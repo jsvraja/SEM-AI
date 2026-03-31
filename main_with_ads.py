@@ -381,3 +381,12 @@ async def mark_conversion(visit_id: int, value: float = 0.0):
             save_traffic(_traffic_data)
             return {"success": True}
     return {"success": False, "error": "Visit not found"}
+
+
+@app.post("/api/ai-traffic/reset")
+async def reset_traffic():
+    from ai_traffic import _traffic_data, save_traffic
+    _traffic_data["visits"] = []
+    _traffic_data["total"] = 0
+    save_traffic(_traffic_data)
+    return {"success": True, "message": "All traffic data cleared"}
