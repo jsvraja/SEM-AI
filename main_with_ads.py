@@ -146,12 +146,28 @@ Now replace ALL values above with real copy specifically for: {s['title']} at {s
 
 def parse_ai_json(raw: str) -> dict:
     raw = raw.strip()
+    # Strip markdown fences
     raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
     raw = re.sub(r'\s*```\s*$', '', raw, flags=re.MULTILINE)
     raw = raw.strip()
-    decoder = json.JSONDecoder()
-    obj, _ = decoder.raw_decode(raw)
-    return obj
+    # Fix common JSON issues from Gemini
+    # Remove trailing commas before } or ]
+    raw = re.sub(r',\s*([}\]])', r'\1', raw)
+    # Remove control characters
+    raw = re.sub(r'[\x00-\x1f\x7f]', ' ', raw)
+    try:
+        decoder = json.JSONDecoder()
+        obj, _ = decoder.raw_decode(raw)
+        return obj
+    except json.JSONDecodeError:
+        # Try finding the largest valid JSON object
+        for i in range(len(raw), 0, -1):
+            try:
+                obj = json.loads(raw[:i])
+                return obj
+            except:
+                continue
+        raise ValueError("Could not parse JSON from AI response")
 
 async def call_gemini(prompt: str) -> str:
     loop = asyncio.get_event_loop()
