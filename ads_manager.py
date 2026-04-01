@@ -9,7 +9,7 @@ import httpx
 from datetime import datetime, date
 from typing import Optional
 
-GOOGLE_ADS_BASE = "https://googleads.googleapis.com/v16"
+GOOGLE_ADS_BASE = "https://googleads.googleapis.com/v23"
 
 
 def get_headers(refresh_token: str) -> dict:
