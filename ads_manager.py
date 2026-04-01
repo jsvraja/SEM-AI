@@ -194,6 +194,9 @@ def _rest_add_keywords(cid, headers, ad_group_resource, keywords):
 def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, final_url):
     url = f"{GOOGLE_ADS_BASE}/customers/{cid}/adGroupAds:mutate"
     rsa_headlines = [{"text": h[:30]} for h in headlines[:15]]
+    # Need minimum 2 descriptions
+    if len(descriptions) < 2:
+        descriptions = descriptions + ["Contact us today to learn more about our services."]
     rsa_descriptions = [{"text": d[:90]} for d in descriptions[:4]]
     body = {"operations": [{"create": {
         "adGroup": ad_group_resource,
