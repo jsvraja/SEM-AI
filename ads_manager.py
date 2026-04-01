@@ -54,7 +54,77 @@ def gaql_search(customer_id: str, refresh_token: str, query: str) -> list:
     return data.get("results", [])
 
 
-# ─── Campaign Operations ──────────────────────────────────────────────────────
+def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
+    """Get all campaigns with metrics via REST — uses last 30 days not just today."""
+    cid = customer_id.replace("-", "")
+
+    # First get all campaigns (no date filter so we see all campaigns)
+    query = """
+        SELECT
+            campaign.id,
+            campaign.name,
+            campaign.status,
+            campaign.resource_name,
+            campaign.advertising_channel_type
+        FROM campaign
+        WHERE campaign.status != 'REMOVED'
+        ORDER BY campaign.name
+    """
+    try:
+        results = gaql_search(cid, refresh_token, query)
+        campaigns = []
+        for row in results:
+            campaign = row.get("campaign", {})
+            campaigns.append({
+                "campaign_id": campaign.get("id"),
+                "campaign_name": campaign.get("name"),
+                "resource_name": campaign.get("resourceName"),
+                "status": campaign.get("status", "UNKNOWN"),
+                "channel_type": campaign.get("advertisingChannelType", ""),
+                "spend_today_usd": 0.0,
+                "clicks": 0,
+                "impressions": 0,
+                "ctr": 0.0,
+                "conversions": 0.0,
+            })
+
+        # Now get metrics for last 30 days
+        if campaigns:
+            metrics_query = """
+                SELECT
+                    campaign.resource_name,
+                    metrics.cost_micros,
+                    metrics.clicks,
+                    metrics.impressions,
+                    metrics.ctr,
+                    metrics.conversions
+                FROM campaign
+                WHERE campaign.status != 'REMOVED'
+                AND segments.date DURING LAST_30_DAYS
+            """
+            metrics_results = gaql_search(cid, refresh_token, metrics_query)
+            metrics_map = {}
+            for row in metrics_results:
+                rn = row.get("campaign", {}).get("resourceName")
+                m = row.get("metrics", {})
+                if rn:
+                    metrics_map[rn] = {
+                        "spend_today_usd": round(int(m.get("costMicros", 0)) / 1_000_000, 2),
+                        "clicks": int(m.get("clicks", 0)),
+                        "impressions": int(m.get("impressions", 0)),
+                        "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                        "conversions": float(m.get("conversions", 0)),
+                    }
+
+            for c in campaigns:
+                if c["resource_name"] in metrics_map:
+                    c.update(metrics_map[c["resource_name"]])
+
+        return campaigns
+    except Exception as e:
+        print(f"get_all_campaigns_spend error: {e}")
+        return []
+
 
 def create_campaign_from_report(
     customer_id: str,
@@ -73,27 +143,22 @@ def create_campaign_from_report(
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
 
     try:
-        # Step 1: Create budget
         print("Step 1: Creating budget...")
         budget_resource = _rest_create_budget(cid, headers, campaign_name, daily_budget_usd, timestamp)
         print(f"Budget: {budget_resource}")
 
-        # Step 2: Create campaign
         print("Step 2: Creating campaign...")
         campaign_resource = _rest_create_campaign(cid, headers, campaign_name, budget_resource, timestamp)
         print(f"Campaign: {campaign_resource}")
 
-        # Step 3: Create ad group
         print("Step 3: Creating ad group...")
         ad_group_resource = _rest_create_ad_group(cid, headers, campaign_resource, timestamp)
         print(f"Ad group: {ad_group_resource}")
 
-        # Step 4: Add keywords
         print("Step 4: Adding keywords...")
         kw_count = _rest_add_keywords(cid, headers, ad_group_resource, keywords)
         print(f"Keywords added: {kw_count}")
 
-        # Step 5: Create ad
         print("Step 5: Creating ad...")
         ad_resource = _rest_create_ad(cid, headers, ad_group_resource, ad_headlines, ad_descriptions, final_url)
         print(f"Ad: {ad_resource}")
@@ -193,10 +258,9 @@ def _rest_add_keywords(cid, headers, ad_group_resource, keywords):
 
 def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, final_url):
     url = f"{GOOGLE_ADS_BASE}/customers/{cid}/adGroupAds:mutate"
-    rsa_headlines = [{"text": h[:30]} for h in headlines[:15]]
-    # Need minimum 2 descriptions
     if len(descriptions) < 2:
-        descriptions = descriptions + ["Contact us today to learn more about our services."]
+        descriptions = descriptions + ["Contact us today to learn more about our AI services."]
+    rsa_headlines = [{"text": h[:30]} for h in headlines[:15]]
     rsa_descriptions = [{"text": d[:90]} for d in descriptions[:4]]
     body = {"operations": [{"create": {
         "adGroup": ad_group_resource,
@@ -215,8 +279,6 @@ def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, fi
         raise Exception(f"Ad creation failed: {data}")
     return data["results"][0]["resourceName"]
 
-
-# ─── Campaign Control ─────────────────────────────────────────────────────────
 
 def _update_campaign_status(customer_id: str, refresh_token: str, campaign_resource_name: str, status: str) -> dict:
     cid = customer_id.replace("-", "")
@@ -241,8 +303,6 @@ def enable_campaign(customer_id: str, refresh_token: str, campaign_resource_name
     return _update_campaign_status(customer_id, refresh_token, campaign_resource_name, "ENABLED")
 
 
-# ─── Metrics ──────────────────────────────────────────────────────────────────
-
 def get_campaign_spend(customer_id: str, refresh_token: str, campaign_resource_name: str) -> dict:
     query = f"""
         SELECT campaign.id, campaign.name, campaign.status,
@@ -250,7 +310,7 @@ def get_campaign_spend(customer_id: str, refresh_token: str, campaign_resource_n
                metrics.ctr, metrics.average_cpc, metrics.conversions
         FROM campaign
         WHERE campaign.resource_name = '{campaign_resource_name}'
-        AND segments.date DURING TODAY
+        AND segments.date DURING LAST_30_DAYS
     """
     results = gaql_search(customer_id, refresh_token, query)
     if not results:
@@ -270,38 +330,3 @@ def get_campaign_spend(customer_id: str, refresh_token: str, campaign_resource_n
         "avg_cpc_usd": round(int(metrics.get("averageCpc", 0)) / 1_000_000, 2),
         "conversions": metrics.get("conversions", 0),
     }
-
-
-def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
-    """Get all campaigns with today's metrics via REST."""
-    cid = customer_id.replace("-", "")
-    query = """
-        SELECT campaign.id, campaign.name, campaign.status, campaign.resource_name,
-               metrics.cost_micros, metrics.clicks, metrics.impressions,
-               metrics.ctr, metrics.conversions
-        FROM campaign
-        WHERE segments.date DURING TODAY
-        AND campaign.status != 'REMOVED'
-        ORDER BY metrics.cost_micros DESC
-    """
-    try:
-        results = gaql_search(cid, refresh_token, query)
-        campaigns = []
-        for row in results:
-            campaign = row.get("campaign", {})
-            metrics = row.get("metrics", {})
-            campaigns.append({
-                "campaign_id": campaign.get("id"),
-                "campaign_name": campaign.get("name"),
-                "resource_name": campaign.get("resourceName"),
-                "status": campaign.get("status", "UNKNOWN"),
-                "spend_today_usd": round(int(metrics.get("costMicros", 0)) / 1_000_000, 2),
-                "clicks": int(metrics.get("clicks", 0)),
-                "impressions": int(metrics.get("impressions", 0)),
-                "ctr": round(float(metrics.get("ctr", 0)) * 100, 2),
-                "conversions": float(metrics.get("conversions", 0)),
-            })
-        return campaigns
-    except Exception as e:
-        print(f"get_all_campaigns_spend error: {e}")
-        return []
