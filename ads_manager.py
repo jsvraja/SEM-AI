@@ -56,22 +56,32 @@ def create_campaign_from_report(
 
     try:
         # Step 1: Create budget
+        print(f"Step 1: Creating budget...")
         budget_resource = _create_budget(client, customer_id, campaign_name, daily_budget_usd)
+        print(f"Budget created: {budget_resource}")
 
         # Step 2: Create campaign
+        print(f"Step 2: Creating campaign...")
         campaign_resource = _create_campaign(client, customer_id, campaign_name, budget_resource, target_countries)
+        print(f"Campaign created: {campaign_resource}")
 
         # Step 3: Create ad group
+        print(f"Step 3: Creating ad group...")
         ad_group_resource = _create_ad_group(client, customer_id, campaign_resource)
+        print(f"Ad group created: {ad_group_resource}")
 
         # Step 4: Add keywords
+        print(f"Step 4: Adding keywords...")
         keyword_resources = _add_keywords(client, customer_id, ad_group_resource, keywords)
+        print(f"Keywords added: {len(keyword_resources)}")
 
         # Step 5: Create responsive search ad
+        print(f"Step 5: Creating ad...")
         ad_resource = _create_responsive_search_ad(
             client, customer_id, ad_group_resource,
             ad_headlines, ad_descriptions, final_url
         )
+        print(f"Ad created: {ad_resource}")
 
         return {
             "success": True,
@@ -84,7 +94,11 @@ def create_campaign_from_report(
 
     except GoogleAdsException as ex:
         errors = [err.message for err in ex.failure.errors]
+        print(f"GoogleAdsException: {errors}")
         return {"success": False, "errors": errors}
+    except Exception as ex:
+        print(f"Unexpected error: {str(ex)}")
+        return {"success": False, "errors": [str(ex)]}
 
 
 def _create_budget(client, customer_id, name, daily_budget_usd):
