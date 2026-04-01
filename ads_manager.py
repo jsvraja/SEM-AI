@@ -126,15 +126,16 @@ def _create_campaign(client, customer_id, name, budget_resource, target_countrie
 
     campaign.name = f"{name} {datetime.now().strftime('%Y%m%d%H%M%S')}"
     campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
-    campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for review
+    campaign.advertising_channel_sub_type = client.enums.AdvertisingChannelSubTypeEnum.SEARCH_MOBILE_APP
+    campaign.status = client.enums.CampaignStatusEnum.PAUSED
     campaign.campaign_budget = budget_resource
-    
-    # Bidding strategy - Manual CPC (most compatible)
-    campaign.manual_cpc.enhanced_cpc_enabled = False
+
+    # Bidding strategy - Target Spend (no target = maximize clicks)
+    campaign.target_spend.target_spend_micros = 10000000  # $10 target spend
 
     # Network settings
     campaign.network_settings.target_google_search = True
-    campaign.network_settings.target_search_network = True
+    campaign.network_settings.target_search_network = False
     campaign.network_settings.target_content_network = False
     campaign.network_settings.target_partner_search_network = False
 
