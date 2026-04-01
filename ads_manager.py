@@ -12,7 +12,7 @@ from datetime import datetime, date
 from typing import Optional
 
 
-def get_ads_client(refresh_token: str) -> GoogleAdsClient:
+def get_ads_client(refresh_token: str, customer_id: str = "") -> GoogleAdsClient:
     """Create authenticated Google Ads client from refresh token."""
     config = {
         "developer_token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
@@ -20,9 +20,13 @@ def get_ads_client(refresh_token: str) -> GoogleAdsClient:
         "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
         "refresh_token": refresh_token,
         "login_customer_id": os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", ""),
+        "linked_customer_id": customer_id.replace("-", "") if customer_id else "",
         "use_proto_plus": True,
         "transport": "rest",
     }
+    # Remove empty linked_customer_id
+    if not config["linked_customer_id"]:
+        del config["linked_customer_id"]
     return GoogleAdsClient.load_from_dict(config)
 
 
@@ -111,13 +115,14 @@ def _create_campaign(client, customer_id, name, budget_resource, target_countrie
     campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for review
     campaign.campaign_budget = budget_resource
     
-    # Bidding strategy
-    campaign.target_spend.target_spend_micros = 0  # Maximize clicks
+    # Bidding strategy - Maximize clicks
+    campaign.maximize_clicks.CopyFrom(client.get_type("MaximizeClicks"))
 
     # Network settings
     campaign.network_settings.target_google_search = True
     campaign.network_settings.target_search_network = True
     campaign.network_settings.target_content_network = False
+    campaign.network_settings.target_partner_search_network = False
 
     response = campaign_service.mutate_campaigns(
         customer_id=customer_id, operations=[campaign_op]
