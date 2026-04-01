@@ -13,20 +13,20 @@ from typing import Optional
 
 
 def get_ads_client(refresh_token: str, customer_id: str = "") -> GoogleAdsClient:
-    """Create authenticated Google Ads client from refresh token."""
+    """Create authenticated Google Ads client from refresh token.
+    login_customer_id = Manager Account ID (always)
+    customer_id = Client Account ID (where campaigns are created)
+    """
+    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
     config = {
         "developer_token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN"),
         "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
         "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
         "refresh_token": refresh_token,
-        "login_customer_id": os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", ""),
-        "linked_customer_id": customer_id.replace("-", "") if customer_id else "",
+        "login_customer_id": manager_id,
         "use_proto_plus": True,
         "transport": "rest",
     }
-    # Remove empty linked_customer_id
-    if not config["linked_customer_id"]:
-        del config["linked_customer_id"]
     return GoogleAdsClient.load_from_dict(config)
 
 
