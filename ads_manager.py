@@ -140,6 +140,7 @@ def _rest_create_campaign(cid, headers, name, budget_resource, timestamp):
         "status": "PAUSED",
         "campaignBudget": budget_resource,
         "manualCpc": {"enhancedCpcEnabled": False},
+        "containsEuPoliticalAdvertising": 2,
         "networkSettings": {
             "targetGoogleSearch": True,
             "targetSearchNetwork": True,
