@@ -100,7 +100,6 @@ def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
                     metrics.conversions
                 FROM campaign
                 WHERE campaign.status != 'REMOVED'
-                AND segments.date DURING LAST_30_DAYS
             """
             metrics_results = gaql_search(cid, refresh_token, metrics_query)
             metrics_map = {}

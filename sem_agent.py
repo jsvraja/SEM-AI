@@ -46,7 +46,7 @@ _agent_state = load_agent_state()
 
 def call_gemini(prompt: str, system: str = "") -> str:
     """Call Gemini API for analysis."""
-    import google.generativeai as genai
+    from google import genai as genai_client
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return "Gemini API key not configured."
