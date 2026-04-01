@@ -129,8 +129,10 @@ def _create_campaign(client, customer_id, name, budget_resource, target_countrie
     campaign.status = client.enums.CampaignStatusEnum.PAUSED
     campaign.campaign_budget = budget_resource
 
-    # Bidding strategy - Target Spend
-    campaign.target_spend.CopyFrom(client.get_type("TargetSpend"))
+    # Use manual CPC with correct proto syntax
+    manual_cpc = client.get_type("ManualCpc")
+    manual_cpc.enhanced_cpc_enabled = False
+    campaign.manual_cpc.CopyFrom(manual_cpc)
 
     # Network settings
     campaign.network_settings.target_google_search = True
