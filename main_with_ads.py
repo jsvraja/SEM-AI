@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request, Request, Request, Request, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -146,28 +146,12 @@ Now replace ALL values above with real copy specifically for: {s['title']} at {s
 
 def parse_ai_json(raw: str) -> dict:
     raw = raw.strip()
-    # Strip markdown fences
     raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
     raw = re.sub(r'\s*```\s*$', '', raw, flags=re.MULTILINE)
     raw = raw.strip()
-    # Fix common JSON issues from Gemini
-    # Remove trailing commas before } or ]
-    raw = re.sub(r',\s*([}\]])', r'\1', raw)
-    # Remove control characters
-    raw = re.sub(r'[\x00-\x1f\x7f]', ' ', raw)
-    try:
-        decoder = json.JSONDecoder()
-        obj, _ = decoder.raw_decode(raw)
-        return obj
-    except json.JSONDecodeError:
-        # Try finding the largest valid JSON object
-        for i in range(len(raw), 0, -1):
-            try:
-                obj = json.loads(raw[:i])
-                return obj
-            except:
-                continue
-        raise ValueError("Could not parse JSON from AI response")
+    decoder = json.JSONDecoder()
+    obj, _ = decoder.raw_decode(raw)
+    return obj
 
 async def call_gemini(prompt: str) -> str:
     loop = asyncio.get_event_loop()
@@ -279,7 +263,7 @@ async def publish_campaign(req: PublishCampaignRequest):
     if req.daily_budget_usd < 1.0:
         raise HTTPException(status_code=400, detail=f"Daily budget ${req.daily_budget_usd:.2f} is below Google Ads minimum of $1.00/day.")
 
-    customer_id = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "") or resolve_customer_id(session, req.customer_id)
+    customer_id = resolve_customer_id(session, req.customer_id)
 
     result = create_campaign_from_report(
         customer_id=customer_id,
@@ -383,10 +367,82 @@ async def mark_conversion(visit_id: int, value: float = 0.0):
     return {"success": False, "error": "Visit not found"}
 
 
-@app.post("/api/ai-traffic/reset")
-async def reset_traffic():
-    from ai_traffic import _traffic_data, save_traffic
-    _traffic_data["visits"] = []
-    _traffic_data["total"] = 0
-    save_traffic(_traffic_data)
-    return {"success": True, "message": "All traffic data cleared"}
+# ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
+
+from sem_agent import (
+    chat_with_agent, get_agent_status, run_monitoring_cycle,
+    generate_weekly_report, set_agent_active, clear_agent_chat,
+    analyze_campaigns_with_gemini
+)
+
+@app.get("/api/agent/status")
+async def agent_status():
+    """Get AI agent status and recent activity."""
+    return get_agent_status()
+
+
+@app.post("/api/agent/chat")
+async def agent_chat(request: Request):
+    """Chat with the AI SEM agent."""
+    body = await request.json()
+    message = body.get("message", "")
+    session_id = body.get("session_id", "")
+    customer_id = body.get("customer_id", os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", ""))
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Message required")
+
+    session = _sessions.get(session_id)
+    campaigns = []
+    if session:
+        try:
+            campaigns = get_all_campaigns_spend(customer_id, session["refresh_token"])
+        except:
+            pass
+
+    response = chat_with_agent(message, campaigns, session_id)
+    return {"response": response, "timestamp": datetime.now().isoformat()}
+
+
+@app.post("/api/agent/analyze")
+async def agent_analyze(request: Request):
+    """Run a manual analysis cycle."""
+    body = await request.json()
+    session_id = body.get("session_id", "")
+    customer_id = body.get("customer_id", os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", ""))
+
+    session = _sessions.get(session_id)
+    campaigns = []
+    if session:
+        try:
+            campaigns = get_all_campaigns_spend(customer_id, session["refresh_token"])
+        except:
+            pass
+
+    analysis = await run_monitoring_cycle(campaigns, session_id, customer_id)
+    return analysis
+
+
+@app.get("/api/agent/report")
+async def agent_weekly_report(session_id: str, customer_id: str = ""):
+    """Generate weekly performance report."""
+    from sem_agent import _agent_state
+    snapshots = _agent_state.get("campaign_snapshots", [])
+    report = generate_weekly_report(snapshots)
+    return {"report": report, "generated_at": datetime.now().isoformat()}
+
+
+@app.post("/api/agent/toggle")
+async def agent_toggle(request: Request):
+    """Enable or disable the agent."""
+    body = await request.json()
+    active = body.get("active", True)
+    set_agent_active(active)
+    return {"active": active}
+
+
+@app.post("/api/agent/clear-chat")
+async def agent_clear_chat():
+    """Clear chat history."""
+    clear_agent_chat()
+    return {"success": True}
