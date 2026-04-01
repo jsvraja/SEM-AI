@@ -110,8 +110,7 @@ def _create_campaign(client, customer_id, name, budget_resource, target_countrie
     campaign.advertising_channel_type = client.enums.AdvertisingChannelTypeEnum.SEARCH
     campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for review
     campaign.campaign_budget = budget_resource
-    campaign.start_date = date.today().strftime("%Y%m%d")
-
+    
     # Bidding strategy
     campaign.target_spend.target_spend_micros = 0  # Maximize clicks
 
@@ -309,6 +308,8 @@ def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
         AND campaign.status != 'REMOVED'
         ORDER BY metrics.cost_micros DESC
     """
+    # Use customer_id directly, not manager account
+    customer_id = customer_id.replace("-", "")
 
     try:
         response = ga_service.search(customer_id=customer_id, query=query)
