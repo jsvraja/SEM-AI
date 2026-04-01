@@ -263,7 +263,12 @@ async def publish_campaign(req: PublishCampaignRequest):
     if req.daily_budget_usd < 1.0:
         raise HTTPException(status_code=400, detail=f"Daily budget ${req.daily_budget_usd:.2f} is below Google Ads minimum of $1.00/day.")
 
-    customer_id = resolve_customer_id(session, req.customer_id)
+    # Force client account — never use manager account for campaigns
+    client_cid = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
+    resolved = resolve_customer_id(session, req.customer_id)
+    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+    customer_id = client_cid if (not resolved or resolved == manager_id) else resolved
+    print(f"Publishing to customer_id: {customer_id}")
 
     result = create_campaign_from_report(
         customer_id=customer_id,
