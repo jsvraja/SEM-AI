@@ -146,6 +146,7 @@ def _rest_create_campaign(cid, headers, name, budget_resource, timestamp):
             "targetContentNetwork": False,
             "targetPartnerSearchNetwork": False,
         },
+        "containsEuPoliticalAdvertising": False,
     }}]}
     resp = httpx.post(url, headers=headers, json=body, timeout=30)
     data = resp.json()
