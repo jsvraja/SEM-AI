@@ -374,6 +374,7 @@ async def mark_conversion(visit_id: int, value: float = 0.0):
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
 
+from datetime import datetime
 from sem_agent import (
     chat_with_agent, get_agent_status, run_monitoring_cycle,
     generate_weekly_report, set_agent_active, clear_agent_chat,
