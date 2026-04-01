@@ -115,8 +115,8 @@ def _create_campaign(client, customer_id, name, budget_resource, target_countrie
     campaign.status = client.enums.CampaignStatusEnum.PAUSED  # Start paused for review
     campaign.campaign_budget = budget_resource
     
-    # Bidding strategy - Maximize clicks
-    campaign.maximize_clicks.CopyFrom(client.get_type("MaximizeClicks"))
+    # Bidding strategy - Manual CPC (most compatible)
+    campaign.manual_cpc.enhanced_cpc_enabled = False
 
     # Network settings
     campaign.network_settings.target_google_search = True
