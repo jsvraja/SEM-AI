@@ -1,3 +1,9 @@
 start.sh
 .sessions.json
 .ai_traffic.json
+.sessions.json
+.ai_traffic.json
+.agent_state.json
+.agent_log.json
+.env
+start.sh
