@@ -15,16 +15,19 @@ GOOGLE_ADS_BASE = "https://googleads.googleapis.com/v19"
 def get_headers(refresh_token: str) -> dict:
     """Get auth headers by refreshing access token."""
     token_url = "https://oauth2.googleapis.com/token"
+    print(f"Refreshing access token...")
     resp = httpx.post(token_url, data={
         "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
         "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
         "refresh_token": refresh_token,
         "grant_type": "refresh_token",
-    })
+    }, timeout=15)
+    print(f"Token refresh status: {resp.status_code}")
     tokens = resp.json()
     access_token = tokens.get("access_token")
     if not access_token:
         raise Exception(f"Failed to get access token: {tokens}")
+    print(f"Got access token: {access_token[:20]}...")
 
     manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
     headers = {
@@ -34,6 +37,7 @@ def get_headers(refresh_token: str) -> dict:
     }
     if manager_id:
         headers["login-customer-id"] = manager_id
+    print(f"Headers ready. Manager ID: {manager_id}")
     return headers
 
 
