@@ -116,7 +116,12 @@ def _rest_create_budget(cid, headers, name, daily_budget_usd, timestamp):
         "deliveryMethod": "STANDARD",
         "explicitlyShared": False,
     }}]}
+    print(f"Budget URL: {url}")
     resp = httpx.post(url, headers=headers, json=body, timeout=30)
+    print(f"Budget response status: {resp.status_code}")
+    print(f"Budget response: {resp.text[:300]}")
+    if not resp.text:
+        raise Exception(f"Empty response from budget API. Status: {resp.status_code}")
     data = resp.json()
     if resp.status_code != 200:
         raise Exception(f"Budget creation failed: {data}")
