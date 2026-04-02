@@ -21,7 +21,7 @@ from budget_monitor import register_campaign, get_all_monitored
 from ai_traffic import log_visit, get_traffic_stats, detect_ai_platform
 
 gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-GEMINI_MODEL = "gemini-2.0-flash-lite"
+GEMINI_MODEL = "gemini-2.0-flash"
 
 app = FastAPI(title="SEM AI Platform", version="2.0.0")
 app.add_middleware(
