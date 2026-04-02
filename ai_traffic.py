@@ -51,33 +51,8 @@ def detect_ai_platform(referrer: str) -> Optional[dict]:
     return None
 
 
-UTM_PLATFORM_MAP = {
-    "chatgpt": "chatgpt",
-    "chat.openai": "chatgpt",
-    "perplexity": "perplexity",
-    "claude": "claude",
-    "gemini": "gemini",
-    "copilot": "copilot",
-    "grok": "grok",
-    "meta_ai": "meta_ai",
-    "you": "you",
-}
-
-def detect_utm_platform(utm_source: str) -> Optional[dict]:
-    if not utm_source:
-        return None
-    utm_lower = utm_source.lower()
-    for key, platform_id in UTM_PLATFORM_MAP.items():
-        if key in utm_lower:
-            platform = AI_PLATFORMS.get(platform_id)
-            if platform:
-                return {"id": platform_id, **platform}
-    return None
-
-def log_visit(referrer: str, page: str, user_agent: str = "", ip: str = "", converted: bool = False, conversion_value: float = 0.0, utm_source: str = ""):
+def log_visit(referrer: str, page: str, user_agent: str = "", ip: str = "", converted: bool = False, conversion_value: float = 0.0):
     platform = detect_ai_platform(referrer)
-    if not platform:
-        platform = detect_utm_platform(utm_source)
     if not platform:
         return None
 
@@ -161,6 +136,30 @@ def get_traffic_stats(days: int = 30) -> dict:
     total_conversions = sum(1 for v in recent if v.get("converted"))
     total_value = sum(v.get("conversion_value", 0) for v in recent if v.get("converted"))
 
+    # Keyword analytics
+    keyword_counts = defaultdict(lambda: {"visits": 0, "platforms": set(), "conversions": 0})
+    for v in recent:
+        kw = v.get("keyword", "").strip()
+        if kw:
+            keyword_counts[kw]["visits"] += 1
+            keyword_counts[kw]["platforms"].add(v["platform_name"])
+            if v.get("converted"):
+                keyword_counts[kw]["conversions"] += 1
+
+    top_keywords = sorted([
+        {
+            "keyword": kw,
+            "visits": stats["visits"],
+            "platforms": list(stats["platforms"]),
+            "conversions": stats["conversions"],
+            "conversion_rate": round(stats["conversions"] / stats["visits"] * 100, 1) if stats["visits"] > 0 else 0,
+        }
+        for kw, stats in keyword_counts.items()
+    ], key=lambda x: x["visits"], reverse=True)[:20]
+
+    # Impressions = total visits per platform (proxy metric)
+    impressions_by_platform = {p["id"]: p["visits"] for p in platforms}
+
     return {
         "period_days": days,
         "total_visits": len(recent),
@@ -169,6 +168,8 @@ def get_traffic_stats(days: int = 30) -> dict:
         "overall_conversion_rate": round(total_conversions / len(recent) * 100, 1) if recent else 0,
         "platforms": platforms,
         "top_pages": top_pages,
+        "top_keywords": top_keywords,
+        "impressions_by_platform": impressions_by_platform,
         "daily_trend": trend,
         "recent_visits": recent_visits,
     }
