@@ -47,7 +47,7 @@ def call_gemini(prompt: str, system: str = "") -> str:
     try:
         full_prompt = f"{system}\n\n{prompt}" if system else prompt
         resp = httpx.post(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent",
             params={"key": api_key},
             json={"contents": [{"parts": [{"text": full_prompt}]}]},
             timeout=45,
