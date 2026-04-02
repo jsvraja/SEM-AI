@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ from ads_manager import (
     get_all_campaigns_spend,
 )
 from budget_monitor import register_campaign, get_all_monitored
-from ai_traffic import log_visit, get_traffic_stats, detect_ai_platform
+from ai_traffic import log_visit, get_traffic_stats, add_demo_data, detect_ai_platform
 
 gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 GEMINI_MODEL = "gemini-2.5-flash"
@@ -263,12 +263,7 @@ async def publish_campaign(req: PublishCampaignRequest):
     if req.daily_budget_usd < 1.0:
         raise HTTPException(status_code=400, detail=f"Daily budget ${req.daily_budget_usd:.2f} is below Google Ads minimum of $1.00/day.")
 
-    # Force client account — never use manager account for campaigns
-    client_cid = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
-    resolved = resolve_customer_id(session, req.customer_id)
-    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
-    customer_id = client_cid if (not resolved or resolved == manager_id) else resolved
-    print(f"Publishing to customer_id: {customer_id}")
+    customer_id = resolve_customer_id(session, req.customer_id)
 
     result = create_campaign_from_report(
         customer_id=customer_id,
@@ -339,8 +334,7 @@ async def track_visit(request: Request):
     converted = body.get("converted", False)
     conversion_value = body.get("conversion_value", 0.0)
 
-    utm_source = body.get("utm_source", "")
-    visit = log_visit(referrer, page, user_agent, ip, converted, conversion_value, utm_source)
+    visit = log_visit(referrer, page, user_agent, ip, converted, conversion_value)
     if visit:
         return {"tracked": True, "platform": visit["platform_name"]}
     return {"tracked": False, "reason": "Not from an AI platform"}
@@ -375,7 +369,6 @@ async def mark_conversion(visit_id: int, value: float = 0.0):
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
 
-from datetime import datetime
 from sem_agent import (
     chat_with_agent, get_agent_status, run_monitoring_cycle,
     generate_weekly_report, set_agent_active, clear_agent_chat,
