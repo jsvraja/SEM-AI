@@ -282,7 +282,7 @@ def get_campaign_spend(customer_id: str, refresh_token: str, campaign_resource_n
                metrics.ctr, metrics.average_cpc, metrics.conversions
         FROM campaign
         WHERE campaign.resource_name = '{campaign_resource_name}'
-        AND segments.date DURING LAST_30_DAYS
+        AND segments.date DURING TODAY
     """
     results = gaql_search(customer_id, refresh_token, query)
     if not results:
