@@ -17,7 +17,7 @@ from ads_manager import (
     get_all_campaigns_spend,
 )
 from budget_monitor import register_campaign, get_all_monitored
-from ai_traffic import log_visit, get_traffic_stats, add_demo_data, detect_ai_platform
+from ai_traffic import log_visit, get_traffic_stats, detect_ai_platform
 
 gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 GEMINI_MODEL = "gemini-2.5-flash"
