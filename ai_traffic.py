@@ -51,8 +51,33 @@ def detect_ai_platform(referrer: str) -> Optional[dict]:
     return None
 
 
-def log_visit(referrer: str, page: str, user_agent: str = "", ip: str = "", converted: bool = False, conversion_value: float = 0.0):
+UTM_PLATFORM_MAP = {
+    "chatgpt": "chatgpt",
+    "chat.openai": "chatgpt",
+    "perplexity": "perplexity",
+    "claude": "claude",
+    "gemini": "gemini",
+    "copilot": "copilot",
+    "grok": "grok",
+    "meta_ai": "meta_ai",
+    "you": "you",
+}
+
+def detect_utm_platform(utm_source: str) -> Optional[dict]:
+    if not utm_source:
+        return None
+    utm_lower = utm_source.lower()
+    for key, platform_id in UTM_PLATFORM_MAP.items():
+        if key in utm_lower:
+            platform = AI_PLATFORMS.get(platform_id)
+            if platform:
+                return {"id": platform_id, **platform}
+    return None
+
+def log_visit(referrer: str, page: str, user_agent: str = "", ip: str = "", converted: bool = False, conversion_value: float = 0.0, utm_source: str = ""):
     platform = detect_ai_platform(referrer)
+    if not platform:
+        platform = detect_utm_platform(utm_source)
     if not platform:
         return None
 

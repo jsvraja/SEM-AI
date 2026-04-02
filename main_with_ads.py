@@ -339,7 +339,8 @@ async def track_visit(request: Request):
     converted = body.get("converted", False)
     conversion_value = body.get("conversion_value", 0.0)
 
-    visit = log_visit(referrer, page, user_agent, ip, converted, conversion_value)
+    utm_source = body.get("utm_source", "")
+    visit = log_visit(referrer, page, user_agent, ip, converted, conversion_value, utm_source)
     if visit:
         return {"tracked": True, "platform": visit["platform_name"]}
     return {"tracked": False, "reason": "Not from an AI platform"}
