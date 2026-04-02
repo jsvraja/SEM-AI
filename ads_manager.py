@@ -89,36 +89,8 @@ def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
             })
 
         # Now get metrics for last 30 days
-        if campaigns:
-            metrics_query = """
-                SELECT
-                    campaign.resource_name,
-                    metrics.cost_micros,
-                    metrics.clicks,
-                    metrics.impressions,
-                    metrics.ctr,
-                    metrics.conversions
-                FROM campaign
-                WHERE campaign.status != 'REMOVED'
-                AND segments.date DURING THIS_MONTH
-            """
-            metrics_results = gaql_search(cid, refresh_token, metrics_query)
-            metrics_map = {}
-            for row in metrics_results:
-                rn = row.get("campaign", {}).get("resourceName")
-                m = row.get("metrics", {})
-                if rn:
-                    metrics_map[rn] = {
-                        "spend_today_usd": round(int(m.get("costMicros", 0)) / 1_000_000, 2),
-                        "clicks": int(m.get("clicks", 0)),
-                        "impressions": int(m.get("impressions", 0)),
-                        "ctr": round(float(m.get("ctr", 0)) * 100, 2),
-                        "conversions": float(m.get("conversions", 0)),
-                    }
-
-            for c in campaigns:
-                if c["resource_name"] in metrics_map:
-                    c.update(metrics_map[c["resource_name"]])
+        # Note: metrics require date segmentation which can cause 400 errors
+        # Campaigns are returned with zero metrics - metrics load when campaigns serve
 
         return campaigns
     except Exception as e:
