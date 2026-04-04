@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -8,7 +8,6 @@ import json
 import re
 import asyncio
 import os
-from datetime import datetime
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
@@ -18,7 +17,7 @@ from ads_manager import (
     get_all_campaigns_spend,
 )
 from budget_monitor import register_campaign, get_all_monitored
-from ai_traffic import log_visit, get_traffic_stats, detect_ai_platform
+from ai_traffic import log_visit, get_traffic_stats, add_demo_data, detect_ai_platform
 
 gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 GEMINI_MODEL = "gemini-2.5-flash"
@@ -264,7 +263,12 @@ async def publish_campaign(req: PublishCampaignRequest):
     if req.daily_budget_usd < 1.0:
         raise HTTPException(status_code=400, detail=f"Daily budget ${req.daily_budget_usd:.2f} is below Google Ads minimum of $1.00/day.")
 
-    customer_id = resolve_customer_id(session, req.customer_id)
+    # Always use client account, never manager account
+    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+    client_id = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
+    resolved = resolve_customer_id(session, req.customer_id)
+    customer_id = client_id if (not resolved or resolved == manager_id) else resolved
+    print(f"[PUBLISH] Using customer_id: {customer_id} (manager={manager_id}, client={client_id})")
 
     result = create_campaign_from_report(
         customer_id=customer_id,
