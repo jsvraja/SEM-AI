@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -339,7 +339,9 @@ async def track_visit(request: Request):
     converted = body.get("converted", False)
     conversion_value = body.get("conversion_value", 0.0)
 
-    visit = log_visit(referrer, page, user_agent, ip, converted, conversion_value)
+    utm_source = body.get("utm_source", "")
+    utm_term = body.get("utm_term", "")
+    visit = log_visit(referrer, page, user_agent, ip, converted, conversion_value, utm_source, utm_term)
     if visit:
         return {"tracked": True, "platform": visit["platform_name"]}
     return {"tracked": False, "reason": "Not from an AI platform"}

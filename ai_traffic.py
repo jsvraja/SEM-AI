@@ -53,6 +53,30 @@ AI_PLATFORMS = {
     },
 }
 
+
+UTM_PLATFORM_MAP = {
+    "chatgpt": "chatgpt", "chat.openai": "chatgpt", "chatgpt.com": "chatgpt",
+    "perplexity": "perplexity",
+    "claude": "claude", "anthropic": "claude",
+    "gemini": "gemini", "bard": "gemini",
+    "copilot": "copilot", "bing": "copilot",
+    "grok": "grok", "x.ai": "grok",
+    "meta": "meta_ai",
+    "you": "you",
+}
+
+
+def detect_utm_platform(utm_source: str) -> Optional[dict]:
+    if not utm_source:
+        return None
+    utm_lower = utm_source.lower()
+    for key, platform_id in UTM_PLATFORM_MAP.items():
+        if key in utm_lower:
+            platform = AI_PLATFORMS.get(platform_id)
+            if platform:
+                return {"id": platform_id, **platform}
+    return None
+
 # In-memory store (replace with DB in production)
 TRAFFIC_FILE = os.path.join(os.path.dirname(__file__), ".ai_traffic.json")
 
@@ -94,11 +118,28 @@ def log_visit(
     ip: str = "",
     converted: bool = False,
     conversion_value: float = 0.0,
+    utm_source: str = "",
+    utm_term: str = "",
 ):
     """Log a visit from an AI platform."""
     platform = detect_ai_platform(referrer)
     if not platform:
+        platform = detect_utm_platform(utm_source)
+    if not platform:
         return None
+    
+    # Extract keyword from utm_term or referrer query params
+    keyword = utm_term.strip() if utm_term else ""
+    if not keyword and referrer:
+        try:
+            from urllib.parse import urlparse, parse_qs
+            params = parse_qs(urlparse(referrer).query)
+            for p in ['q', 'query', 'search', 'text']:
+                if p in params:
+                    keyword = params[p][0].strip()
+                    break
+        except:
+            pass
 
     visit = {
         "id": len(_traffic_data["visits"]) + 1,
@@ -109,6 +150,7 @@ def log_visit(
         "platform_color": platform["color"],
         "referrer": referrer,
         "page": page,
+        "keyword": keyword,
         "user_agent": user_agent[:200] if user_agent else "",
         "converted": converted,
         "conversion_value": conversion_value,
