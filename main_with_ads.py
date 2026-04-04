@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -371,6 +371,33 @@ async def mark_conversion(visit_id: int, value: float = 0.0):
             return {"success": True}
     return {"success": False, "error": "Visit not found"}
 
+
+
+
+@app.post("/api/ads/delete")
+async def delete_campaign(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id", "")
+    customer_id = body.get("customer_id", "")
+    campaign_resource_name = body.get("campaign_resource_name", "")
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+    client_id = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
+    cid = client_id or customer_id.replace("-", "")
+    
+    from ads_manager import get_headers
+    import httpx
+    headers = get_headers(session["refresh_token"])
+    url = f"https://googleads.googleapis.com/v23/customers/{cid}/campaigns:mutate"
+    body = {"operations": [{"remove": campaign_resource_name}]}
+    resp = httpx.post(url, headers=headers, json=body, timeout=30)
+    data = resp.json()
+    if resp.status_code != 200:
+        return {"success": False, "errors": [str(data)]}
+    return {"success": True, "message": "Campaign deleted successfully"}
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
 
