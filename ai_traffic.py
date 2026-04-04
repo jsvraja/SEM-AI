@@ -15,13 +15,13 @@ AI_PLATFORMS = {
     "claude": {"name": "Claude", "domains": ["claude.ai", "anthropic.com", "www.claude.ai"], "color": "#cc785c"},
     "gemini": {"name": "Gemini", "domains": ["gemini.google.com", "bard.google.com", "ai.google.com"], "color": "#4285f4"},
     "copilot": {"name": "Microsoft Copilot", "domains": ["copilot.microsoft.com", "bing.com", "www.bing.com"], "color": "#0078d4"},
-    "grok": {"name": "Grok", "domains": ["grok.x.ai", "x.ai", "grok.com"], "color": "#1da1f2"},
+    "grok": {"name": "Grok", "domains": ["grok.x.ai", "x.ai", "grok.com", "grok.com/chat"], "color": "#1da1f2"},
     "meta_ai": {"name": "Meta AI", "domains": ["meta.ai", "www.meta.ai"], "color": "#0866ff"},
     "you": {"name": "You.com", "domains": ["you.com", "www.you.com"], "color": "#7c3aed"},
 }
 
 UTM_PLATFORM_MAP = {
-    "chatgpt": "chatgpt", "chat.openai": "chatgpt",
+    "chatgpt": "chatgpt", "chat.openai": "chatgpt", "chatgpt.com": "chatgpt",
     "perplexity": "perplexity", "claude": "claude",
     "gemini": "gemini", "copilot": "copilot",
     "grok": "grok", "meta_ai": "meta_ai", "you": "you",
