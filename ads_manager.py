@@ -253,13 +253,18 @@ def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, fi
 
 
 def _update_campaign_status(customer_id: str, refresh_token: str, campaign_resource_name: str, status: str) -> dict:
-    cid = customer_id.replace("-", "")
+    # Extract customer ID from resource name: customers/1234/campaigns/5678
+    try:
+        cid = campaign_resource_name.split("/")[1]
+    except:
+        cid = customer_id.replace("-", "")
     headers = get_headers(refresh_token)
     url = f"{GOOGLE_ADS_BASE}/customers/{cid}/campaigns:mutate"
     body = {"operations": [{"update": {
         "resourceName": campaign_resource_name,
         "status": status,
     }, "updateMask": "status"}]}
+    print(f"[UPDATE] URL: {url}, resource: {campaign_resource_name}, status: {status}")
     resp = httpx.post(url, headers=headers, json=body, timeout=30)
     data = resp.json()
     if resp.status_code != 200:
