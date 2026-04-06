@@ -229,6 +229,7 @@ def _rest_add_keywords(cid, headers, ad_group_resource, keywords):
 
 
 def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, final_url):
+    import time
     url = f"{GOOGLE_ADS_BASE}/customers/{cid}/adGroupAds:mutate"
     if len(descriptions) < 2:
         descriptions = descriptions + ["Contact us today to learn more about our AI services."]
@@ -245,11 +246,19 @@ def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, fi
             },
         },
     }}]}
-    resp = httpx.post(url, headers=headers, json=body, timeout=30)
-    data = resp.json()
-    if resp.status_code != 200:
+    # Retry up to 3 times on concurrent modification
+    for attempt in range(3):
+        resp = httpx.post(url, headers=headers, json=body, timeout=30)
+        data = resp.json()
+        if resp.status_code == 200:
+            return data["results"][0]["resourceName"]
+        error_str = str(data)
+        if "CONCURRENT_MODIFICATION" in error_str and attempt < 2:
+            print(f"Concurrent modification, retrying in {2**attempt}s...")
+            time.sleep(2**attempt)
+            continue
         raise Exception(f"Ad creation failed: {data}")
-    return data["results"][0]["resourceName"]
+    raise Exception("Ad creation failed after 3 retries")
 
 
 def _update_campaign_status(customer_id: str, refresh_token: str, campaign_resource_name: str, status: str) -> dict:
