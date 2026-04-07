@@ -457,6 +457,62 @@ Rules:
         return {"error": str(e), "posts": []}
 
 
+
+@app.post("/api/competitor/analyze")
+async def analyze_competitors(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    competitors = body.get("competitors", [])
+    seo_score = body.get("seo_score", 50)
+    keywords = body.get("keywords", [])
+    strengths = body.get("strengths", [])
+
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+
+    prompt = f"""You are an expert SEO and digital marketing analyst.
+
+My website: {url}
+My domain: {domain}
+My SEO Score: {seo_score}/100
+My keywords: {', '.join(keywords)}
+My strengths: {', '.join(strengths) if strengths else 'Not available'}
+
+Competitors: {', '.join(competitors)}
+
+Respond ONLY with valid JSON, no markdown, no explanation:
+{{
+  "my_site": {{
+    "domain": "{domain}",
+    "score": {seo_score},
+    "strengths": ["strength1", "strength2"],
+    "weaknesses": ["weakness1", "weakness2"]
+  }},
+  "competitors": [
+    {{
+      "domain": "competitor.com",
+      "estimated_score": 75,
+      "estimated_traffic": "10k-50k/month",
+      "top_keywords": ["kw1", "kw2", "kw3"],
+      "strengths": ["strong point 1", "strong point 2"],
+      "weaknesses": ["weak point 1", "weak point 2"],
+      "ad_strategy": "Description of their ad approach",
+      "social_presence": "Their social media activity"
+    }}
+  ],
+  "opportunities": ["opportunity 1", "opportunity 2", "opportunity 3"],
+  "threats": ["threat 1", "threat 2"],
+  "action_plan": ["action 1", "action 2", "action 3", "action 4"]
+}}"""
+
+    try:
+        raw = await call_gemini(prompt)
+        import re, json
+        clean = re.sub(r'```json|```', '', raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
 
 from sem_agent import (
