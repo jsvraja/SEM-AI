@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -8,12 +8,12 @@ import json
 import re
 import asyncio
 import os
-from datetime import datetime
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
 from oauth_handler import get_oauth_url, exchange_code_for_tokens, get_user_info
 from ads_manager import (
+    get_campaign_performance, update_campaign_bid, add_negative_keywords,
     create_campaign_from_report, pause_campaign, enable_campaign,
     get_all_campaigns_spend,
 )
@@ -403,114 +403,94 @@ async def delete_campaign(request: Request):
     return {"success": True, "message": "Campaign deleted successfully"}
 
 
-@app.post("/api/social/generate")
-async def generate_social_posts(request: Request):
+@app.post("/api/ads/optimize")
+async def optimize_campaigns(request: Request):
+    """AI-powered campaign optimization - analyze performance and suggest bid changes."""
     body = await request.json()
-    url = body.get("url", "")
-    platforms = body.get("platforms", ["linkedin", "twitter"])
-    post_types = body.get("post_types", ["service"])
-    custom_topic = body.get("custom_topic", "")
-    keywords = body.get("keywords", [])
-    services = body.get("services", "")
+    session_id = body.get("session_id", "")
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    client_id = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
+    campaigns = get_campaign_performance(client_id, session["refresh_token"])
 
-    prompt = f"""You are a professional social media content creator. Generate posts for {domain}.
+    if not campaigns:
+        return {"success": True, "recommendations": [], "message": "No campaign data available yet. Campaigns need to run for at least a day to generate optimization data."}
 
-Business: {url}
-Services: {services or 'AI automation and technology'}
-Keywords: {', '.join(keywords) if keywords else 'AI, automation, technology'}
-Custom topic: {custom_topic or 'General brand awareness'}
+    import json
+    campaign_data = json.dumps(campaigns, indent=2)
+    prompt = f"""You are a Google Ads optimization expert. Analyze these campaign metrics and provide specific bid optimization recommendations.
 
-Generate posts for platforms: {', '.join(platforms)}
-Post types: {', '.join(post_types)}
+Campaign data:
+{campaign_data}
 
-Respond ONLY with valid JSON, no other text:
+Provide recommendations in this JSON format only:
 {{
-  "posts": [
+  "overall_health": "good|warning|critical",
+  "summary": "2 sentence summary",
+  "recommendations": [
     {{
-      "platform": "linkedin",
-      "type": "service",
-      "content": "full post text with emojis",
-      "hashtags": ["tag1", "tag2", "tag3"],
-      "best_time": "Tuesday 9-11 AM"
+      "campaign_resource": "customers/xxx/campaigns/yyy",
+      "campaign_name": "name",
+      "action": "increase_bid|decrease_bid|pause|add_negative_keywords",
+      "reason": "specific reason with data",
+      "current_ctr": 0.02,
+      "suggested_change": "Increase bid by 20%",
+      "negative_keywords": ["keyword1", "keyword2"]
     }}
   ]
-}}
-
-Rules:
-- LinkedIn: professional tone, 150-300 words, call to action
-- Twitter: under 250 chars, punchy, 2-3 hashtags  
-- Instagram: visual, emojis, 5-10 hashtags
-- Facebook: friendly, 50-100 words
-- Make content specific to {domain}
-- Generate one post per platform per post_type combination"""
-
-    try:
-        raw = await call_gemini(prompt)
-        import re
-        clean = re.sub(r'```json|```', '', raw).strip()
-        import json
-        parsed = json.loads(clean)
-        return parsed
-    except Exception as e:
-        return {"error": str(e), "posts": []}
-
-
-
-@app.post("/api/competitor/analyze")
-async def analyze_competitors(request: Request):
-    body = await request.json()
-    url = body.get("url", "")
-    competitors = body.get("competitors", [])
-    seo_score = body.get("seo_score", 50)
-    keywords = body.get("keywords", [])
-    strengths = body.get("strengths", [])
-
-    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
-
-    prompt = f"""You are an expert SEO and digital marketing analyst.
-
-My website: {url}
-My domain: {domain}
-My SEO Score: {seo_score}/100
-My keywords: {', '.join(keywords)}
-My strengths: {', '.join(strengths) if strengths else 'Not available'}
-
-Competitors: {', '.join(competitors)}
-
-Respond ONLY with valid JSON, no markdown, no explanation:
-{{
-  "my_site": {{
-    "domain": "{domain}",
-    "score": {seo_score},
-    "strengths": ["strength1", "strength2"],
-    "weaknesses": ["weakness1", "weakness2"]
-  }},
-  "competitors": [
-    {{
-      "domain": "competitor.com",
-      "estimated_score": 75,
-      "estimated_traffic": "10k-50k/month",
-      "top_keywords": ["kw1", "kw2", "kw3"],
-      "strengths": ["strong point 1", "strong point 2"],
-      "weaknesses": ["weak point 1", "weak point 2"],
-      "ad_strategy": "Description of their ad approach",
-      "social_presence": "Their social media activity"
-    }}
-  ],
-  "opportunities": ["opportunity 1", "opportunity 2", "opportunity 3"],
-  "threats": ["threat 1", "threat 2"],
-  "action_plan": ["action 1", "action 2", "action 3", "action 4"]
 }}"""
 
+    raw = await call_gemini(prompt)
+    import re
+    clean = re.sub(r'```json|```', '', raw).strip()
     try:
-        raw = await call_gemini(prompt)
-        import re, json
-        clean = re.sub(r'```json|```', '', raw).strip()
-        return json.loads(clean)
-    except Exception as e:
-        return {"error": str(e)}
+        result = json.loads(clean)
+        return {"success": True, **result}
+    except:
+        return {"success": True, "recommendations": [], "summary": raw[:300], "overall_health": "good"}
+
+
+@app.post("/api/ads/negative-keywords")
+async def add_negative_keywords_endpoint(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id", "")
+    campaign_resource_name = body.get("campaign_resource_name", "")
+    keywords = body.get("keywords", [])
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    result = add_negative_keywords("", session["refresh_token"], campaign_resource_name, keywords)
+    return result
+
+
+@app.get("/api/ads/report/{session_id}")
+async def get_performance_report(session_id: str):
+    """Generate weekly performance report."""
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    client_id = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
+    campaigns = get_campaign_performance(client_id, session["refresh_token"])
+
+    import json
+    prompt = f"""Generate a professional weekly Google Ads performance report.
+
+Campaign data: {json.dumps(campaigns, indent=2)}
+
+Write a clear, concise report with these sections:
+1. Executive Summary
+2. Campaign Performance Highlights  
+3. Areas for Improvement
+4. Recommended Actions for Next Week
+5. Budget Efficiency Score (0-100)
+
+Be specific with numbers and actionable with recommendations."""
+
+    report = await call_gemini(prompt)
+    return {"success": True, "report": report, "campaigns": campaigns}
 
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────

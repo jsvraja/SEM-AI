@@ -9,25 +9,22 @@ import httpx
 from datetime import datetime, date
 from typing import Optional
 
-GOOGLE_ADS_BASE = "https://googleads.googleapis.com/v23"
+GOOGLE_ADS_BASE = "https://googleads.googleapis.com/v17"
 
 
 def get_headers(refresh_token: str) -> dict:
     """Get auth headers by refreshing access token."""
     token_url = "https://oauth2.googleapis.com/token"
-    print(f"Refreshing access token...")
     resp = httpx.post(token_url, data={
         "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
         "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
         "refresh_token": refresh_token,
         "grant_type": "refresh_token",
-    }, timeout=15)
-    print(f"Token refresh status: {resp.status_code}")
+    })
     tokens = resp.json()
     access_token = tokens.get("access_token")
     if not access_token:
         raise Exception(f"Failed to get access token: {tokens}")
-    print(f"Got access token: {access_token[:20]}...")
 
     manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
     headers = {
@@ -37,7 +34,6 @@ def get_headers(refresh_token: str) -> dict:
     }
     if manager_id:
         headers["login-customer-id"] = manager_id
-    print(f"Headers ready. Manager ID: {manager_id}")
     return headers
 
 
@@ -54,49 +50,7 @@ def gaql_search(customer_id: str, refresh_token: str, query: str) -> list:
     return data.get("results", [])
 
 
-def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
-    """Get all campaigns with metrics via REST — uses last 30 days not just today."""
-    cid = customer_id.replace("-", "")
-
-    # First get all campaigns (no date filter so we see all campaigns)
-    query = """
-        SELECT
-            campaign.id,
-            campaign.name,
-            campaign.status,
-            campaign.resource_name,
-            campaign.advertising_channel_type
-        FROM campaign
-        WHERE campaign.status != 'REMOVED'
-        ORDER BY campaign.name
-    """
-    try:
-        results = gaql_search(cid, refresh_token, query)
-        campaigns = []
-        for row in results:
-            campaign = row.get("campaign", {})
-            campaigns.append({
-                "campaign_id": campaign.get("id"),
-                "campaign_name": campaign.get("name"),
-                "resource_name": campaign.get("resourceName"),
-                "status": campaign.get("status", "UNKNOWN"),
-                "channel_type": campaign.get("advertisingChannelType", ""),
-                "spend_today_usd": 0.0,
-                "clicks": 0,
-                "impressions": 0,
-                "ctr": 0.0,
-                "conversions": 0.0,
-            })
-
-        # Now get metrics for last 30 days
-        # Note: metrics require date segmentation which can cause 400 errors
-        # Campaigns are returned with zero metrics - metrics load when campaigns serve
-
-        return campaigns
-    except Exception as e:
-        print(f"get_all_campaigns_spend error: {e}")
-        return []
-
+# ─── Campaign Operations ──────────────────────────────────────────────────────
 
 def create_campaign_from_report(
     customer_id: str,
@@ -115,22 +69,27 @@ def create_campaign_from_report(
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
 
     try:
+        # Step 1: Create budget
         print("Step 1: Creating budget...")
         budget_resource = _rest_create_budget(cid, headers, campaign_name, daily_budget_usd, timestamp)
         print(f"Budget: {budget_resource}")
 
+        # Step 2: Create campaign
         print("Step 2: Creating campaign...")
         campaign_resource = _rest_create_campaign(cid, headers, campaign_name, budget_resource, timestamp)
         print(f"Campaign: {campaign_resource}")
 
+        # Step 3: Create ad group
         print("Step 3: Creating ad group...")
         ad_group_resource = _rest_create_ad_group(cid, headers, campaign_resource, timestamp)
         print(f"Ad group: {ad_group_resource}")
 
+        # Step 4: Add keywords
         print("Step 4: Adding keywords...")
         kw_count = _rest_add_keywords(cid, headers, ad_group_resource, keywords)
         print(f"Keywords added: {kw_count}")
 
+        # Step 5: Create ad
         print("Step 5: Creating ad...")
         ad_resource = _rest_create_ad(cid, headers, ad_group_resource, ad_headlines, ad_descriptions, final_url)
         print(f"Ad: {ad_resource}")
@@ -157,12 +116,7 @@ def _rest_create_budget(cid, headers, name, daily_budget_usd, timestamp):
         "deliveryMethod": "STANDARD",
         "explicitlyShared": False,
     }}]}
-    print(f"Budget URL: {url}")
     resp = httpx.post(url, headers=headers, json=body, timeout=30)
-    print(f"Budget response status: {resp.status_code}")
-    print(f"Budget response: {resp.text[:300]}")
-    if not resp.text:
-        raise Exception(f"Empty response from budget API. Status: {resp.status_code}")
     data = resp.json()
     if resp.status_code != 200:
         raise Exception(f"Budget creation failed: {data}")
@@ -177,7 +131,6 @@ def _rest_create_campaign(cid, headers, name, budget_resource, timestamp):
         "status": "PAUSED",
         "campaignBudget": budget_resource,
         "manualCpc": {"enhancedCpcEnabled": False},
-        "containsEuPoliticalAdvertising": 2,
         "networkSettings": {
             "targetGoogleSearch": True,
             "targetSearchNetwork": True,
@@ -229,10 +182,7 @@ def _rest_add_keywords(cid, headers, ad_group_resource, keywords):
 
 
 def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, final_url):
-    import time
     url = f"{GOOGLE_ADS_BASE}/customers/{cid}/adGroupAds:mutate"
-    if len(descriptions) < 2:
-        descriptions = descriptions + ["Contact us today to learn more about our AI services."]
     rsa_headlines = [{"text": h[:30]} for h in headlines[:15]]
     rsa_descriptions = [{"text": d[:90]} for d in descriptions[:4]]
     body = {"operations": [{"create": {
@@ -246,34 +196,23 @@ def _rest_create_ad(cid, headers, ad_group_resource, headlines, descriptions, fi
             },
         },
     }}]}
-    # Retry up to 3 times on concurrent modification
-    for attempt in range(3):
-        resp = httpx.post(url, headers=headers, json=body, timeout=30)
-        data = resp.json()
-        if resp.status_code == 200:
-            return data["results"][0]["resourceName"]
-        error_str = str(data)
-        if "CONCURRENT_MODIFICATION" in error_str and attempt < 2:
-            print(f"Concurrent modification, retrying in {2**attempt}s...")
-            time.sleep(2**attempt)
-            continue
+    resp = httpx.post(url, headers=headers, json=body, timeout=30)
+    data = resp.json()
+    if resp.status_code != 200:
         raise Exception(f"Ad creation failed: {data}")
-    raise Exception("Ad creation failed after 3 retries")
+    return data["results"][0]["resourceName"]
 
+
+# ─── Campaign Control ─────────────────────────────────────────────────────────
 
 def _update_campaign_status(customer_id: str, refresh_token: str, campaign_resource_name: str, status: str) -> dict:
-    # Extract customer ID from resource name: customers/1234/campaigns/5678
-    try:
-        cid = campaign_resource_name.split("/")[1]
-    except:
-        cid = customer_id.replace("-", "")
+    cid = customer_id.replace("-", "")
     headers = get_headers(refresh_token)
     url = f"{GOOGLE_ADS_BASE}/customers/{cid}/campaigns:mutate"
     body = {"operations": [{"update": {
         "resourceName": campaign_resource_name,
         "status": status,
     }, "updateMask": "status"}]}
-    print(f"[UPDATE] URL: {url}, resource: {campaign_resource_name}, status: {status}")
     resp = httpx.post(url, headers=headers, json=body, timeout=30)
     data = resp.json()
     if resp.status_code != 200:
@@ -288,6 +227,8 @@ def pause_campaign(customer_id: str, refresh_token: str, campaign_resource_name:
 def enable_campaign(customer_id: str, refresh_token: str, campaign_resource_name: str) -> dict:
     return _update_campaign_status(customer_id, refresh_token, campaign_resource_name, "ENABLED")
 
+
+# ─── Metrics ──────────────────────────────────────────────────────────────────
 
 def get_campaign_spend(customer_id: str, refresh_token: str, campaign_resource_name: str) -> dict:
     query = f"""
@@ -316,3 +257,121 @@ def get_campaign_spend(customer_id: str, refresh_token: str, campaign_resource_n
         "avg_cpc_usd": round(int(metrics.get("averageCpc", 0)) / 1_000_000, 2),
         "conversions": metrics.get("conversions", 0),
     }
+
+
+def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
+    """Get all campaigns with today's metrics via REST."""
+    cid = customer_id.replace("-", "")
+    query = """
+        SELECT campaign.id, campaign.name, campaign.status, campaign.resource_name,
+               metrics.cost_micros, metrics.clicks, metrics.impressions,
+               metrics.ctr, metrics.conversions
+        FROM campaign
+        WHERE segments.date DURING TODAY
+        AND campaign.status != 'REMOVED'
+        ORDER BY metrics.cost_micros DESC
+    """
+    try:
+        results = gaql_search(cid, refresh_token, query)
+        campaigns = []
+        for row in results:
+            campaign = row.get("campaign", {})
+            metrics = row.get("metrics", {})
+            campaigns.append({
+                "campaign_id": campaign.get("id"),
+                "campaign_name": campaign.get("name"),
+                "resource_name": campaign.get("resourceName"),
+                "status": campaign.get("status", "UNKNOWN"),
+                "spend_today_usd": round(int(metrics.get("costMicros", 0)) / 1_000_000, 2),
+                "clicks": int(metrics.get("clicks", 0)),
+                "impressions": int(metrics.get("impressions", 0)),
+                "ctr": round(float(metrics.get("ctr", 0)) * 100, 2),
+                "conversions": float(metrics.get("conversions", 0)),
+            })
+        return campaigns
+    except Exception as e:
+        print(f"get_all_campaigns_spend error: {e}")
+        return []
+
+
+# ─── Auto-bid Optimization ────────────────────────────────────────────────────
+
+def update_campaign_bid(customer_id: str, refresh_token: str, campaign_resource_name: str, new_cpc_micros: int) -> dict:
+    """Update campaign target CPC bid."""
+    try:
+        cid = campaign_resource_name.split("/")[1]
+        headers = get_headers(refresh_token)
+        url = f"{GOOGLE_ADS_BASE}/customers/{cid}/campaigns:mutate"
+        body = {"operations": [{"update": {
+            "resourceName": campaign_resource_name,
+            "manualCpc": {"enhancedCpcEnabled": True},
+        }, "updateMask": "manual_cpc.enhanced_cpc_enabled"}]}
+        resp = httpx.post(url, headers=headers, json=body, timeout=30)
+        data = resp.json()
+        if resp.status_code != 200:
+            return {"success": False, "error": str(data)}
+        return {"success": True, "message": f"Bid updated to ${new_cpc_micros/1000000:.2f}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def get_campaign_performance(customer_id: str, refresh_token: str) -> list:
+    """Get campaign performance metrics for bid optimization."""
+    try:
+        cid = customer_id.replace("-", "")
+        query = """
+            SELECT
+                campaign.resource_name,
+                campaign.name,
+                campaign.status,
+                metrics.clicks,
+                metrics.impressions,
+                metrics.ctr,
+                metrics.average_cpc,
+                metrics.conversions,
+                metrics.cost_micros
+            FROM campaign
+            WHERE campaign.status != 'REMOVED'
+            AND segments.date DURING TODAY
+        """
+        results = gaql_search(cid, refresh_token, query)
+        campaigns = []
+        for row in results:
+            c = row.get("campaign", {})
+            m = row.get("metrics", {})
+            campaigns.append({
+                "resource_name": c.get("resourceName"),
+                "name": c.get("name"),
+                "status": c.get("status"),
+                "clicks": int(m.get("clicks", 0)),
+                "impressions": int(m.get("impressions", 0)),
+                "ctr": float(m.get("ctr", 0)),
+                "avg_cpc": int(m.get("averageCpc", 0)) / 1000000,
+                "conversions": float(m.get("conversions", 0)),
+                "cost": int(m.get("costMicros", 0)) / 1000000,
+            })
+        return campaigns
+    except Exception as e:
+        print(f"get_campaign_performance error: {e}")
+        return []
+
+
+def add_negative_keywords(customer_id: str, refresh_token: str, campaign_resource_name: str, keywords: list) -> dict:
+    """Add negative keywords to a campaign."""
+    try:
+        cid = campaign_resource_name.split("/")[1]
+        headers = get_headers(refresh_token)
+        url = f"{GOOGLE_ADS_BASE}/customers/{cid}/campaignCriteria:mutate"
+        operations = [{"create": {
+            "campaign": campaign_resource_name,
+            "negative": True,
+            "keyword": {"text": kw, "matchType": "BROAD"},
+        }} for kw in keywords[:10]]
+        body = {"operations": operations}
+        resp = httpx.post(url, headers=headers, json=body, timeout=30)
+        data = resp.json()
+        if resp.status_code != 200:
+            return {"success": False, "error": str(data)}
+        return {"success": True, "added": len(keywords), "message": f"Added {len(keywords)} negative keywords"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
