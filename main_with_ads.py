@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -8,7 +8,6 @@ import json
 import re
 import asyncio
 import os
-from datetime import datetime
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
@@ -299,11 +298,7 @@ async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(defa
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    # Always use client account for campaigns
-    client_cid = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
-    provided = (customer_id or "").replace("-", "")
-    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
-    cid = client_cid if (not provided or provided == manager_id) else provided
+    cid = resolve_customer_id(session, customer_id)
     campaigns = get_all_campaigns_spend(cid, session["refresh_token"])
     monitored = get_all_monitored()
     for c in campaigns:
