@@ -299,7 +299,11 @@ async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(defa
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    cid = resolve_customer_id(session, customer_id)
+    # Always use client account for campaigns
+    client_cid = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
+    provided = (customer_id or "").replace("-", "")
+    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+    cid = client_cid if (not provided or provided == manager_id) else provided
     campaigns = get_all_campaigns_spend(cid, session["refresh_token"])
     monitored = get_all_monitored()
     for c in campaigns:
