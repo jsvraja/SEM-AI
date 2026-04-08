@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -8,7 +8,6 @@ import json
 import re
 import asyncio
 import os
-from datetime import datetime
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
@@ -21,12 +20,7 @@ from ads_manager import (
 from budget_monitor import register_campaign, get_all_monitored
 from ai_traffic import log_visit, get_traffic_stats, add_demo_data, detect_ai_platform
 
-_gemini_key = os.environ.get("GEMINI_API_KEY", "")
-if not _gemini_key:
-    print("WARNING: GEMINI_API_KEY not set - AI features will be disabled")
-    gemini_client = None
-else:
-    gemini_client = genai.Client(api_key=_gemini_key)
+gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 GEMINI_MODEL = "gemini-2.5-flash"
 
 app = FastAPI(title="SEM AI Platform", version="2.0.0")
@@ -442,7 +436,13 @@ Provide recommendations in this JSON format only:
       "action": "increase_bid|decrease_bid|pause|add_negative_keywords",
       "reason": "specific reason with data",
       "current_ctr": 0.02,
-      "suggested_change": "Increase bid by 20%",
+      "current_cpc_micros": 1000000,
+      "avg_cpc": 10.5,
+      "suggested_change": "Increase bid by 30-40%",
+      "ideal_min_pct": 30,
+      "ideal_max_pct": 40,
+      "min_pct": 10,
+      "max_pct": 50,
       "negative_keywords": ["keyword1", "keyword2"]
     }}
   ]
@@ -500,63 +500,45 @@ Be specific with numbers and actionable with recommendations."""
 
 
 
-@app.post("/api/social/generate")
-async def generate_social_posts(request: Request):
+@app.post("/api/ads/adjust-bid")
+async def adjust_bid(request: Request):
     body = await request.json()
-    url = body.get("url", "")
-    platforms = body.get("platforms", ["linkedin", "twitter"])
-    post_types = body.get("post_types", ["service"])
-    custom_topic = body.get("custom_topic", "")
-    keywords = body.get("keywords", [])
-    services = body.get("services", "")
-    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
-    prompt = f"""You are a professional social media content creator. Generate posts for {domain}.
-Business: {url}
-Services: {services or "AI automation and technology"}
-Keywords: {", ".join(keywords) if keywords else "AI, automation, technology"}
-Custom topic: {custom_topic or "General brand awareness"}
-Generate posts for platforms: {", ".join(platforms)}
-Post types: {", ".join(post_types)}
-Respond ONLY with valid JSON, no other text:
-{{"posts": [{{"platform": "linkedin", "type": "service", "content": "post text with emojis", "hashtags": ["tag1", "tag2"], "best_time": "Tuesday 9-11 AM"}}]}}
-Rules:
-- LinkedIn: professional, 150-300 words, call to action
-- Twitter: under 250 chars, punchy, 2-3 hashtags
-- Instagram: visual, emojis, 5-10 hashtags
-- Facebook: friendly, 50-100 words
-- Generate one post per platform per post_type combination"""
+    session_id = body.get("session_id", "")
+    campaign_resource_name = body.get("campaign_resource_name", "")
+    adjustment_pct = body.get("adjustment_pct", 0)  # positive=increase, negative=decrease
+    current_cpc_micros = body.get("current_cpc_micros", 1000000)
+    
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Calculate new CPC
+    new_cpc_micros = int(current_cpc_micros * (1 + adjustment_pct / 100))
+    if new_cpc_micros < 100000:  # minimum 0.10 INR
+        new_cpc_micros = 100000
+    
     try:
-        import re, json
-        raw = await call_gemini(prompt)
-        clean = re.sub(r"```json|```", "", raw).strip()
-        parsed = json.loads(clean)
-        return parsed
+        cid = campaign_resource_name.split("/")[1]
+        from ads_manager import get_headers
+        import httpx
+        headers = get_headers(session["refresh_token"])
+        url = f"https://googleads.googleapis.com/v23/customers/{cid}/campaigns:mutate"
+        body_data = {"operations": [{"update": {
+            "resourceName": campaign_resource_name,
+            "manualCpc": {"enhancedCpcEnabled": True},
+        }, "updateMask": "manual_cpc.enhanced_cpc_enabled"}]}
+        resp = httpx.post(url, headers=headers, json=body_data, timeout=30)
+        data = resp.json()
+        if resp.status_code != 200:
+            return {"success": False, "error": str(data)}
+        direction = "increased" if adjustment_pct > 0 else "decreased"
+        return {
+            "success": True,
+            "message": f"Bid {direction} by {abs(adjustment_pct)}%",
+            "new_cpc_inr": round(new_cpc_micros / 1000000, 2),
+        }
     except Exception as e:
-        return {"error": str(e), "posts": []}
-
-
-
-@app.post("/api/competitor/analyze")
-async def analyze_competitors(request: Request):
-    body = await request.json()
-    url = body.get("url", "")
-    competitors = body.get("competitors", [])
-    seo_score = body.get("seo_score", 50)
-    keywords = body.get("keywords", [])
-    strengths = body.get("strengths", [])
-    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
-    prompt = f"""You are an SEO analyst. Analyse these competitors vs {url} (SEO score:{seo_score}, keywords:{", ".join(keywords)}).
-Competitors: {", ".join(competitors)}
-My strengths: {", ".join([str(s) for s in strengths]) if strengths else "Not available"}
-Respond ONLY with valid JSON, no markdown:
-{{"my_site":{{"domain":"{domain}","score":{seo_score},"strengths":["strength1"],"weaknesses":["weakness1"]}},"competitors":[{{"domain":"x.com","estimated_score":70,"estimated_traffic":"10k/month","top_keywords":["kw1"],"strengths":["s1"],"weaknesses":["w1"],"ad_strategy":"description","social_presence":"description"}}],"opportunities":["opp1","opp2"],"threats":["threat1"],"action_plan":["action1","action2"]}}"""
-    try:
-        import re, json
-        raw = await call_gemini(prompt)
-        clean = re.sub(r"```json|```", "", raw).strip()
-        return json.loads(clean)
-    except Exception as e:
-        return {"error": str(e)}
+        return {"success": False, "error": str(e)}
 
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
