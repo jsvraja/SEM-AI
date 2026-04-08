@@ -505,37 +505,65 @@ async def adjust_bid(request: Request):
     body = await request.json()
     session_id = body.get("session_id", "")
     campaign_resource_name = body.get("campaign_resource_name", "")
-    adjustment_pct = body.get("adjustment_pct", 0)  # positive=increase, negative=decrease
+    adjustment_pct = body.get("adjustment_pct", 0)
     current_cpc_micros = body.get("current_cpc_micros", 1000000)
-    
+
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    # Calculate new CPC
+
     new_cpc_micros = int(current_cpc_micros * (1 + adjustment_pct / 100))
-    if new_cpc_micros < 100000:  # minimum 0.10 INR
+    if new_cpc_micros < 100000:
         new_cpc_micros = 100000
-    
+
     try:
         cid = campaign_resource_name.split("/")[1]
-        from ads_manager import get_headers
+        from ads_manager import get_headers, gaql_search
         import httpx
         headers = get_headers(session["refresh_token"])
-        url = f"https://googleads.googleapis.com/v23/customers/{cid}/campaigns:mutate"
-        body_data = {"operations": [{"update": {
-            "resourceName": campaign_resource_name,
-            "manualCpc": {"enhancedCpcEnabled": True},
-        }, "updateMask": "manual_cpc.enhanced_cpc_enabled"}]}
-        resp = httpx.post(url, headers=headers, json=body_data, timeout=30)
+
+        # Step 1: Get ad groups for this campaign
+        query = f"""
+            SELECT ad_group.resource_name, ad_group.cpc_bid_micros
+            FROM ad_group
+            WHERE campaign.resource_name = '{campaign_resource_name}'
+            AND ad_group.status != 'REMOVED'
+        """
+        ad_groups = gaql_search(cid, session["refresh_token"], query)
+
+        if not ad_groups:
+            return {"success": False, "error": "No ad groups found for this campaign"}
+
+        # Step 2: Update each ad group CPC bid
+        operations = []
+        for ag in ad_groups:
+            ag_resource = ag.get("adGroup", {}).get("resourceName")
+            current_ag_cpc = int(ag.get("adGroup", {}).get("cpcBidMicros", current_cpc_micros))
+            new_ag_cpc = int(current_ag_cpc * (1 + adjustment_pct / 100))
+            if new_ag_cpc < 100000:
+                new_ag_cpc = 100000
+            operations.append({
+                "update": {
+                    "resourceName": ag_resource,
+                    "cpcBidMicros": str(new_ag_cpc),
+                },
+                "updateMask": "cpc_bid_micros"
+            })
+
+        url = f"https://googleads.googleapis.com/v23/customers/{cid}/adGroups:mutate"
+        resp = httpx.post(url, headers=headers, json={"operations": operations}, timeout=30)
         data = resp.json()
+
         if resp.status_code != 200:
             return {"success": False, "error": str(data)}
+
         direction = "increased" if adjustment_pct > 0 else "decreased"
+        new_inr = round(new_cpc_micros / 1000000, 2)
         return {
             "success": True,
-            "message": f"Bid {direction} by {abs(adjustment_pct)}%",
-            "new_cpc_inr": round(new_cpc_micros / 1000000, 2),
+            "message": f"Bid {direction} by {abs(adjustment_pct)}% across {len(operations)} ad group(s)",
+            "new_cpc_inr": new_inr,
+            "ad_groups_updated": len(operations),
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
