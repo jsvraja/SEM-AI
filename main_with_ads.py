@@ -535,6 +535,30 @@ Rules:
         return {"error": str(e), "posts": []}
 
 
+
+@app.post("/api/competitor/analyze")
+async def analyze_competitors(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    competitors = body.get("competitors", [])
+    seo_score = body.get("seo_score", 50)
+    keywords = body.get("keywords", [])
+    strengths = body.get("strengths", [])
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    prompt = f"""You are an SEO analyst. Analyse these competitors vs {url} (SEO score:{seo_score}, keywords:{", ".join(keywords)}).
+Competitors: {", ".join(competitors)}
+My strengths: {", ".join([str(s) for s in strengths]) if strengths else "Not available"}
+Respond ONLY with valid JSON, no markdown:
+{{"my_site":{{"domain":"{domain}","score":{seo_score},"strengths":["strength1"],"weaknesses":["weakness1"]}},"competitors":[{{"domain":"x.com","estimated_score":70,"estimated_traffic":"10k/month","top_keywords":["kw1"],"strengths":["s1"],"weaknesses":["w1"],"ad_strategy":"description","social_presence":"description"}}],"opportunities":["opp1","opp2"],"threats":["threat1"],"action_plan":["action1","action2"]}}"""
+    try:
+        import re, json
+        raw = await call_gemini(prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
 
 from sem_agent import (
