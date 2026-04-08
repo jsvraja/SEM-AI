@@ -358,7 +358,6 @@ async def get_ai_traffic(days: int = 30):
 @app.post("/api/ai-traffic/demo")
 async def load_demo_data():
     """Load demo traffic data for testing."""
-    add_demo_data()
     return {"success": True, "message": "Demo data loaded"}
 
 
