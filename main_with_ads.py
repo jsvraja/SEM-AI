@@ -8,6 +8,7 @@ import json
 import re
 import asyncio
 import os
+from datetime import datetime
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
@@ -496,6 +497,42 @@ Be specific with numbers and actionable with recommendations."""
 
     report = await call_gemini(prompt)
     return {"success": True, "report": report, "campaigns": campaigns}
+
+
+
+@app.post("/api/social/generate")
+async def generate_social_posts(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    platforms = body.get("platforms", ["linkedin", "twitter"])
+    post_types = body.get("post_types", ["service"])
+    custom_topic = body.get("custom_topic", "")
+    keywords = body.get("keywords", [])
+    services = body.get("services", "")
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    prompt = f"""You are a professional social media content creator. Generate posts for {domain}.
+Business: {url}
+Services: {services or "AI automation and technology"}
+Keywords: {", ".join(keywords) if keywords else "AI, automation, technology"}
+Custom topic: {custom_topic or "General brand awareness"}
+Generate posts for platforms: {", ".join(platforms)}
+Post types: {", ".join(post_types)}
+Respond ONLY with valid JSON, no other text:
+{{"posts": [{{"platform": "linkedin", "type": "service", "content": "post text with emojis", "hashtags": ["tag1", "tag2"], "best_time": "Tuesday 9-11 AM"}}]}}
+Rules:
+- LinkedIn: professional, 150-300 words, call to action
+- Twitter: under 250 chars, punchy, 2-3 hashtags
+- Instagram: visual, emojis, 5-10 hashtags
+- Facebook: friendly, 50-100 words
+- Generate one post per platform per post_type combination"""
+    try:
+        import re, json
+        raw = await call_gemini(prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
+        parsed = json.loads(clean)
+        return parsed
+    except Exception as e:
+        return {"error": str(e), "posts": []}
 
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
