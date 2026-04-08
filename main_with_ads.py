@@ -20,7 +20,12 @@ from ads_manager import (
 from budget_monitor import register_campaign, get_all_monitored
 from ai_traffic import log_visit, get_traffic_stats, add_demo_data, detect_ai_platform
 
-gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+_gemini_key = os.environ.get("GEMINI_API_KEY", "")
+if not _gemini_key:
+    print("WARNING: GEMINI_API_KEY not set - AI features will be disabled")
+    gemini_client = None
+else:
+    gemini_client = genai.Client(api_key=_gemini_key)
 GEMINI_MODEL = "gemini-2.5-flash"
 
 app = FastAPI(title="SEM AI Platform", version="2.0.0")
