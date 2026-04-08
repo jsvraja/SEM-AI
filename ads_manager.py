@@ -56,7 +56,7 @@ def create_campaign_from_report(
     customer_id: str,
     refresh_token: str,
     campaign_name: str,
-    daily_budget_usd: float,
+    daily_budget_inr: float,
     target_countries: list,
     keywords: list,
     ad_headlines: list,
@@ -71,7 +71,7 @@ def create_campaign_from_report(
     try:
         # Step 1: Create budget
         print("Step 1: Creating budget...")
-        budget_resource = _rest_create_budget(cid, headers, campaign_name, daily_budget_usd, timestamp)
+        budget_resource = _rest_create_budget(cid, headers, campaign_name, daily_budget_inr, timestamp)
         print(f"Budget: {budget_resource}")
 
         # Step 2: Create campaign
@@ -108,11 +108,11 @@ def create_campaign_from_report(
         return {"success": False, "errors": [str(e)]}
 
 
-def _rest_create_budget(cid, headers, name, daily_budget_usd, timestamp):
+def _rest_create_budget(cid, headers, name, daily_budget_inr, timestamp):
     url = f"{GOOGLE_ADS_BASE}/customers/{cid}/campaignBudgets:mutate"
     body = {"operations": [{"create": {
         "name": f"{name} Budget {timestamp}",
-        "amountMicros": str(int(daily_budget_usd * 1_000_000)),
+        "amountMicros": str(int(daily_budget_inr * 1_000_000)),
         "deliveryMethod": "STANDARD",
         "explicitlyShared": False,
     }}]}
