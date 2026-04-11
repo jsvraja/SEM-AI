@@ -276,7 +276,7 @@ async def publish_campaign(req: PublishCampaignRequest):
         customer_id=customer_id,
         refresh_token=session["refresh_token"],
         campaign_name=req.campaign_name,
-        daily_budget_usd=req.daily_budget_usd,
+        daily_budget_inr=req.daily_budget_usd,
         target_countries=req.target_countries,
         keywords=req.keywords,
         ad_headlines=req.headlines,
