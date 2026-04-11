@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -8,7 +8,6 @@ import json
 import re
 import asyncio
 import os
-from datetime import datetime
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
@@ -19,7 +18,7 @@ from ads_manager import (
     get_all_campaigns_spend,
 )
 from budget_monitor import register_campaign, get_all_monitored
-from ai_traffic import log_visit, get_traffic_stats, detect_ai_platform
+from ai_traffic import log_visit, get_traffic_stats, add_demo_data, detect_ai_platform
 
 gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 GEMINI_MODEL = "gemini-2.5-flash"
@@ -37,31 +36,6 @@ app.add_middleware(
 SESSIONS_FILE = os.path.join(os.path.dirname(__file__), ".sessions.json")
 
 def load_sessions():
-    # Try PostgreSQL first
-    try:
-        import psycopg2
-        db_url = os.environ.get("DATABASE_URL", "")
-        if db_url:
-            conn = psycopg2.connect(db_url)
-            cur = conn.cursor()
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    session_id TEXT PRIMARY KEY,
-                    data JSONB,
-                    updated_at TIMESTAMPTZ DEFAULT NOW()
-                )
-            """)
-            conn.commit()
-            cur.execute("SELECT session_id, data FROM sessions")
-            rows = cur.fetchall()
-            cur.close()
-            conn.close()
-            sessions = {row[0]: row[1] for row in rows}
-            print(f"Loaded {len(sessions)} session(s) from PostgreSQL")
-            return sessions
-    except Exception as e:
-        print(f"PostgreSQL session load failed: {e}")
-    # Fallback to file
     try:
         if os.path.exists(SESSIONS_FILE):
             with open(SESSIONS_FILE, "r") as f:
@@ -71,34 +45,6 @@ def load_sessions():
     return {}
 
 def save_sessions(sessions):
-    # Save to PostgreSQL
-    try:
-        import psycopg2, psycopg2.extras
-        db_url = os.environ.get("DATABASE_URL", "")
-        if db_url:
-            conn = psycopg2.connect(db_url)
-            cur = conn.cursor()
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    session_id TEXT PRIMARY KEY,
-                    data JSONB,
-                    updated_at TIMESTAMPTZ DEFAULT NOW()
-                )
-            """)
-            for sid, data in sessions.items():
-                cur.execute("""
-                    INSERT INTO sessions (session_id, data, updated_at)
-                    VALUES (%s, %s, NOW())
-                    ON CONFLICT (session_id) DO UPDATE
-                    SET data = EXCLUDED.data, updated_at = NOW()
-                """, (sid, psycopg2.extras.Json(data)))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return
-    except Exception as e:
-        print(f"PostgreSQL session save failed: {e}")
-    # Fallback to file
     try:
         with open(SESSIONS_FILE, "w") as f:
             json.dump(sessions, f, indent=2)
@@ -329,7 +275,7 @@ async def publish_campaign(req: PublishCampaignRequest):
         customer_id=customer_id,
         refresh_token=session["refresh_token"],
         campaign_name=req.campaign_name,
-        daily_budget_inr=req.daily_budget_usd,
+        daily_budget_usd=req.daily_budget_usd,
         target_countries=req.target_countries,
         keywords=req.keywords,
         ad_headlines=req.headlines,
@@ -412,6 +358,7 @@ async def get_ai_traffic(days: int = 30):
 @app.post("/api/ai-traffic/demo")
 async def load_demo_data():
     """Load demo traffic data for testing."""
+    add_demo_data()
     return {"success": True, "message": "Demo data loaded"}
 
 
@@ -558,127 +505,40 @@ async def adjust_bid(request: Request):
     body = await request.json()
     session_id = body.get("session_id", "")
     campaign_resource_name = body.get("campaign_resource_name", "")
-    adjustment_pct = body.get("adjustment_pct", 0)
+    adjustment_pct = body.get("adjustment_pct", 0)  # positive=increase, negative=decrease
     current_cpc_micros = body.get("current_cpc_micros", 1000000)
-
+    
     session = _sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=401, detail="Not authenticated")
-
+    
+    # Calculate new CPC
     new_cpc_micros = int(current_cpc_micros * (1 + adjustment_pct / 100))
-    if new_cpc_micros < 100000:
+    if new_cpc_micros < 100000:  # minimum 0.10 INR
         new_cpc_micros = 100000
-
+    
     try:
         cid = campaign_resource_name.split("/")[1]
-        from ads_manager import get_headers, gaql_search
+        from ads_manager import get_headers
         import httpx
         headers = get_headers(session["refresh_token"])
-
-        # Get ad groups for this campaign
-        query = f"""
-            SELECT ad_group.resource_name, ad_group.cpc_bid_micros
-            FROM ad_group
-            WHERE campaign.resource_name = '{campaign_resource_name}'
-            AND ad_group.status != 'REMOVED'
-        """
-        ad_groups = gaql_search(cid, session["refresh_token"], query)
-
-        if not ad_groups:
-            return {"success": False, "error": "No ad groups found for this campaign"}
-
-        # Update each ad group CPC bid
-        operations = []
-        for ag in ad_groups:
-            ag_resource = ag.get("adGroup", {}).get("resourceName")
-            current_ag_cpc = int(ag.get("adGroup", {}).get("cpcBidMicros", current_cpc_micros))
-            new_ag_cpc = int(current_ag_cpc * (1 + adjustment_pct / 100))
-            # Round to nearest 10000 micros (₹0.01 minimum unit for INR)
-            new_ag_cpc = max(10000, round(new_ag_cpc / 10000) * 10000)
-            operations.append({
-                "update": {
-                    "resourceName": ag_resource,
-                    "cpcBidMicros": str(new_ag_cpc),
-                },
-                "updateMask": "cpc_bid_micros"
-            })
-
-        url = f"https://googleads.googleapis.com/v23/customers/{cid}/adGroups:mutate"
-        resp = httpx.post(url, headers=headers, json={"operations": operations}, timeout=30)
+        url = f"https://googleads.googleapis.com/v23/customers/{cid}/campaigns:mutate"
+        body_data = {"operations": [{"update": {
+            "resourceName": campaign_resource_name,
+            "manualCpc": {"enhancedCpcEnabled": True},
+        }, "updateMask": "manual_cpc.enhanced_cpc_enabled"}]}
+        resp = httpx.post(url, headers=headers, json=body_data, timeout=30)
         data = resp.json()
-
         if resp.status_code != 200:
             return {"success": False, "error": str(data)}
-
         direction = "increased" if adjustment_pct > 0 else "decreased"
-        new_inr = round(new_cpc_micros / 1000000, 2)
         return {
             "success": True,
-            "message": f"Bid {direction} by {abs(adjustment_pct)}% across {len(operations)} ad group(s)",
-            "new_cpc_inr": new_inr,
-            "ad_groups_updated": len(operations),
+            "message": f"Bid {direction} by {abs(adjustment_pct)}%",
+            "new_cpc_inr": round(new_cpc_micros / 1000000, 2),
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
-
-
-
-@app.post("/api/social/generate")
-async def generate_social_posts(request: Request):
-    body = await request.json()
-    url = body.get("url", "")
-    platforms = body.get("platforms", ["linkedin", "twitter"])
-    post_types = body.get("post_types", ["service"])
-    custom_topic = body.get("custom_topic", "")
-    keywords = body.get("keywords", [])
-    services = body.get("services", "")
-    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
-    prompt = f"""You are a professional social media content creator. Generate posts for {domain}.
-Business: {url}
-Services: {services or "AI automation and technology"}
-Keywords: {", ".join(keywords) if keywords else "AI, automation, technology"}
-Custom topic: {custom_topic or "General brand awareness"}
-Generate posts for platforms: {", ".join(platforms)}
-Post types: {", ".join(post_types)}
-Respond ONLY with valid JSON, no other text:
-{{"posts": [{{"platform": "linkedin", "type": "service", "content": "post text with emojis", "hashtags": ["tag1", "tag2"], "best_time": "Tuesday 9-11 AM"}}]}}
-Rules:
-- LinkedIn: professional, 150-300 words, call to action
-- Twitter: under 250 chars, punchy, 2-3 hashtags
-- Instagram: visual, emojis, 5-10 hashtags
-- Facebook: friendly, 50-100 words
-- Generate one post per platform per post_type combination"""
-    try:
-        import re, json
-        raw = await call_gemini(prompt)
-        clean = re.sub(r"```json|```", "", raw).strip()
-        parsed = json.loads(clean)
-        return parsed
-    except Exception as e:
-        return {"error": str(e), "posts": []}
-
-
-@app.post("/api/competitor/analyze")
-async def analyze_competitors(request: Request):
-    body = await request.json()
-    url = body.get("url", "")
-    competitors = body.get("competitors", [])
-    seo_score = body.get("seo_score", 50)
-    keywords = body.get("keywords", [])
-    strengths = body.get("strengths", [])
-    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
-    prompt = f"""You are an SEO analyst. Analyse these competitors vs {url} (SEO score:{seo_score}, keywords:{", ".join(keywords)}).
-Competitors: {", ".join(competitors)}
-My strengths: {", ".join([str(s) for s in strengths]) if strengths else "Not available"}
-Respond ONLY with valid JSON, no markdown:
-{{"my_site":{{"domain":"{domain}","score":{seo_score},"strengths":["strength1"],"weaknesses":["weakness1"]}},"competitors":[{{"domain":"x.com","estimated_score":70,"estimated_traffic":"10k/month","top_keywords":["kw1"],"strengths":["s1"],"weaknesses":["w1"],"ad_strategy":"description","social_presence":"description"}}],"opportunities":["opp1","opp2"],"threats":["threat1"],"action_plan":["action1","action2"]}}"""
-    try:
-        import re, json
-        raw = await call_gemini(prompt)
-        clean = re.sub(r"```json|```", "", raw).strip()
-        return json.loads(clean)
-    except Exception as e:
-        return {"error": str(e)}
 
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
