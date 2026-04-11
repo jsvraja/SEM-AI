@@ -541,6 +541,85 @@ async def adjust_bid(request: Request):
         return {"success": False, "error": str(e)}
 
 
+
+@app.post("/api/social/generate")
+async def generate_social_posts(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    platforms = body.get("platforms", ["linkedin", "twitter"])
+    post_types = body.get("post_types", ["service"])
+    custom_topic = body.get("custom_topic", "")
+    keywords = body.get("keywords", [])
+    services = body.get("services", "")
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    prompt = f"""Professional social media content creator for {domain}. Services: {services or "technology"}. Keywords: {", ".join(keywords) or "AI, technology"}. Topic: {custom_topic or "Brand awareness"}. Platforms: {", ".join(platforms)}. Types: {", ".join(post_types)}.
+Respond ONLY valid JSON: {{"posts":[{{"platform":"linkedin","type":"service","content":"post text","hashtags":["tag1"],"best_time":"Tuesday 9AM"}}]}}"""
+    try:
+        import re as re2, json
+        raw = await call_gemini(prompt)
+        clean = re2.sub(r"```json|```", "", raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"error": str(e), "posts": []}
+
+
+@app.post("/api/competitor/discover")
+async def discover_competitors(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    keywords = body.get("keywords", [])
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    prompt = f"""Find top 3 real competitors for {url} (keywords: {", ".join(keywords) or "technology"}).
+Respond ONLY valid JSON: {{"competitors":[{{"domain":"competitor.com","url":"https://competitor.com","name":"Name","reason":"why","estimated_traffic":"10k/month","threat_level":"high"}}],"market_summary":"2 sentence overview"}}"""
+    try:
+        import re as re2, json
+        raw = await call_gemini(prompt)
+        clean = re2.sub(r"```json|```", "", raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"error": str(e), "competitors": []}
+
+
+@app.post("/api/competitor/analyze")
+async def analyze_competitors(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    competitors = body.get("competitors", [])
+    seo_score = body.get("seo_score", 50)
+    keywords = body.get("keywords", [])
+    strengths = body.get("strengths", [])
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    prompt = f"""SEO analyst: analyse {url} vs {", ".join(competitors)} (score:{seo_score}, keywords:{", ".join(keywords)}). Strengths: {", ".join([str(s) for s in strengths]) if strengths else "N/A"}.
+Respond ONLY valid JSON: {{"my_site":{{"domain":"{domain}","score":{seo_score},"strengths":["s1"],"weaknesses":["w1"]}},"competitors":[{{"domain":"x.com","estimated_score":70,"estimated_traffic":"10k/month","top_keywords":["kw1"],"strengths":["s1"],"weaknesses":["w1"],"ad_strategy":"desc","social_presence":"desc"}}],"opportunities":["o1"],"threats":["t1"],"action_plan":["a1"]}}"""
+    try:
+        import re as re2, json
+        raw = await call_gemini(prompt)
+        clean = re2.sub(r"```json|```", "", raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/api/site-audit")
+async def site_audit(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    max_pages = min(body.get("max_pages", 50), 500)
+    if not url:
+        raise HTTPException(status_code=400, detail="URL required")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    from site_crawler import crawl_site, analyze_site
+    try:
+        pages = await crawl_site(url, max_pages)
+        if not pages:
+            return {"error": "Could not crawl any pages. Check the URL and try again."}
+        result = analyze_site(pages, url)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
 
 from sem_agent import (
