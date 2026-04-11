@@ -540,8 +540,8 @@ async def adjust_bid(request: Request):
             ag_resource = ag.get("adGroup", {}).get("resourceName")
             current_ag_cpc = int(ag.get("adGroup", {}).get("cpcBidMicros", current_cpc_micros))
             new_ag_cpc = int(current_ag_cpc * (1 + adjustment_pct / 100))
-            if new_ag_cpc < 100000:
-                new_ag_cpc = 100000
+            # Round to nearest 10000 micros (₹0.01 minimum unit for INR)
+            new_ag_cpc = max(10000, round(new_ag_cpc / 10000) * 10000)
             operations.append({
                 "update": {
                     "resourceName": ag_resource,
