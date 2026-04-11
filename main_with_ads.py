@@ -569,6 +569,65 @@ async def adjust_bid(request: Request):
         return {"success": False, "error": str(e)}
 
 
+
+@app.post("/api/social/generate")
+async def generate_social_posts(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    platforms = body.get("platforms", ["linkedin", "twitter"])
+    post_types = body.get("post_types", ["service"])
+    custom_topic = body.get("custom_topic", "")
+    keywords = body.get("keywords", [])
+    services = body.get("services", "")
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    prompt = f"""You are a professional social media content creator. Generate posts for {domain}.
+Business: {url}
+Services: {services or "AI automation and technology"}
+Keywords: {", ".join(keywords) if keywords else "AI, automation, technology"}
+Custom topic: {custom_topic or "General brand awareness"}
+Generate posts for platforms: {", ".join(platforms)}
+Post types: {", ".join(post_types)}
+Respond ONLY with valid JSON, no other text:
+{{"posts": [{{"platform": "linkedin", "type": "service", "content": "post text with emojis", "hashtags": ["tag1", "tag2"], "best_time": "Tuesday 9-11 AM"}}]}}
+Rules:
+- LinkedIn: professional, 150-300 words, call to action
+- Twitter: under 250 chars, punchy, 2-3 hashtags
+- Instagram: visual, emojis, 5-10 hashtags
+- Facebook: friendly, 50-100 words
+- Generate one post per platform per post_type combination"""
+    try:
+        import re, json
+        raw = await call_gemini(prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
+        parsed = json.loads(clean)
+        return parsed
+    except Exception as e:
+        return {"error": str(e), "posts": []}
+
+
+@app.post("/api/competitor/analyze")
+async def analyze_competitors(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    competitors = body.get("competitors", [])
+    seo_score = body.get("seo_score", 50)
+    keywords = body.get("keywords", [])
+    strengths = body.get("strengths", [])
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    prompt = f"""You are an SEO analyst. Analyse these competitors vs {url} (SEO score:{seo_score}, keywords:{", ".join(keywords)}).
+Competitors: {", ".join(competitors)}
+My strengths: {", ".join([str(s) for s in strengths]) if strengths else "Not available"}
+Respond ONLY with valid JSON, no markdown:
+{{"my_site":{{"domain":"{domain}","score":{seo_score},"strengths":["strength1"],"weaknesses":["weakness1"]}},"competitors":[{{"domain":"x.com","estimated_score":70,"estimated_traffic":"10k/month","top_keywords":["kw1"],"strengths":["s1"],"weaknesses":["w1"],"ad_strategy":"description","social_presence":"description"}}],"opportunities":["opp1","opp2"],"threats":["threat1"],"action_plan":["action1","action2"]}}"""
+    try:
+        import re, json
+        raw = await call_gemini(prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
 
 from sem_agent import (
