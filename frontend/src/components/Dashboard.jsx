@@ -1,4 +1,5 @@
 import AITraffic from './AITraffic'
+import SiteAudit from './SiteAudit'
 import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
@@ -13,7 +14,7 @@ import {
   TrendingUp, DollarSign, Target, Megaphone, Users,
   ChevronDown, ChevronUp, ChevronRight, Copy, Check, ExternalLink,
   Zap, Search, BarChart3
-, Share2 } from 'lucide-react'
+} from 'lucide-react'
 
 function ScoreRing({ score, label, size = 80 }) {
   const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)'
@@ -193,6 +194,7 @@ const TABS = [
   { id: 'ads', label: 'Ad Copy', icon: Megaphone },
   { id: 'sem', label: 'SEM Plan', icon: TrendingUp },
   { id: 'google-ads', label: 'Google Ads', icon: Zap },
+  { id: 'site-audit', label: 'Site Audit', icon: Globe },
   { id: 'ai-traffic', label: 'AI Traffic', icon: Globe },
   { id: 'social', label: 'Social Media', icon: Share2 },
   { id: 'competitor', label: 'Competitors', icon: Target },
@@ -530,11 +532,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                   <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Readability</div>
-                    <div style={{ fontSize: '13px' }}>{typeof seo.content_analysis.readability === "object" ? JSON.stringify(seo.content_analysis.readability) : seo.content_analysis.readability}</div>
+                    <div style={{ fontSize: '13px' }}>{seo.content_analysis.readability}</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Keyword Density</div>
-                    <div style={{ fontSize: '13px' }}>{typeof seo.content_analysis.keyword_density === "object" ? JSON.stringify(seo.content_analysis.keyword_density) : seo.content_analysis.keyword_density}</div>
+                    <div style={{ fontSize: '13px' }}>{seo.content_analysis.keyword_density}</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Content Gaps</div>
@@ -691,7 +693,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '6px', fontWeight: 500 }}>POSITIONING SUGGESTION</div>
-                  <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.7 }}>{typeof seo.competitor_insights.positioning_suggestion === "object" ? JSON.stringify(seo.competitor_insights.positioning_suggestion) : seo.competitor_insights.positioning_suggestion}</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.7 }}>{seo.competitor_insights.positioning_suggestion}</p>
                 </div>
               </Card>
             )}
@@ -699,6 +701,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         )}
 
         {/* ── GOOGLE ADS TAB ── */}
+        {tab === 'site-audit' && <SiteAudit />}
+
         {tab === 'ai-traffic' && <AITraffic />}
 
         {tab === 'social' && (
