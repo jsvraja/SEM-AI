@@ -37,6 +37,31 @@ app.add_middleware(
 SESSIONS_FILE = os.path.join(os.path.dirname(__file__), ".sessions.json")
 
 def load_sessions():
+    # Try PostgreSQL first
+    try:
+        import psycopg2
+        db_url = os.environ.get("DATABASE_URL", "")
+        if db_url:
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    data JSONB,
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            conn.commit()
+            cur.execute("SELECT session_id, data FROM sessions")
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            sessions = {row[0]: row[1] for row in rows}
+            print(f"Loaded {len(sessions)} session(s) from PostgreSQL")
+            return sessions
+    except Exception as e:
+        print(f"PostgreSQL session load failed: {e}")
+    # Fallback to file
     try:
         if os.path.exists(SESSIONS_FILE):
             with open(SESSIONS_FILE, "r") as f:
@@ -46,6 +71,34 @@ def load_sessions():
     return {}
 
 def save_sessions(sessions):
+    # Save to PostgreSQL
+    try:
+        import psycopg2, psycopg2.extras
+        db_url = os.environ.get("DATABASE_URL", "")
+        if db_url:
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    data JSONB,
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            for sid, data in sessions.items():
+                cur.execute("""
+                    INSERT INTO sessions (session_id, data, updated_at)
+                    VALUES (%s, %s, NOW())
+                    ON CONFLICT (session_id) DO UPDATE
+                    SET data = EXCLUDED.data, updated_at = NOW()
+                """, (sid, psycopg2.extras.Json(data)))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return
+    except Exception as e:
+        print(f"PostgreSQL session save failed: {e}")
+    # Fallback to file
     try:
         with open(SESSIONS_FILE, "w") as f:
             json.dump(sessions, f, indent=2)
