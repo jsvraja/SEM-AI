@@ -14,7 +14,7 @@ import {
   ArrowLeft, Globe, CheckCircle, AlertTriangle, XCircle,
   TrendingUp, DollarSign, Target, Megaphone, Users,
   ChevronDown, ChevronUp, ChevronRight, Copy, Check, ExternalLink,
-  Zap, Search, BarChart3, Share2
+  Zap, Search, BarChart3
 } from 'lucide-react'
 
 function ScoreRing({ score, label, size = 80 }) {
@@ -217,13 +217,13 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
   const domain = url.replace(/https?:\/\//, '').split('/')[0]
 
-  const keywordChartData = (seo?.keyword_suggestions || []).slice(0, 8).map(k => ({
-    name: (k?.keyword || '').length > 18 ? (k?.keyword || '').slice(0, 18) + '…' : (k?.keyword || ''),
-    difficulty: k?.difficulty === 'low' ? 30 : k?.difficulty === 'medium' ? 60 : 90,
-    priority: k?.priority === 'primary' ? 1 : 0,
+  const keywordChartData = (seo.keyword_suggestions || []).slice(0, 8).map(k => ({
+    name: k.keyword.length > 18 ? k.keyword.slice(0, 18) + '…' : k.keyword,
+    difficulty: k.difficulty === 'low' ? 30 : k.difficulty === 'medium' ? 60 : 90,
+    priority: k.priority === 'primary' ? 1 : 0,
   }))
 
-  const budgetData = seo?.sem_recommendations ? [
+  const budgetData = seo.sem_recommendations ? [
     { name: 'Search', value: 60 },
     { name: 'Display', value: 25 },
     { name: 'Remarketing', value: 15 },
@@ -312,33 +312,33 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               <Card>
                 <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>SEO Health</div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
-                  <ScoreRing score={seo?.overall_seo_score} label="Overall SEO" />
-                  <ScoreRing score={seo?.content_analysis?.quality_score || 0} label="Content" />
+                  <ScoreRing score={seo.overall_seo_score} label="Overall SEO" />
+                  <ScoreRing score={seo.content_analysis?.quality_score || 0} label="Content" />
                 </div>
               </Card>
 
               <Card>
                 <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Budget Range</div>
-                {seo?.sem_recommendations && (
+                {seo.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                      ₹{(seo?.sem_recommendations?.monthly_budget_inr || seo?.sem_recommendations?.suggested_monthly_budget_usd?.min || 0).toLocaleString()}
-                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
+                      ${seo.sem_recommendations.suggested_monthly_budget_usd.min.toLocaleString()}
+                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}> – ${seo.sem_recommendations.suggested_monthly_budget_usd.max.toLocaleString()}/mo</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>{(seo?.sem_recommendations?.bidding_strategy || '').split('—')[0]}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>{seo.sem_recommendations.bidding_strategy.split('—')[0]}</div>
                   </>
                 )}
               </Card>
 
               <Card>
                 <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Est. Monthly Clicks</div>
-                {seo?.sem_recommendations && (
+                {seo.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--cyan)' }}>
-                      {seo?.sem_recommendations.estimated_monthly_clicks.min.toLocaleString()}–{seo?.sem_recommendations.estimated_monthly_clicks.max.toLocaleString()}
+                      {seo.sem_recommendations.estimated_monthly_clicks.min.toLocaleString()}–{seo.sem_recommendations.estimated_monthly_clicks.max.toLocaleString()}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>
-                      ${seo?.sem_recommendations.estimated_cpc_usd.min}–${seo?.sem_recommendations.estimated_cpc_usd.max} avg CPC
+                      ${seo.sem_recommendations.estimated_cpc_usd.min}–${seo.sem_recommendations.estimated_cpc_usd.max} avg CPC
                     </div>
                   </>
                 )}
@@ -365,7 +365,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             {/* Summary */}
             <Card>
               <SectionTitle icon={Zap}>AI Summary</SectionTitle>
-              <p style={{ color: 'var(--text2)', fontSize: '14px', lineHeight: 1.7 }}>{seo.summary}</p>
+              <p style={{ color: 'var(--text2)', fontSize: '14px', lineHeight: 1.7 }}>{seo?.ai_summary || seo?.summary || 'AI analysis complete. Check the sections below for detailed insights.'}</p>
 
               {seo.priority_actions?.length > 0 && (
                 <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '8px' }}>
@@ -459,7 +459,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 {[
                   { label: 'Title', value: sc.title },
                   { label: 'Meta description', value: sc.meta_description },
-                  { label: 'H1 tags', value: sc?.h1_tags?.join(', ') || 'None found' },
+                  { label: 'H1 tags', value: sc.h1_tags?.join(', ') || 'None found' },
                 ].map(({ label, value }) => (
                   <div key={label} style={{
                     padding: '10px 12px', background: 'var(--bg3)',
@@ -479,7 +479,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               <Card>
                 <SectionTitle icon={CheckCircle}>Strengths</SectionTitle>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {(seo.strengths || []).map((s, i) => (
+                  {(seo?.strengths || []).map((s, i) => (
                     <div key={i} style={{
                       display: 'flex', gap: '8px', padding: '8px 10px',
                       background: 'rgba(34,197,94,0.05)', borderRadius: '7px',
@@ -487,8 +487,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     }}>
                       <CheckCircle size={13} color="var(--green)" style={{ flexShrink: 0, marginTop: '2px' }} />
                       <div>
-                        <div style={{ fontSize: '13px', lineHeight: 1.4 }}>{s.point}</div>
-                        <SeverityBadge severity={s.impact} />
+                        <div style={{ fontSize: '13px', lineHeight: 1.4 }}>{typeof s === 'string' ? s : s.point}</div>
+                        {s.impact && <SeverityBadge severity={s.impact} />}
                       </div>
                     </div>
                   ))}
@@ -497,7 +497,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               <Card>
                 <SectionTitle icon={AlertTriangle}>Weaknesses</SectionTitle>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {(seo.weaknesses || []).map((w, i) => (
+                  {(seo?.weaknesses || []).map((w, i) => (
                     <div key={i} style={{
                       display: 'flex', gap: '8px', padding: '8px 10px',
                       background: 'rgba(245,158,11,0.05)', borderRadius: '7px',
@@ -505,8 +505,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     }}>
                       <AlertTriangle size={13} color="var(--yellow)" style={{ flexShrink: 0, marginTop: '2px' }} />
                       <div>
-                        <div style={{ fontSize: '13px', marginBottom: '3px', lineHeight: 1.4 }}>{w.point}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text3)', fontStyle: 'italic' }}>Fix: {w.fix}</div>
+                        <div style={{ fontSize: '13px', marginBottom: '3px', lineHeight: 1.4 }}>{typeof w === 'string' ? w : w.point}</div>
+                        {w.fix && <div style={{ fontSize: '12px', color: 'var(--text3)', fontStyle: 'italic' }}>Fix: {w.fix}</div>}
                       </div>
                     </div>
                   ))}
@@ -523,15 +523,20 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     padding: '12px', background: 'var(--bg3)',
                     borderRadius: '8px', border: '1px solid var(--border)',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <SeverityBadge severity={issue.severity} />
-                      <span style={{ fontSize: '13px', fontWeight: 500 }}>{issue.issue}</span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: 'var(--text2)', marginBottom: '4px' }}>{issue.description}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <ChevronRight size={11} />
-                      {issue.recommendation}
-                    </div>
+                    {typeof issue === 'string' ? (
+                      <div style={{ fontSize: '13px', color: 'var(--text2)' }}>{issue}</div>
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          {issue.severity && <SeverityBadge severity={issue.severity} />}
+                          <span style={{ fontSize: '13px', fontWeight: 500 }}>{issue.issue || issue.title}</span>
+                        </div>
+                        {issue.description && <div style={{ fontSize: '13px', color: 'var(--text2)', marginBottom: '4px' }}>{issue.description}</div>}
+                        {issue.recommendation && <div style={{ fontSize: '12px', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <ChevronRight size={11} />{issue.recommendation}
+                        </div>}
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -541,7 +546,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             <Card>
               <SectionTitle icon={Search}>Keyword Suggestions</SectionTitle>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '6px' }}>
-                {(seo?.keyword_suggestions || []).map((k, i) => (
+                {(seo.keyword_suggestions || []).map((k, i) => (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '8px 12px', background: 'var(--bg3)',
@@ -559,21 +564,21 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             </Card>
 
             {/* Content Analysis */}
-            {seo?.content_analysis && (
+            {seo.content_analysis && (
               <Card>
                 <SectionTitle icon={BarChart3}>Content Analysis</SectionTitle>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                   <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Readability</div>
-                    <div style={{ fontSize: '13px' }}>{seo?.content_analysis.readability}</div>
+                    <div style={{ fontSize: '13px' }}>{seo.content_analysis.readability}</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Keyword Density</div>
-                    <div style={{ fontSize: '13px' }}>{seo?.content_analysis.keyword_density}</div>
+                    <div style={{ fontSize: '13px' }}>{seo.content_analysis.keyword_density}</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Content Gaps</div>
-                    {(seo?.content_analysis.content_gaps || []).map((g, i) => (
+                    {(seo.content_analysis.content_gaps || []).map((g, i) => (
                       <div key={i} style={{ fontSize: '13px', color: 'var(--text2)' }}>• {g}</div>
                     ))}
                   </div>
@@ -589,23 +594,23 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         )}
 
         
-        {tab === 'sem' && seo?.sem_recommendations && (
+        {tab === 'sem' && seo.sem_recommendations && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               {[
                 {
                   label: 'Monthly budget',
-                  value: `$${seo?.sem_recommendations.suggested_monthly_budget_usd.min.toLocaleString()} – $${seo?.sem_recommendations.suggested_monthly_budget_usd.max.toLocaleString()}`,
+                  value: `$${seo.sem_recommendations.suggested_monthly_budget_usd.min.toLocaleString()} – $${seo.sem_recommendations.suggested_monthly_budget_usd.max.toLocaleString()}`,
                   icon: DollarSign, color: 'var(--green)',
                 },
                 {
                   label: 'Est. clicks / mo',
-                  value: `${seo?.sem_recommendations.estimated_monthly_clicks.min.toLocaleString()} – ${seo?.sem_recommendations.estimated_monthly_clicks.max.toLocaleString()}`,
+                  value: `${seo.sem_recommendations.estimated_monthly_clicks.min.toLocaleString()} – ${seo.sem_recommendations.estimated_monthly_clicks.max.toLocaleString()}`,
                   icon: TrendingUp, color: 'var(--cyan)',
                 },
                 {
                   label: 'Avg CPC range',
-                  value: `$${seo?.sem_recommendations.estimated_cpc_usd.min} – $${seo?.sem_recommendations.estimated_cpc_usd.max}`,
+                  value: `$${seo.sem_recommendations.estimated_cpc_usd.min} – $${seo.sem_recommendations.estimated_cpc_usd.max}`,
                   icon: Target, color: 'var(--accent)',
                 },
               ].map(({ label, value, icon: Icon, color }) => (
@@ -621,14 +626,14 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
             <Card>
               <SectionTitle icon={Target}>Bidding Strategy</SectionTitle>
-              <p style={{ fontSize: '14px', color: 'var(--text2)', lineHeight: 1.7 }}>{seo?.sem_recommendations.bidding_strategy}</p>
+              <p style={{ fontSize: '14px', color: 'var(--text2)', lineHeight: 1.7 }}>{seo.sem_recommendations.bidding_strategy}</p>
             </Card>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <Card>
                 <SectionTitle icon={Globe}>Target Countries</SectionTitle>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {(seo?.sem_recommendations.target_countries || []).map((c, i) => (
+                  {(seo.sem_recommendations.target_countries || []).map((c, i) => (
                     <span key={i} className="badge badge-blue">{c}</span>
                   ))}
                 </div>
@@ -636,7 +641,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
               <Card>
                 <SectionTitle icon={Users}>Audience Segments</SectionTitle>
-                {(seo?.sem_recommendations.audience_segments || []).map((seg, i) => (
+                {(seo.sem_recommendations.audience_segments || []).map((seg, i) => (
                   <div key={i} style={{
                     padding: '10px', background: 'var(--bg3)',
                     borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '6px',
@@ -653,20 +658,20 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               </Card>
             </div>
 
-            {seo?.competitor_insights && (
+            {seo.competitor_insights && (
               <Card>
                 <SectionTitle icon={BarChart3}>Competitor Insights</SectionTitle>
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '6px', fontWeight: 500 }}>LIKELY COMPETITORS</div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {(seo?.competitor_insights.likely_competitors || []).map((c, i) => (
+                    {(seo.competitor_insights.likely_competitors || []).map((c, i) => (
                       <span key={i} className="badge badge-gray">{c}</span>
                     ))}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '6px', fontWeight: 500 }}>POSITIONING SUGGESTION</div>
-                  <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.7 }}>{seo?.competitor_insights.positioning_suggestion}</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.7 }}>{seo.competitor_insights.positioning_suggestion}</p>
                 </div>
               </Card>
             )}
