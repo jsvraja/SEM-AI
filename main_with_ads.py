@@ -216,6 +216,32 @@ async def full_report(req: FullReportRequest):
     # Force correct url_type regardless of what AI returned
     seo_report['url_type'] = _detected_url_type
     
+    # Normalize sem_recommendations fields
+    sem = seo_report.get('sem_recommendations', {})
+    if sem:
+        # Normalize budget
+        if not sem.get('monthly_budget_inr'):
+            budget = sem.get('suggested_monthly_budget_usd', {})
+            if isinstance(budget, dict):
+                sem['monthly_budget_inr'] = int((budget.get('min', 0) + budget.get('max', 0)) / 2 * 83)
+            elif isinstance(budget, (int, float)):
+                sem['monthly_budget_inr'] = int(budget * 83)
+        # Normalize clicks
+        if not sem.get('monthly_clicks_estimate'):
+            clicks = sem.get('estimated_monthly_clicks', {})
+            if isinstance(clicks, dict):
+                sem['monthly_clicks_estimate'] = f"{clicks.get('min',0):,}–{clicks.get('max',0):,}"
+            elif clicks:
+                sem['monthly_clicks_estimate'] = str(clicks)
+        # Normalize CPC
+        if not sem.get('estimated_cpc_inr'):
+            cpc = sem.get('estimated_cpc_usd', {})
+            if isinstance(cpc, dict):
+                sem['estimated_cpc_inr'] = round((cpc.get('min', 0) + cpc.get('max', 0)) / 2 * 83)
+            elif isinstance(cpc, (int, float)):
+                sem['estimated_cpc_inr'] = round(cpc * 83)
+        seo_report['sem_recommendations'] = sem
+    
     return {
         "url": url,
         "scraped_data": {
