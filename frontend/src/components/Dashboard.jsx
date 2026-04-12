@@ -206,11 +206,13 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
   const urlType = seo?.url_type || ((() => {
-    const path = url.replace(/https?:\/\//, '').split('?')[0]
-    const exts = ['.html', '.htm', '.php', '.aspx', '.asp']
+    const exts = ['.html', '.htm', '.php', '.aspx', '.asp', '.jsp']
+    const cleanUrl = url.replace(/https?:\/\//, '').replace(/\/$/, '')
+    const path = cleanUrl.split('?')[0]
     if (exts.some(e => path.endsWith(e))) return 'single_page'
     const segs = path.split('/').filter(s => s)
-    if (segs.length >= 3) return 'single_page'
+    if (url.trim().endsWith('/')) return 'whole_site'
+    if (segs.length >= 4) return 'single_page'
     return 'whole_site'
   })())
   const isWholeSite = urlType === 'whole_site'
@@ -322,10 +324,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 {seo.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                      ${seo.sem_recommendations.suggested_monthly_budget_usd.min.toLocaleString()}
-                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}> – ${seo.sem_recommendations.suggested_monthly_budget_usd.max.toLocaleString()}/mo</span>
+                      ₹{(seo?.sem_recommendations?.monthly_budget_inr || seo?.sem_recommendations?.suggested_monthly_budget_usd?.min || 0).toLocaleString()}
+                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>{seo.sem_recommendations.bidding_strategy.split('—')[0]}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>{(seo?.sem_recommendations?.bidding_strategy || '').split('—')[0]}</div>
                   </>
                 )}
               </Card>
@@ -335,10 +337,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 {seo.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--cyan)' }}>
-                      {seo.sem_recommendations.estimated_monthly_clicks.min.toLocaleString()}–{seo.sem_recommendations.estimated_monthly_clicks.max.toLocaleString()}
+                      {(seo?.sem_recommendations?.estimated_monthly_clicks?.min || 0).toLocaleString()}–{(seo?.sem_recommendations?.estimated_monthly_clicks?.max || 0).toLocaleString()}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>
-                      ${seo.sem_recommendations.estimated_cpc_usd.min}–${seo.sem_recommendations.estimated_cpc_usd.max} avg CPC
+                      ₹{seo?.sem_recommendations?.estimated_cpc_inr || seo?.sem_recommendations?.estimated_cpc_usd?.min || 0} avg CPC
                     </div>
                   </>
                 )}
@@ -600,12 +602,12 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               {[
                 {
                   label: 'Monthly budget',
-                  value: `$${seo.sem_recommendations.suggested_monthly_budget_usd.min.toLocaleString()} – $${seo.sem_recommendations.suggested_monthly_budget_usd.max.toLocaleString()}`,
+                  value: `$${(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()} – $${(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()}`,
                   icon: DollarSign, color: 'var(--green)',
                 },
                 {
                   label: 'Est. clicks / mo',
-                  value: `${seo.sem_recommendations.estimated_monthly_clicks.min.toLocaleString()} – ${seo.sem_recommendations.estimated_monthly_clicks.max.toLocaleString()}`,
+                  value: `${(seo?.sem_recommendations?.estimated_monthly_clicks?.min || 0).toLocaleString()} – ${(seo?.sem_recommendations?.estimated_monthly_clicks?.max || 0).toLocaleString()}`,
                   icon: TrendingUp, color: 'var(--cyan)',
                 },
                 {
