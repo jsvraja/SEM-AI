@@ -823,135 +823,68 @@ async def site_audit(request: Request, background_tasks: BackgroundTasks):
 
 @app.post("/api/ads/recommend-pages")
 async def recommend_ad_pages(request: Request):
-    """Crawl site, find best pages to advertise, generate ad copy for each."""
     try:
         body = await request.json()
         url = body.get("url", "")
         max_pages = min(body.get("max_pages", 100), 500)
-        
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
-        
         from urllib.parse import urlparse
-        from site_crawler import crawl_site, get_urls_from_sitemap, fetch_page
+        from site_crawler import get_urls_from_sitemap, fetch_page
         import httpx as hx
-    
-    parsed = urlparse(url)
-    base_domain = parsed.netloc
-    
-    # Step 1: Get pages from sitemap
-    pages_data = []
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)'}
+        parsed = urlparse(url)
+        base_domain = parsed.netloc
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)"}
         async with hx.AsyncClient(headers=headers, follow_redirects=True) as client:
-            # Try sitemap
             sitemap_urls = []
-            for sitemap_candidate in [
+            for sc in [
                 f"{parsed.scheme}://{base_domain}{parsed.path.rstrip('/')}/sitemap.xml",
-                f"{parsed.scheme}://{base_domain}/sitemap.xml",
+                f"{parsed.scheme}://{base_domain}/sitemap.xml"
             ]:
-                sitemap_urls = await get_urls_from_sitemap(client, sitemap_candidate, base_domain, max_pages)
+                sitemap_urls = await get_urls_from_sitemap(client, sc, base_domain, max_pages)
                 if sitemap_urls:
                     break
-            
             if not sitemap_urls:
                 sitemap_urls = [url]
-            
-            # Limit to max_pages
             sitemap_urls = sitemap_urls[:max_pages]
-            
-            # Fetch page titles and meta for each
-            from site_crawler import fetch_page
-            batch_size = 20
-            for i in range(0, len(sitemap_urls), batch_size):
-                batch = sitemap_urls[i:i+batch_size]
-                tasks = [fetch_page(client, u) for u in batch]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+            pages_data = []
+            for i in range(0, len(sitemap_urls), 20):
+                batch = sitemap_urls[i:i+20]
+                results = await asyncio.gather(*[fetch_page(client, u) for u in batch], return_exceptions=True)
                 for r in results:
-                    if r and isinstance(r, dict) and r.get('title'):
+                    if r and isinstance(r, dict) and r.get("title"):
                         pages_data.append({
-                            'url': r['url'],
-                            'title': r['title'],
-                            'meta': r.get('meta_description', ''),
-                            'h1': r.get('h1', ''),
-                            'word_count': r.get('word_count', 0),
-                            'score': r.get('score', 0),
+                            "url": r["url"],
+                            "title": r["title"],
+                            "meta": r.get("meta_description", "")[:80],
                         })
                 await asyncio.sleep(0.2)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"error": f"Crawl failed: {str(e)}"}
-    
-    if not pages_data:
-        return {"error": "Could not crawl any pages. The site may be blocking crawlers or the URL is incorrect."}
-    
-    print(f"[RECOMMEND] Found {len(pages_data)} pages to analyse")
-    # Step 2: Ask AI to pick best pages for Google Ads
-    pages_summary = "\n".join([
-        f"- {p['url']} | {p['title']} | {p['meta'][:80]}"
-        for p in pages_data[:100]  # Send max 100 to AI
-    ])
-    
-    recommend_prompt = f"""You are a Google Ads expert. Analyse these pages from {url} and recommend the BEST 5-8 pages to advertise on Google Ads.
+        if not pages_data:
+            return {"error": "Could not crawl any pages"}
+        pages_summary = "\n".join([
+            f"- {p['url']} | {p['title']} | {p['meta']}"
+            for p in pages_data[:100]
+        ])
+        recommend_prompt = f"""You are a Google Ads expert. Pick the BEST 5-8 pages to advertise from {url}.
 
 Pages found:
 {pages_summary}
 
-Select pages that have:
-- High commercial intent (product pages, feature pages, pricing, demos)
-- Clear value proposition
-- Good for paid traffic conversion
-- Avoid: blog posts, help docs, login pages, news pages, duplicate/region pages
+Pick pages with high commercial intent (product, feature, pricing, demo).
+Avoid: blog posts, help docs, login, news, duplicate region pages.
 
-For each recommended page, generate complete Google Ads copy.
-
-Respond ONLY with valid JSON:
-{{
-  "recommended_pages": [
-    {{
-      "url": "https://exact-url-from-list",
-      "title": "Page title",
-      "reason": "Why this page is good for ads",
-      "ad_intent": "commercial|informational|transactional",
-      "suggested_keywords": ["keyword1", "keyword2", "keyword3"],
-      "ad_copy": {{
-        "headline_1": "Max 30 chars",
-        "headline_2": "Max 30 chars", 
-        "headline_3": "Max 30 chars",
-        "description_1": "Max 90 chars description",
-        "description_2": "Max 90 chars description",
-        "display_path": "/product/feature"
-      }}
-    }}
-  ],
-  "excluded_pages": [
-    {{"url": "url", "reason": "Why excluded"}}
-  ],
-  "campaign_strategy": "2-3 sentence overall campaign strategy recommendation"
-}}"""
-
-    try:
+Respond ONLY valid JSON:
+{{"recommended_pages":[{{"url":"exact-url","title":"title","reason":"why","ad_intent":"commercial","suggested_keywords":["kw1"],"ad_copy":{{"headline_1":"max 30 chars","headline_2":"max 30 chars","headline_3":"max 30 chars","description_1":"max 90 chars","description_2":"max 90 chars","display_path":"/path"}}}}],"excluded_pages":[{{"url":"url","reason":"why"}}],"campaign_strategy":"2-3 sentence strategy"}}"""
         raw = await call_gemini(recommend_prompt)
         clean = re.sub(r"```json|```", "", raw).strip()
         result = json.loads(clean)
-        result['total_pages_analysed'] = len(pages_data)
+        result["total_pages_analysed"] = len(pages_data)
         return result
-    except Exception as outer_e:
+    except Exception as e:
         import traceback
         traceback.print_exc()
-        return {"error": f"Failed: {str(outer_e)}"}
-    except Exception as e:
-        return {"error": f"AI analysis failed: {str(e)}", "raw": raw[:500] if 'raw' in dir() else ""}
+        return {"error": str(e)}
 
-
-# ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
-
-from sem_agent import (
-    chat_with_agent, get_agent_status, run_monitoring_cycle,
-    generate_weekly_report, set_agent_active, clear_agent_chat,
-    analyze_campaigns_with_gemini
-)
 
 @app.get("/api/agent/status")
 async def agent_status():
