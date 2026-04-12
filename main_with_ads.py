@@ -824,16 +824,17 @@ async def site_audit(request: Request, background_tasks: BackgroundTasks):
 @app.post("/api/ads/recommend-pages")
 async def recommend_ad_pages(request: Request):
     """Crawl site, find best pages to advertise, generate ad copy for each."""
-    body = await request.json()
-    url = body.get("url", "")
-    max_pages = min(body.get("max_pages", 100), 500)
-    
-    if not url.startswith(("http://", "https://")):
-        url = "https://" + url
-    
-    from urllib.parse import urlparse
-    from site_crawler import crawl_site, get_urls_from_sitemap
-    import httpx as hx
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        max_pages = min(body.get("max_pages", 100), 500)
+        
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        
+        from urllib.parse import urlparse
+        from site_crawler import crawl_site, get_urls_from_sitemap, fetch_page
+        import httpx as hx
     
     parsed = urlparse(url)
     base_domain = parsed.netloc
@@ -936,6 +937,10 @@ Respond ONLY with valid JSON:
         result = json.loads(clean)
         result['total_pages_analysed'] = len(pages_data)
         return result
+    except Exception as outer_e:
+        import traceback
+        traceback.print_exc()
+        return {"error": f"Failed: {str(outer_e)}"}
     except Exception as e:
         return {"error": f"AI analysis failed: {str(e)}", "raw": raw[:500] if 'raw' in dir() else ""}
 
