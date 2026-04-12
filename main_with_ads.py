@@ -198,6 +198,9 @@ async def full_report(req: FullReportRequest):
     else:
         seo_prompt = build_seo_prompt_whole_site(scraped)
     
+    # Store detected url_type to override whatever AI returns
+    _detected_url_type = url_type
+    
     seo_raw, ad_raw = await asyncio.gather(
         call_gemini(seo_prompt),
         call_gemini(build_ad_prompt(scraped, req.business_description or scraped.get("title",""), req.target_keywords))
@@ -210,6 +213,9 @@ async def full_report(req: FullReportRequest):
         ad_copy = parse_ai_json(ad_raw)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ad parse error: {e} | {ad_raw[:200]}")
+    # Force correct url_type regardless of what AI returned
+    seo_report['url_type'] = _detected_url_type
+    
     return {
         "url": url,
         "scraped_data": {
@@ -221,6 +227,7 @@ async def full_report(req: FullReportRequest):
             "internal_links_count": scraped["internal_links_count"],
             "has_schema_markup": scraped["has_schema_markup"],
             "html_size_kb": scraped["html_size_kb"],
+            "url_type": _detected_url_type,
         },
         "seo_report": seo_report,
         "ad_copy": ad_copy,
