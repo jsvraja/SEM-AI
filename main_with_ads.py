@@ -257,6 +257,13 @@ Return this EXACT JSON structure (no extra text):
 {{
   "overall_seo_score": 72,
   "url_type": "single_page",
+  "ai_summary": "3 sentence assessment of this specific page SEO health and main opportunities",
+  "strengths": [
+    {{"point": "Clear and descriptive title tag", "impact": "high"}}
+  ],
+  "weaknesses": [
+    {{"point": "Missing meta description", "fix": "Add a 150-160 character meta description", "impact": "high"}}
+  ],
   "page_analysis": {{
     "title_score": 85,
     "title_issues": "Title is good but could include primary keyword",
@@ -294,37 +301,39 @@ Return this EXACT JSON structure (no extra text):
 
 def build_seo_prompt_whole_site(s: dict) -> str:
     """Site-wide SEO analysis based on homepage."""
-    return f"""You are a senior SEO strategist. Analyse this WEBSITE (homepage data) and return ONE JSON object only.
+    return f"""You are a senior SEO strategist. Analyse this WEBSITE and return ONE JSON object only.
 URL: {s['url']} | Title: {s['title']} | Meta: {s['meta_description']} | H1: {s['h1_tags']} | Images: {s['images_count']} | Schema: {s['has_schema_markup']} | Content: {str(s.get('full_text',''))[:2000]}
 
-This is a whole website analysis. Focus on brand, overall SEO strategy, and site-wide recommendations.
-
-Return this EXACT JSON structure (no extra text):
+Return this EXACT JSON (no extra text):
 {{
   "overall_seo_score": 72,
   "url_type": "whole_site",
-  "site_overview": {{
-    "brand_strength": "Strong brand with clear messaging",
-    "content_strategy": "Good blog content but needs more landing pages",
-    "technical_health": "Good technical foundation",
-    "authority_signals": "Schema markup present, good internal linking"
-  }},
+  "ai_summary": "3 sentence overall assessment of the website SEO health and main opportunities",
+  "strengths": [
+    {{"point": "Clear value proposition on homepage", "impact": "high"}},
+    {{"point": "Good use of H1 tags", "impact": "medium"}}
+  ],
+  "weaknesses": [
+    {{"point": "Missing meta descriptions on key pages", "fix": "Add unique 150-160 char meta descriptions", "impact": "high"}},
+    {{"point": "No schema markup detected", "fix": "Add Organization and Product schema", "impact": "medium"}}
+  ],
+  "technical_issues": [
+    {{"issue": "Missing meta description", "severity": "critical", "description": "Homepage has no meta description", "recommendation": "Add a 150-160 character meta description with primary keyword"}}
+  ],
   "keyword_suggestions": [
-    {{"keyword": "example keyword", "difficulty": "low", "priority": "primary", "monthly_searches": "1K-10K"}}
+    {{"keyword": "example keyword", "difficulty": "low", "priority": "primary", "monthly_searches": "1K-10K", "intent": "commercial"}}
   ],
   "content_analysis": {{
     "word_count": {s.get('word_count', 0)},
     "readability": "Good",
     "keyword_density": "2.3%",
-    "content_gaps": ["Add pricing page", "Create comparison pages", "Add case studies"]
+    "content_gaps": ["Add pricing page", "Create case studies", "Add comparison pages"]
   }},
-  "site_wide_issues": ["Inconsistent meta descriptions across pages", "Missing XML sitemap link in robots.txt"],
-  "technical_issues": ["Missing meta description on homepage", "Images missing alt text"],
-  "quick_wins": ["Fix homepage meta description", "Add XML sitemap"],
+  "quick_wins": ["Fix homepage meta description", "Add alt text to images", "Add schema markup"],
   "recommendations": ["Create dedicated landing pages for each service", "Build topical authority with blog content"],
   "competitor_insights": {{
     "top_competitors": ["competitor1.com", "competitor2.com"],
-    "positioning_suggestion": "Position as the most comprehensive solution"
+    "positioning_suggestion": "Position as the most comprehensive enterprise solution"
   }},
   "sem_recommendations": {{
     "monthly_budget_inr": 40000,
@@ -869,11 +878,14 @@ async def recommend_ad_pages(request: Request):
                         })
                 await asyncio.sleep(0.2)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": f"Crawl failed: {str(e)}"}
     
     if not pages_data:
-        return {"error": "Could not crawl any pages"}
+        return {"error": "Could not crawl any pages. The site may be blocking crawlers or the URL is incorrect."}
     
+    print(f"[RECOMMEND] Found {len(pages_data)} pages to analyse")
     # Step 2: Ask AI to pick best pages for Google Ads
     pages_summary = "\n".join([
         f"- {p['url']} | {p['title']} | {p['meta'][:80]}"
