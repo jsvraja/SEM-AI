@@ -325,11 +325,14 @@ Return this EXACT JSON structure (no extra text):
   }},
   "sem_recommendations": {{
     "monthly_budget_inr": 15000,
-    "monthly_clicks_estimate": "500-2,000",
-    "estimated_cpc_inr": 7,
-    "target_countries": ["IN", "US"],
+    "monthly_clicks_estimate": "500-1,500",
+    "estimated_cpc_inr": 20,
     "campaign_type": "Search",
     "bidding_strategy": "Target CPA — focus on high-intent keywords",
+    "country_budgets": [
+      {{"country": "India", "code": "IN", "budget_pct": 60, "budget_inr": 9000, "avg_cpc_inr": 15, "monthly_clicks": "400-700", "competition": "medium", "notes": "Primary market focus"}},
+      {{"country": "United States", "code": "US", "budget_pct": 40, "budget_inr": 6000, "avg_cpc_inr": 75, "monthly_clicks": "50-100", "competition": "high", "notes": "High value leads"}}
+    ],
     "audience_segments": [
       {{"segment": "Decision Makers", "age_range": "28-50", "interests": ["Business Software", "Productivity"]}}
     ]
@@ -376,10 +379,14 @@ Return this EXACT JSON (no extra text):
   "sem_recommendations": {{
     "monthly_budget_inr": 40000,
     "monthly_clicks_estimate": "1,000-5,000",
-    "estimated_cpc_inr": 8,
-    "target_countries": ["IN", "US"],
+    "estimated_cpc_inr": 25,
     "campaign_type": "Search + Display",
     "bidding_strategy": "Target CPA — focus on conversion-ready audiences",
+    "country_budgets": [
+      {{"country": "India", "code": "IN", "budget_pct": 50, "budget_inr": 20000, "avg_cpc_inr": 15, "monthly_clicks": "800-1500", "competition": "medium", "notes": "High volume, lower CPC market"}},
+      {{"country": "United States", "code": "US", "budget_pct": 30, "budget_inr": 12000, "avg_cpc_inr": 80, "monthly_clicks": "100-200", "competition": "high", "notes": "Premium market, high intent leads"}},
+      {{"country": "United Kingdom", "code": "UK", "budget_pct": 20, "budget_inr": 8000, "avg_cpc_inr": 65, "monthly_clicks": "80-150", "competition": "high", "notes": "Strong enterprise market"}}
+    ],
     "audience_segments": [
       {{"segment": "IT Professionals", "age_range": "25-45", "interests": ["Technology", "Enterprise Software"]}}
     ]
