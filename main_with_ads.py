@@ -299,9 +299,14 @@ Return this EXACT JSON structure (no extra text):
   }},
   "sem_recommendations": {{
     "monthly_budget_inr": 15000,
+    "monthly_clicks_estimate": "500-2,000",
+    "estimated_cpc_inr": 7,
     "target_countries": ["IN", "US"],
     "campaign_type": "Search",
-    "bidding_strategy": "Target CPA"
+    "bidding_strategy": "Target CPA — focus on high-intent keywords",
+    "audience_segments": [
+      {{"segment": "Decision Makers", "age_range": "28-50", "interests": ["Business Software", "Productivity"]}}
+    ]
   }}
 }}"""
 
@@ -344,9 +349,14 @@ Return this EXACT JSON (no extra text):
   }},
   "sem_recommendations": {{
     "monthly_budget_inr": 40000,
+    "monthly_clicks_estimate": "1,000-5,000",
+    "estimated_cpc_inr": 8,
     "target_countries": ["IN", "US"],
     "campaign_type": "Search + Display",
-    "bidding_strategy": "Target CPA"
+    "bidding_strategy": "Target CPA — focus on conversion-ready audiences",
+    "audience_segments": [
+      {{"segment": "IT Professionals", "age_range": "25-45", "interests": ["Technology", "Enterprise Software"]}}
+    ]
   }}
 }}"""
 
