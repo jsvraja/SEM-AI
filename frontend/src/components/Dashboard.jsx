@@ -322,10 +322,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 {seo?.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                      ${seo?.sem_recommendations.suggested_monthly_budget_usd.min.toLocaleString()}
-                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}> – ${seo?.sem_recommendations.suggested_monthly_budget_usd.max.toLocaleString()}/mo</span>
+                      ₹{(seo?.sem_recommendations?.monthly_budget_inr || seo?.sem_recommendations?.suggested_monthly_budget_usd?.min || 0).toLocaleString()}
+                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>{seo?.sem_recommendations.bidding_strategy.split('—')[0]}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>{(seo?.sem_recommendations?.bidding_strategy || '').split('—')[0]}</div>
                   </>
                 )}
               </Card>
