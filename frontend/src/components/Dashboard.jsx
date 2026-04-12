@@ -14,8 +14,8 @@ import {
   ArrowLeft, Globe, CheckCircle, AlertTriangle, XCircle,
   TrendingUp, DollarSign, Target, Megaphone, Users,
   ChevronDown, ChevronUp, ChevronRight, Copy, Check, ExternalLink,
-  Zap, Search, BarChart3
-, Share2 } from 'lucide-react'
+  Zap, Search, BarChart3, Share2
+} from 'lucide-react'
 
 function ScoreRing({ score, label, size = 80 }) {
   const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)'
