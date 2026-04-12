@@ -190,8 +190,16 @@ async def full_report(req: FullReportRequest):
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     scraped = await scrape_website(url)
+    url_type = detect_url_type(url)
+    scraped['url_type'] = url_type
+    
+    if url_type == 'single_page':
+        seo_prompt = build_seo_prompt_single_page(scraped)
+    else:
+        seo_prompt = build_seo_prompt_whole_site(scraped)
+    
     seo_raw, ad_raw = await asyncio.gather(
-        call_gemini(build_seo_prompt(scraped)),
+        call_gemini(seo_prompt),
         call_gemini(build_ad_prompt(scraped, req.business_description or scraped.get("title",""), req.target_keywords))
     )
     try:
@@ -218,6 +226,114 @@ async def full_report(req: FullReportRequest):
         "ad_copy": ad_copy,
         "mock_campaign": {"status": "PREVIEW", "message": "Connect Google Ads to publish"},
     }
+
+
+def detect_url_type(url: str) -> str:
+    """Detect if URL is a single page or whole site."""
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    path = parsed.path.rstrip('/')
+    
+    # Single page indicators
+    single_page_extensions = ['.html', '.htm', '.php', '.aspx', '.asp', '.jsp', '.cfm', '.shtml']
+    if any(path.endswith(ext) for ext in single_page_extensions):
+        return 'single_page'
+    
+    # If path has many segments and looks like a specific page
+    segments = [s for s in path.split('/') if s]
+    if len(segments) >= 3 and not path.endswith('/'):
+        return 'single_page'
+    
+    # Otherwise it's a whole site or section
+    return 'whole_site'
+
+
+def build_seo_prompt_single_page(s: dict) -> str:
+    """Deep SEO analysis for a single page."""
+    return f"""You are a senior SEO specialist. Do a deep analysis of this SINGLE PAGE and return ONE JSON object only.
+URL: {s['url']} | Title: {s['title']} | Meta: {s['meta_description']} | H1: {s['h1_tags']} | Words: {s.get('word_count', 0)} | Images: {s['images_count']} | Images without alt: {s['images_without_alt_count']} | Schema: {s['has_schema_markup']} | Content: {str(s.get('full_text',''))[:2000]}
+
+Return this EXACT JSON structure (no extra text):
+{{
+  "overall_seo_score": 72,
+  "url_type": "single_page",
+  "page_analysis": {{
+    "title_score": 85,
+    "title_issues": "Title is good but could include primary keyword",
+    "meta_score": 40,
+    "meta_issues": "Meta description is missing - this is critical for CTR",
+    "content_score": 70,
+    "content_issues": "Content is thin at under 500 words",
+    "technical_score": 90,
+    "technical_issues": "Schema markup detected which is good"
+  }},
+  "keyword_suggestions": [
+    {{"keyword": "example keyword", "difficulty": "low", "priority": "primary", "monthly_searches": "1K-10K"}}
+  ],
+  "content_analysis": {{
+    "word_count": {s.get('word_count', 0)},
+    "readability": "Good",
+    "keyword_density": "2.3%",
+    "content_gaps": ["Add FAQ section", "Include comparison table"]
+  }},
+  "technical_issues": ["Missing meta description", "Images missing alt text"],
+  "quick_wins": ["Add meta description (5 min fix)", "Add alt text to 3 images"],
+  "recommendations": ["Write a 150-character meta description with primary keyword", "Expand content to 800+ words"],
+  "competitor_insights": {{
+    "top_competitors": ["competitor1.com", "competitor2.com"],
+    "positioning_suggestion": "Position as the most comprehensive solution"
+  }},
+  "sem_recommendations": {{
+    "monthly_budget_inr": 15000,
+    "target_countries": ["IN", "US"],
+    "campaign_type": "Search",
+    "bidding_strategy": "Target CPA"
+  }}
+}}"""
+
+
+def build_seo_prompt_whole_site(s: dict) -> str:
+    """Site-wide SEO analysis based on homepage."""
+    return f"""You are a senior SEO strategist. Analyse this WEBSITE (homepage data) and return ONE JSON object only.
+URL: {s['url']} | Title: {s['title']} | Meta: {s['meta_description']} | H1: {s['h1_tags']} | Images: {s['images_count']} | Schema: {s['has_schema_markup']} | Content: {str(s.get('full_text',''))[:2000]}
+
+This is a whole website analysis. Focus on brand, overall SEO strategy, and site-wide recommendations.
+
+Return this EXACT JSON structure (no extra text):
+{{
+  "overall_seo_score": 72,
+  "url_type": "whole_site",
+  "site_overview": {{
+    "brand_strength": "Strong brand with clear messaging",
+    "content_strategy": "Good blog content but needs more landing pages",
+    "technical_health": "Good technical foundation",
+    "authority_signals": "Schema markup present, good internal linking"
+  }},
+  "keyword_suggestions": [
+    {{"keyword": "example keyword", "difficulty": "low", "priority": "primary", "monthly_searches": "1K-10K"}}
+  ],
+  "content_analysis": {{
+    "word_count": {s.get('word_count', 0)},
+    "readability": "Good",
+    "keyword_density": "2.3%",
+    "content_gaps": ["Add pricing page", "Create comparison pages", "Add case studies"]
+  }},
+  "site_wide_issues": ["Inconsistent meta descriptions across pages", "Missing XML sitemap link in robots.txt"],
+  "technical_issues": ["Missing meta description on homepage", "Images missing alt text"],
+  "quick_wins": ["Fix homepage meta description", "Add XML sitemap"],
+  "recommendations": ["Create dedicated landing pages for each service", "Build topical authority with blog content"],
+  "competitor_insights": {{
+    "top_competitors": ["competitor1.com", "competitor2.com"],
+    "positioning_suggestion": "Position as the most comprehensive solution"
+  }},
+  "sem_recommendations": {{
+    "monthly_budget_inr": 40000,
+    "target_countries": ["IN", "US"],
+    "campaign_type": "Search + Display",
+    "bidding_strategy": "Target CPA"
+  }}
+}}"""
+
 
 # ─── OAuth ────────────────────────────────────────────────────────────────────
 
@@ -539,6 +655,277 @@ async def adjust_bid(request: Request):
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+
+@app.post("/api/competitor/discover")
+async def discover_competitors(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    keywords = body.get("keywords", [])
+    seo_score = body.get("seo_score", 50)
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+    
+    prompt = f"""You are an expert digital marketing analyst. Based on this website, identify their top competitors.
+
+Website: {url}
+Domain: {domain}
+Keywords: {", ".join(keywords) if keywords else "AI, technology, automation"}
+SEO Score: {seo_score}
+
+Identify the top 3 direct competitors for this business. These should be real companies that offer similar products/services and target the same audience.
+
+Respond ONLY with valid JSON:
+{{
+  "competitors": [
+    {{
+      "domain": "competitor1.com",
+      "url": "https://competitor1.com",
+      "name": "Competitor Name",
+      "reason": "Why they are a direct competitor",
+      "estimated_traffic": "10k-50k/month",
+      "threat_level": "high|medium|low"
+    }}
+  ],
+  "market_summary": "2 sentence overview of the competitive landscape"
+}}"""
+    
+    try:
+        import re, json
+        raw = await call_gemini(prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"error": str(e), "competitors": []}
+
+
+
+@app.post("/api/competitor/discover")
+async def discover_competitors(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    keywords = body.get("keywords", [])
+    industry = body.get("industry", "technology")
+    domain = url.replace("https://", "").replace("http://", "").split("/")[0]
+
+    prompt = f"""You are an SEO and competitive intelligence expert.
+Find the top 5 competitors for this website: {url}
+Industry: {industry}
+Keywords: {", ".join(keywords) if keywords else "general"}
+
+Respond ONLY with valid JSON, no markdown:
+{{"competitors": [
+  {{"domain": "competitor.com", "url": "https://competitor.com", "reason": "why they compete", "similarity": 85}},
+  {{"domain": "rival.io", "url": "https://rival.io", "reason": "why they compete", "similarity": 72}}
+]}}
+
+Rules:
+- Find REAL companies that compete in the same space
+- similarity is 0-100 percentage of how directly they compete
+- reason should be specific (e.g. "Both offer AI automation for SMEs in India")
+- Return exactly 5 competitors"""
+
+    try:
+        import re, json
+        raw = await call_gemini(prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
+        return json.loads(clean)
+    except Exception as e:
+        return {"competitors": [], "error": str(e)}
+
+
+
+@app.post("/api/site-audit")
+async def site_audit(request: Request):
+    body = await request.json()
+    url = body.get("url", "")
+    max_pages = min(body.get("max_pages", 50), 500)
+    
+    if not url:
+        raise HTTPException(status_code=400, detail="URL required")
+    
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    
+    from site_crawler import crawl_site, analyze_site
+    
+    try:
+        pages = await crawl_site(url, max_pages)
+        if not pages:
+            return {"error": "Could not crawl any pages. Check the URL and try again."}
+        result = analyze_site(pages, url)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/api/site-audit/start")
+async def start_site_audit(request: Request, background_tasks: BackgroundTasks):
+    body = await request.json()
+    url = body.get("url", "")
+    max_pages = min(body.get("max_pages", 100), 20000)
+    if not url:
+        raise HTTPException(status_code=400, detail="URL required")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    import uuid
+    from site_crawler import create_job, run_audit_job
+    job_id = str(uuid.uuid4())[:8]
+    create_job(job_id, url, max_pages)
+    background_tasks.add_task(run_audit_job, job_id, url, max_pages)
+    return {"job_id": job_id, "status": "started"}
+
+
+@app.get("/api/site-audit/status/{job_id}")
+async def get_audit_status(job_id: str):
+    from site_crawler import get_job
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {
+        "job_id": job_id,
+        "status": job["status"],
+        "progress": job["progress"],
+        "pages_found": job["pages_found"],
+        "pages_crawled": job["pages_crawled"],
+        "current_url": job["current_url"],
+        "result": job["result"],
+        "error": job["error"],
+    }
+
+
+@app.post("/api/site-audit")
+async def site_audit(request: Request, background_tasks: BackgroundTasks):
+    """Legacy endpoint - starts job and returns job_id."""
+    body = await request.json()
+    url = body.get("url", "")
+    max_pages = min(body.get("max_pages", 100), 20000)
+    if not url:
+        raise HTTPException(status_code=400, detail="URL required")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    import uuid
+    from site_crawler import create_job, run_audit_job
+    job_id = str(uuid.uuid4())[:8]
+    create_job(job_id, url, max_pages)
+    background_tasks.add_task(run_audit_job, job_id, url, max_pages)
+    return {"job_id": job_id, "status": "started"}
+
+
+@app.post("/api/ads/recommend-pages")
+async def recommend_ad_pages(request: Request):
+    """Crawl site, find best pages to advertise, generate ad copy for each."""
+    body = await request.json()
+    url = body.get("url", "")
+    max_pages = min(body.get("max_pages", 100), 500)
+    
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    
+    from urllib.parse import urlparse
+    from site_crawler import crawl_site, get_urls_from_sitemap
+    import httpx as hx
+    
+    parsed = urlparse(url)
+    base_domain = parsed.netloc
+    
+    # Step 1: Get pages from sitemap
+    pages_data = []
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)'}
+        async with hx.AsyncClient(headers=headers, follow_redirects=True) as client:
+            # Try sitemap
+            sitemap_urls = []
+            for sitemap_candidate in [
+                f"{parsed.scheme}://{base_domain}{parsed.path.rstrip('/')}/sitemap.xml",
+                f"{parsed.scheme}://{base_domain}/sitemap.xml",
+            ]:
+                sitemap_urls = await get_urls_from_sitemap(client, sitemap_candidate, base_domain, max_pages)
+                if sitemap_urls:
+                    break
+            
+            if not sitemap_urls:
+                sitemap_urls = [url]
+            
+            # Limit to max_pages
+            sitemap_urls = sitemap_urls[:max_pages]
+            
+            # Fetch page titles and meta for each
+            from site_crawler import fetch_page
+            batch_size = 20
+            for i in range(0, len(sitemap_urls), batch_size):
+                batch = sitemap_urls[i:i+batch_size]
+                tasks = [fetch_page(client, u) for u in batch]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for r in results:
+                    if r and isinstance(r, dict) and r.get('title'):
+                        pages_data.append({
+                            'url': r['url'],
+                            'title': r['title'],
+                            'meta': r.get('meta_description', ''),
+                            'h1': r.get('h1', ''),
+                            'word_count': r.get('word_count', 0),
+                            'score': r.get('score', 0),
+                        })
+                await asyncio.sleep(0.2)
+    except Exception as e:
+        return {"error": f"Crawl failed: {str(e)}"}
+    
+    if not pages_data:
+        return {"error": "Could not crawl any pages"}
+    
+    # Step 2: Ask AI to pick best pages for Google Ads
+    pages_summary = "\n".join([
+        f"- {p['url']} | {p['title']} | {p['meta'][:80]}"
+        for p in pages_data[:100]  # Send max 100 to AI
+    ])
+    
+    recommend_prompt = f"""You are a Google Ads expert. Analyse these pages from {url} and recommend the BEST 5-8 pages to advertise on Google Ads.
+
+Pages found:
+{pages_summary}
+
+Select pages that have:
+- High commercial intent (product pages, feature pages, pricing, demos)
+- Clear value proposition
+- Good for paid traffic conversion
+- Avoid: blog posts, help docs, login pages, news pages, duplicate/region pages
+
+For each recommended page, generate complete Google Ads copy.
+
+Respond ONLY with valid JSON:
+{{
+  "recommended_pages": [
+    {{
+      "url": "https://exact-url-from-list",
+      "title": "Page title",
+      "reason": "Why this page is good for ads",
+      "ad_intent": "commercial|informational|transactional",
+      "suggested_keywords": ["keyword1", "keyword2", "keyword3"],
+      "ad_copy": {{
+        "headline_1": "Max 30 chars",
+        "headline_2": "Max 30 chars", 
+        "headline_3": "Max 30 chars",
+        "description_1": "Max 90 chars description",
+        "description_2": "Max 90 chars description",
+        "display_path": "/product/feature"
+      }}
+    }}
+  ],
+  "excluded_pages": [
+    {{"url": "url", "reason": "Why excluded"}}
+  ],
+  "campaign_strategy": "2-3 sentence overall campaign strategy recommendation"
+}}"""
+
+    try:
+        raw = await call_gemini(recommend_prompt)
+        clean = re.sub(r"```json|```", "", raw).strip()
+        result = json.loads(clean)
+        result['total_pages_analysed'] = len(pages_data)
+        return result
+    except Exception as e:
+        return {"error": f"AI analysis failed: {str(e)}", "raw": raw[:500] if 'raw' in dir() else ""}
 
 
 # ─── AI SEM Agent Routes ──────────────────────────────────────────────────────
