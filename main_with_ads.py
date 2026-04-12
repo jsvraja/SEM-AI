@@ -240,6 +240,46 @@ async def full_report(req: FullReportRequest):
                 sem['estimated_cpc_inr'] = round((cpc.get('min', 0) + cpc.get('max', 0)) / 2 * 83)
             elif isinstance(cpc, (int, float)):
                 sem['estimated_cpc_inr'] = round(cpc * 83)
+        
+        # Generate country_budgets if not present
+        if not sem.get('country_budgets'):
+            countries = sem.get('target_countries', ['IN', 'US'])
+            total_budget = sem.get('monthly_budget_inr', 20000)
+            # Country-wise CPC and allocation defaults
+            country_defaults = {
+                'IN': {'name': 'India', 'flag': '🇮🇳', 'cpc': 15, 'pct': 50, 'competition': 'medium', 'note': 'High volume, competitive pricing'},
+                'US': {'name': 'United States', 'flag': '🇺🇸', 'cpc': 83, 'pct': 25, 'competition': 'high', 'note': 'Premium market, high-value leads'},
+                'GB': {'name': 'United Kingdom', 'flag': '🇬🇧', 'cpc': 70, 'pct': 15, 'competition': 'high', 'note': 'Strong enterprise demand'},
+                'UK': {'name': 'United Kingdom', 'flag': '🇬🇧', 'cpc': 70, 'pct': 15, 'competition': 'high', 'note': 'Strong enterprise demand'},
+                'AU': {'name': 'Australia', 'flag': '🇦🇺', 'cpc': 60, 'pct': 10, 'competition': 'medium', 'note': 'Growing tech market'},
+                'CA': {'name': 'Canada', 'flag': '🇨🇦', 'cpc': 65, 'pct': 10, 'competition': 'medium', 'note': 'Similar to US market'},
+                'SG': {'name': 'Singapore', 'flag': '🇸🇬', 'cpc': 50, 'pct': 10, 'competition': 'medium', 'note': 'APAC hub market'},
+                'AE': {'name': 'UAE', 'flag': '🇦🇪', 'cpc': 45, 'pct': 10, 'competition': 'medium', 'note': 'MENA region hub'},
+            }
+            # Recalculate percentages to sum to 100
+            selected = [c for c in countries if c in country_defaults]
+            if not selected:
+                selected = ['IN', 'US']
+            pct_each = 100 // len(selected)
+            remainder = 100 - (pct_each * len(selected))
+            country_budgets = []
+            for i, code in enumerate(selected):
+                d = country_defaults.get(code, {'name': code, 'cpc': 30, 'pct': pct_each, 'competition': 'medium', 'note': ''})
+                pct = pct_each + (remainder if i == 0 else 0)
+                budget_inr = round(total_budget * pct / 100)
+                clicks_est = round(budget_inr / d['cpc'])
+                country_budgets.append({
+                    'country': d['name'],
+                    'code': code,
+                    'budget_pct': pct,
+                    'budget_inr': budget_inr,
+                    'avg_cpc_inr': d['cpc'],
+                    'monthly_clicks': f"{round(clicks_est*0.8):,}–{round(clicks_est*1.2):,}",
+                    'competition': d['competition'],
+                    'notes': d['note'],
+                })
+            sem['country_budgets'] = country_budgets
+        
         seo_report['sem_recommendations'] = sem
     
     return {
