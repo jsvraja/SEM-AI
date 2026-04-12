@@ -1,4 +1,5 @@
 import AITraffic from './AITraffic'
+import AdCopy from './AdCopy'
 import SiteAudit from './SiteAudit'
 import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
@@ -14,7 +15,7 @@ import {
   TrendingUp, DollarSign, Target, Megaphone, Users,
   ChevronDown, ChevronUp, ChevronRight, Copy, Check, ExternalLink,
   Zap, Search, BarChart3
-, Share2 , Layers } from 'lucide-react'
+} from 'lucide-react'
 
 function ScoreRing({ score, label, size = 80 }) {
   const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)'
@@ -203,16 +204,26 @@ const TABS = [
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [tab, setTab] = useState('overview')
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
+  
+  const urlType = seo?.url_type || ((() => {
+    const path = url.replace(/https?:\/\//, '').split('?')[0]
+    const exts = ['.html', '.htm', '.php', '.aspx', '.asp']
+    if (exts.some(e => path.endsWith(e))) return 'single_page'
+    const segs = path.split('/').filter(s => s)
+    if (segs.length >= 3) return 'single_page'
+    return 'whole_site'
+  })())
+  const isWholeSite = urlType === 'whole_site'
 
   const domain = url.replace(/https?:\/\//, '').split('/')[0]
 
-  const keywordChartData = (seo.keyword_suggestions || []).slice(0, 8).map(k => ({
-    name: k.keyword.length > 18 ? k.keyword.slice(0, 18) + '…' : k.keyword,
-    difficulty: k.difficulty === 'low' ? 30 : k.difficulty === 'medium' ? 60 : 90,
-    priority: k.priority === 'primary' ? 1 : 0,
+  const keywordChartData = (seo?.keyword_suggestions || []).slice(0, 8).map(k => ({
+    name: (k?.keyword || '').length > 18 ? (k?.keyword || '').slice(0, 18) + '…' : (k?.keyword || ''),
+    difficulty: k?.difficulty === 'low' ? 30 : k?.difficulty === 'medium' ? 60 : 90,
+    priority: k?.priority === 'primary' ? 1 : 0,
   }))
 
-  const budgetData = seo.sem_recommendations ? [
+  const budgetData = seo?.sem_recommendations ? [
     { name: 'Search', value: 60 },
     { name: 'Display', value: 25 },
     { name: 'Remarketing', value: 15 },
@@ -419,6 +430,28 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         {/* ── SEO TAB ── */}
         {tab === 'seo' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* URL type banner */}
+            <div style={{ padding: '10px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+              background: isWholeSite ? 'var(--accent-bg)' : 'var(--purple-bg)',
+              border: `1px solid ${isWholeSite ? 'var(--accent-border)' : 'rgba(83,74,183,0.2)'}`,
+            }}>
+              <span style={{ fontSize: '18px' }}>{isWholeSite ? '🌐' : '📄'}</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: isWholeSite ? 'var(--accent)' : 'var(--purple)' }}>
+                  {isWholeSite ? 'Whole Site Analysis' : 'Single Page Analysis'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>
+                  {isWholeSite 
+                    ? 'Based on homepage data. Go to Site Audit tab for full page-by-page analysis.' 
+                    : `Deep analysis of: ${url}`}
+                </div>
+              </div>
+              {isWholeSite && (
+                <button onClick={() => setTab('site-audit')} style={{ marginLeft: 'auto', padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 500, background: 'var(--accent)', border: 'none', color: 'white', cursor: 'pointer', flexShrink: 0 }}>
+                  View Site Audit →
+                </button>
+              )}
+            </div>
             {/* Meta info */}
             <Card>
               <SectionTitle icon={Globe}>Page Metadata</SectionTitle>
@@ -552,70 +585,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         {/* ── ADS TAB ── */}
         {tab === 'ads' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Campaign preview banner */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '10px 14px', background: 'rgba(79,125,255,0.06)',
-              border: '1px solid rgba(79,125,255,0.15)', borderRadius: '10px',
-            }}>
-              <Megaphone size={15} color="var(--accent)" />
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '13px', fontWeight: 500 }}>{mock_campaign?.campaign_name || 'AI Generated Ad Copy'}</span>
-                <span style={{ fontSize: '12px', color: 'var(--text3)', marginLeft: '8px' }}>{mock_campaign?.message || 'Ready to publish'}</span>
-              </div>
-              <span className="badge badge-blue">{mock_campaign.status}</span>
-            </div>
-
-            {/* Ad variants */}
-            {ads
-              ? (ads.ad_variants || []).map((v, i) => (
-                  <AdVariant key={i} variant={v} url={url} />
-                ))
-              : <div style={{padding:'2rem',textAlign:'center',color:'var(--text3)',fontSize:'13px'}}>Run an analysis first to generate AI ad copy</div>
-            }
-
-            {/* Extensions & Campaign Settings */}
-            {ads?.recommended_extensions && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <Card>
-                  <SectionTitle icon={Zap}>Recommended Extensions</SectionTitle>
-                  <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '6px', fontWeight: 500 }}>SITELINKS</div>
-                  {(ads.recommended_extensions.sitelinks || []).map((s, i) => (
-                    <div key={i} style={{ fontSize: '13px', padding: '4px 0', borderBottom: '1px solid var(--border)', color: 'var(--text2)' }}>{s}</div>
-                  ))}
-                  <div style={{ fontSize: '11px', color: 'var(--text3)', margin: '10px 0 6px', fontWeight: 500 }}>CALLOUTS</div>
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {(ads.recommended_extensions.callouts || []).map((c, i) => (
-                      <span key={i} className="badge badge-gray">{c}</span>
-                    ))}
-                  </div>
-                </Card>
-                <Card>
-                  <SectionTitle icon={Target}>Campaign Settings</SectionTitle>
-                  {ads.campaign_settings && Object.entries({
-                    'Type': ads.campaign_settings.campaign_type,
-                    'Ad rotation': ads.campaign_settings.ad_rotation,
-                    'Match types': (ads.campaign_settings.keyword_match_types || []).join(', '),
-                  }).map(([k, v]) => (
-                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
-                      <span style={{ color: 'var(--text3)' }}>{k}</span>
-                      <span style={{ color: 'var(--text2)', textAlign: 'right', maxWidth: '60%' }}>{v}</span>
-                    </div>
-                  ))}
-                  <div style={{ fontSize: '11px', color: 'var(--text3)', margin: '10px 0 6px', fontWeight: 500 }}>NEGATIVE KEYWORDS</div>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    {(ads.campaign_settings?.negative_keywords || []).map((k, i) => (
-                      <span key={i} className="badge badge-red">{k}</span>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            )}
-          </div>
+          <AdCopy url={url} seoReport={seo} adCopy={ads} urlType={urlType} />
         )}
 
-        {/* ── SEM PLAN TAB ── */}
+        
         {tab === 'sem' && seo.sem_recommendations && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -701,7 +674,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         )}
 
         {/* ── GOOGLE ADS TAB ── */}
-        {tab === 'site-audit' && <SiteAudit />}
+        {tab === 'site-audit' && <SiteAudit autoUrl={isWholeSite ? url : null} />}
 
         {tab === 'ai-traffic' && <AITraffic />}
 
