@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { RefreshCw, Zap, Target, Copy, Check, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import { BASE } from '../api_config'
 
@@ -114,17 +114,24 @@ function AdPreview({ page, index }) {
   )
 }
 
-export default function AdCopy({ url, seoReport, adCopy, urlType }) {
+export default function AdCopy({ url, seoReport, adCopy, urlType, savedRecommendations, onRecommendations }) {
   const [loading, setLoading] = useState(false)
-  const [recommendations, setRecommendations] = useState(null)
+  const [recommendations, setRecommendations] = useState(savedRecommendations || null)
   const [error, setError] = useState(null)
   const [maxPages, setMaxPages] = useState(50)
   const isWholeSite = urlType === 'whole_site'
 
+  useEffect(() => {
+    if (savedRecommendations && !recommendations) {
+      setRecommendations(savedRecommendations)
+    }
+  }, [savedRecommendations])
+
+
+
   async function analyseAndRecommend() {
     setLoading(true)
     setError(null)
-    setRecommendations(null)
     try {
       const res = await fetch(`${BASE}/api/ads/recommend-pages`, {
         method: 'POST',
@@ -134,6 +141,7 @@ export default function AdCopy({ url, seoReport, adCopy, urlType }) {
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setRecommendations(data)
+      if (onRecommendations) onRecommendations(data)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -186,7 +194,7 @@ export default function AdCopy({ url, seoReport, adCopy, urlType }) {
           }}>
             {loading
               ? <><RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} /> Analysing pages...</>
-              : <><Target size={15} /> Find Best Pages to Advertise</>
+              : <><Target size={15} /> {recommendations ? 'Re-analyse Pages' : 'Find Best Pages to Advertise'}</>
             }
           </button>
         </div>
@@ -232,13 +240,13 @@ export default function AdCopy({ url, seoReport, adCopy, urlType }) {
           <div style={{ padding: '10px 14px', background: 'var(--purple-bg)', border: '1px solid rgba(83,74,183,0.2)', borderRadius: '10px', fontSize: '12px', color: 'var(--purple)' }}>
             📄 Single page analysis — showing AI-generated ad copy for this specific page
           </div>
-          {((adCopy?.ad_variants) || []).map((variant, i) => (
+          {(adCopy.ad_variants || []).map((variant, i) => (
             <AdPreview key={i} page={{
               url: url,
               title: variant.angle || `Variant ${i + 1}`,
               reason: 'Generated from page content analysis',
               ad_intent: 'commercial',
-              suggested_keywords: (seoReport?.keyword_suggestions || []).slice(0, 5).map(k => k?.keyword).filter(Boolean),
+              suggested_keywords: (seoReport?.keyword_suggestions || []).slice(0, 5).map(k => k.keyword),
               ad_copy: {
                 headline_1: variant.headlines?.[0]?.text || '',
                 headline_2: variant.headlines?.[1]?.text || '',

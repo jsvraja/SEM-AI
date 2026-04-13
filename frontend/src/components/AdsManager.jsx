@@ -1,5 +1,5 @@
 import { BASE } from '../api_config'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef , useCallback } from 'react'
 import {
   Play, Pause, BarChart3, RefreshCw, Zap, Target,
   TrendingUp, Shield, ExternalLink, CheckCircle,
@@ -280,11 +280,12 @@ function CampaignMonitor({ sessionId }) {
 }
 
 // ─── Publish Panel ────────────────────────────────────────────────────────────
-function PublishPanel({ sessionId, adCopy, seoReport, url }) {
+function PublishPanel({ sessionId, adCopy, seoReport, url, recommendedPages }) {
   const [mode, setMode] = useState('ai') // 'ai' | 'custom'
   const [aiRec, setAiRec] = useState(null)
   const [loadingRec, setLoadingRec] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(0)
+  const [selectedPage, setSelectedPage] = useState(null)
   const [dailyBudget, setDailyBudget] = useState('1500')
   const [monthlyBudget, setMonthlyBudget] = useState('40000')
   const [campaignName, setCampaignName] = useState(() => {
@@ -351,6 +352,7 @@ Respond ONLY with this JSON (no other text):
   const keywords = seoReport?.keyword_suggestions?.map(k => k.keyword) || []
   const targetCountries = seoReport?.sem_recommendations?.target_countries || ['IN', 'US']
   const domain = (() => { try { return new URL(url).hostname } catch { return url } })()
+  const pages = recommendedPages || []
 
   async function handlePublish() {
     const daily = parseFloat(dailyBudget)
@@ -383,9 +385,13 @@ Respond ONLY with this JSON (no other text):
           monthly_budget_usd: monthly,
           target_countries: targetCountries,
           keywords: keywords.slice(0, 15),
-          headlines: variant.headlines.map(h => h.text),
-          descriptions: variant.descriptions.map(d => d.text),
-          final_url: url,
+          headlines: selectedPage?.ad_copy 
+            ? [selectedPage.ad_copy.headline_1, selectedPage.ad_copy.headline_2, selectedPage.ad_copy.headline_3].filter(Boolean)
+            : variant.headlines.map(h => h.text),
+          descriptions: selectedPage?.ad_copy
+            ? [selectedPage.ad_copy.description_1, selectedPage.ad_copy.description_2].filter(Boolean)
+            : variant.descriptions.map(d => d.text),
+          final_url: selectedPage?.url || url,
         }),
       })
       const data = await res.json()
@@ -1180,7 +1186,7 @@ function ReportPanel({ sessionId }) {
 }
 
 
-export default function AdsManager({ sessionId, adCopy, seoReport, url }) {
+export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages }) {
   const [tab, setTab] = useState(sessionId ? 'overview' : 'connect')
 
   useEffect(() => {
@@ -1226,7 +1232,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url }) {
       {tab === 'connect' && <ConnectPanel />}
       {tab === 'overview' && sessionId && <CampaignMonitor sessionId={sessionId} />}
       {tab === 'publish' && sessionId && (
-        <PublishPanel sessionId={sessionId} adCopy={adCopy} seoReport={seoReport} url={url} />
+        <PublishPanel sessionId={sessionId} adCopy={adCopy} seoReport={seoReport} url={url} recommendedPages={recommendedPages || []} />
       )}
       {tab === 'sema' && sessionId && <SEMAConsult sessionId={sessionId} />}
       {tab === 'optimize' && sessionId && <OptimizePanel sessionId={sessionId} />}

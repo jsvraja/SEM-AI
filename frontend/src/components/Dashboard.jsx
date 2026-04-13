@@ -203,6 +203,7 @@ const TABS = [
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [tab, setTab] = useState('overview')
+  const [recommendedPages, setRecommendedPages] = useState([])
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
   const urlType = seo?.url_type || ((() => {
@@ -590,7 +591,14 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         {/* ── ADS TAB ── */}
         {tab === 'ads' && (
-          <AdCopy url={url} seoReport={seo} adCopy={ads} urlType={urlType} />
+          <AdCopy 
+            url={url} 
+            seoReport={seo} 
+            adCopy={ads} 
+            urlType={urlType}
+            savedRecommendations={recommendedPages.length > 0 ? {recommended_pages: recommendedPages} : null}
+            onRecommendations={(data) => setRecommendedPages(data.recommended_pages || [])}
+          />
         )}
 
         
@@ -640,55 +648,12 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <Card>
-                    <SectionTitle icon={Globe}>Country-Wise Budget</SectionTitle>
-                    {(seo.sem_recommendations.country_budgets || []).length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {(seo.sem_recommendations.country_budgets || []).map((cb, i) => {
-                          const cc = cb.competition === 'high' ? 'var(--red)' : cb.competition === 'medium' ? 'var(--yellow)' : 'var(--green)'
-                          const cb2 = cb.competition === 'high' ? 'var(--red-bg)' : cb.competition === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)'
-                          const flag = {IN:'🇮🇳',US:'🇺🇸',GB:'🇬🇧',UK:'🇬🇧',AU:'🇦🇺',CA:'🇨🇦',SG:'🇸🇬',AE:'🇦🇪'}[cb.code] || '🌍'
-                          return (
-                            <div key={i} style={{ padding: '10px 12px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontSize: '16px' }}>{flag}</span>
-                                  <div>
-                                    <div style={{ fontSize: '12px', fontWeight: 600 }}>{cb.country}</div>
-                                    <div style={{ fontSize: '10px', color: 'var(--text3)' }}>{cb.notes}</div>
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: cb2, color: cc, fontWeight: 500 }}>{cb.competition}</span>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px' }}>
-                                {[
-                                  { label: 'Budget', val: `₹${(cb.budget_inr||0).toLocaleString()}`, color: 'var(--green)' },
-                                  { label: 'Share', val: `${cb.budget_pct}%`, color: 'var(--accent)' },
-                                  { label: 'Avg CPC', val: `₹${cb.avg_cpc_inr}`, color: 'var(--yellow)' },
-                                  { label: 'Clicks', val: cb.monthly_clicks, color: 'var(--cyan)' },
-                                ].map(({ label, val, color }) => (
-                                  <div key={label} style={{ textAlign: 'center', padding: '5px', background: 'var(--bg4)', borderRadius: '5px' }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 700, color }}>{val}</div>
-                                    <div style={{ fontSize: '9px', color: 'var(--text3)', textTransform: 'uppercase' }}>{label}</div>
-                                  </div>
-                                ))}
-                              </div>
-                              <div style={{ marginTop: '6px', height: '4px', background: 'var(--bg4)', borderRadius: '2px' }}>
-                                <div style={{ height: '100%', width: `${cb.budget_pct}%`, background: 'var(--accent)', borderRadius: '2px' }} />
-                              </div>
-                            </div>
-                          )
-                        })}
-                        <div style={{ padding: '8px 10px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: '8px', fontSize: '11px', color: 'var(--accent-text)', lineHeight: 1.5 }}>
-                          💡 US/UK markets cost more per click but deliver higher-value leads. India offers volume at lower cost. Allocate based on your target customer location.
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        {(seo.sem_recommendations.target_countries || []).map((c, i) => (
-                          <span key={i} className="badge badge-blue">{c}</span>
-                        ))}
-                      </div>
-                    )}
+                    <SectionTitle icon={Globe}>Target Countries</SectionTitle>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {(seo.sem_recommendations.target_countries || []).map((c, i) => (
+                        <span key={i} className="badge badge-blue">{c}</span>
+                      ))}
+                    </div>
                   </Card>
                   <Card>
                     <SectionTitle icon={Users}>Audience Segments</SectionTitle>
@@ -755,6 +720,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             adCopy={ads}
             seoReport={seo}
             url={url}
+            recommendedPages={recommendedPages}
+            onRecommendedPages={setRecommendedPages}
           />
         )}
       </main>
