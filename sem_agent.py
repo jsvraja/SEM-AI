@@ -246,9 +246,10 @@ async def run_monitoring_cycle(campaigns: list, session_id: str, customer_id: st
 def get_agent_status() -> dict:
     """Get current agent status and recent activity."""
     state = _agent_state
+    last_check = state.get("last_check")
     return {
         "active": state.get("active", True),
-        "last_check": state.get("last_check"),
+        "last_check": str(last_check) if last_check else None,
         "total_alerts": len(state.get("alerts", [])),
         "recent_alerts": state.get("alerts", [])[-5:],
         "recent_actions": state.get("actions_taken", [])[-5:],
