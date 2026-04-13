@@ -34,9 +34,18 @@ function IssueIcon({ severity }) {
   return <CheckCircle size={14} color="var(--green)" />
 }
 
-export default function SiteAudit() {
-  const [url, setUrl] = useState('')
+export default function SiteAudit({ autoUrl = null }) {
+  const [url, setUrl] = useState(autoUrl || '')
   const [maxPages, setMaxPages] = useState(100)
+  const [autoStarted, setAutoStarted] = useState(false)
+
+  useEffect(() => {
+    if (autoUrl && !autoStarted) {
+      setAutoStarted(true)
+      // Small delay to let component render
+      setTimeout(() => startAudit(autoUrl), 500)
+    }
+  }, [autoUrl])
   const [auditing, setAuditing] = useState(false)
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(null)
@@ -49,9 +58,10 @@ export default function SiteAudit() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
 
-  async function startAudit() {
-    if (!url.trim()) { setError('Please enter a URL'); return }
-    let auditUrl = url.trim()
+  async function startAudit(overrideUrl = null) {
+    const rawUrl = overrideUrl || url
+    if (!rawUrl.trim()) { setError('Please enter a URL'); return }
+    let auditUrl = rawUrl.trim()
     if (!auditUrl.startsWith('http')) auditUrl = 'https://' + auditUrl
 
     setAuditing(true)
