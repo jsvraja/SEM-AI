@@ -279,6 +279,7 @@ async def full_report(req: FullReportRequest):
                     'notes': d['note'],
                 })
             sem['country_budgets'] = country_budgets
+        sem['target_countries'] = [cb['code'] for cb in country_budgets]
         
         seo_report['sem_recommendations'] = sem
     
