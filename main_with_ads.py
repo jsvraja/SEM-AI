@@ -834,29 +834,49 @@ Rules:
 
 
 
-@app.post("/api/site-audit")
-async def site_audit(request: Request):
+@app.post("/api/site-audit/start")
+async def start_site_audit(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
     url = body.get("url", "")
-    max_pages = min(body.get("max_pages", 50), 500)
-    
+    max_pages = min(body.get("max_pages", 100), 20000)
     if not url:
         raise HTTPException(status_code=400, detail="URL required")
-    
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
-    
-    from site_crawler import crawl_site, analyze_site
-    
-    try:
-        pages = await crawl_site(url, max_pages)
-        if not pages:
-            return {"error": "Could not crawl any pages. Check the URL and try again."}
-        result = analyze_site(pages, url)
-        return result
-    except Exception as e:
-        return {"error": str(e)}
+    import uuid
+    from site_crawler import create_job, run_audit_job
+    job_id = str(uuid.uuid4())[:8]
+    create_job(job_id, url, max_pages)
+    background_tasks.add_task(run_audit_job, job_id, url, max_pages)
+    return {"job_id": job_id, "status": "started"}
 
+
+@app.get("/api/site-audit/status/{job_id}")
+async def get_audit_status(job_id: str):
+    from site_crawler import get_job
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"job_id": job_id, "status": job["status"], "progress": job["progress"],
+            "pages_found": job["pages_found"], "pages_crawled": job["pages_crawled"],
+            "current_url": job["current_url"], "result": job["result"], "error": job["error"]}
+
+
+@app.post("/api/site-audit")
+async def site_audit(request: Request, background_tasks: BackgroundTasks):
+    body = await request.json()
+    url = body.get("url", "")
+    max_pages = min(body.get("max_pages", 100), 20000)
+    if not url:
+        raise HTTPException(status_code=400, detail="URL required")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    import uuid
+    from site_crawler import create_job, run_audit_job
+    job_id = str(uuid.uuid4())[:8]
+    create_job(job_id, url, max_pages)
+    background_tasks.add_task(run_audit_job, job_id, url, max_pages)
+    return {"job_id": job_id, "status": "started"}
 
 @app.post("/api/site-audit/start")
 async def start_site_audit(request: Request, background_tasks: BackgroundTasks):
