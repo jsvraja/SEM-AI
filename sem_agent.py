@@ -247,13 +247,14 @@ def get_agent_status() -> dict:
     """Get current agent status and recent activity."""
     state = _agent_state
     last_check = state.get("last_check")
+    history = state.get("chat_history", [])
     return {
         "active": state.get("active", True),
         "last_check": str(last_check) if last_check else None,
         "total_alerts": len(state.get("alerts", [])),
-        "recent_alerts": state.get("alerts", [])[-5:],
-        "recent_actions": state.get("actions_taken", [])[-5:],
-        "chat_history": state.get("chat_history", [])[-20:],
+        "recent_alerts": state.get("alerts", [])[-3:],
+        "recent_actions": state.get("actions_taken", [])[-3:],
+        "chat_count": len(history),
         "total_snapshots": len(state.get("campaign_snapshots", [])),
     }
 
