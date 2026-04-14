@@ -1108,7 +1108,7 @@ async def agent_analyze(request: Request):
 @app.get("/api/agent/report")
 async def agent_weekly_report(session_id: str, customer_id: str = ""):
     """Generate weekly performance report."""
-    from sem_agent import _agent_state
+    from sem_agent import _agent_state, chat_with_agent, get_agent_status, clear_agent_chat
     snapshots = _agent_state.get("campaign_snapshots", [])
     report = generate_weekly_report(snapshots)
     return {"report": report, "generated_at": datetime.now().isoformat()}
