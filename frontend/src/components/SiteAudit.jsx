@@ -45,13 +45,10 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
       setResults(savedResults)
     }
   }, [savedResults])
+
+
   
-  // Restore saved results when switching back to this tab
-  useEffect(() => {
-    if (!results && savedResultsRef.current) {
-      setResults(savedResultsRef.current)
-    }
-  }, [])
+
 
   useEffect(() => {
     if (autoUrl && !autoStarted) {
