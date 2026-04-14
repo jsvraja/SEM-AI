@@ -286,8 +286,8 @@ function PublishPanel({ sessionId, adCopy, seoReport, url, recommendedPages }) {
   const [loadingRec, setLoadingRec] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(0)
   const [selectedPage, setSelectedPage] = useState(null)
-  const [dailyBudget, setDailyBudget] = useState('1500')
-  const [monthlyBudget, setMonthlyBudget] = useState('40000')
+  const [dailyBudget, setDailyBudget] = useState('15')
+  const [monthlyBudget, setMonthlyBudget] = useState('400')
   const [campaignName, setCampaignName] = useState(() => {
     try { return `SEM-AI — ${new URL(url).hostname}` } catch { return 'SEM-AI Campaign' }
   })
