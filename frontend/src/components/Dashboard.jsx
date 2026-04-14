@@ -739,6 +739,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           </div>
         )}
 
+        {tab === 'site-audit' && <SiteAudit autoUrl={isWholeSite ? url : null} />}
+
         {tab === 'ai-traffic' && <AITraffic />}
 
         {tab === 'social' && (
