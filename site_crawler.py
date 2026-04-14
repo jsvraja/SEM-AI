@@ -51,7 +51,7 @@ async def get_urls_from_sitemap(client: httpx.AsyncClient, sitemap_url: str, bas
         sitemaps = soup.find_all('sitemap')
         if sitemaps:
             tasks = []
-            for sitemap in sitemaps[:30]:
+            for sitemap in sitemaps[:5]:
                 loc = sitemap.find('loc')
                 if loc and len(urls) < max_urls:
                     tasks.append(get_urls_from_sitemap(client, loc.text.strip(), base_domain, max_urls))
@@ -229,7 +229,7 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
 
             # Crawl pages in batches of 20
             pages = []
-            batch_size = 5
+            batch_size = 3
             total = len(urls_to_fetch)
 
             for i in range(0, total, batch_size):
