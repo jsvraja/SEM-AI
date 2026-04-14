@@ -38,6 +38,13 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
   const [url, setUrl] = useState(autoUrl || '')
   const [maxPages, setMaxPages] = useState(100)
   const [autoStarted, setAutoStarted] = useState(false)
+  const [auditing, setAuditing] = useState(false)
+  const [jobId, setJobId] = useState(null)
+  const [progress, setProgress] = useState(null)
+  const [results, setResults] = useState(savedResults || null)
+  const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState('overview')
+  const pollRef = useRef(null)
 
   // Restore results when switching back to this tab
   useEffect(() => {
@@ -46,25 +53,12 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
     }
   }, [savedResults])
 
-
-  
-
-
   useEffect(() => {
     if (autoUrl && !autoStarted) {
       setAutoStarted(true)
-      // Small delay to let component render
       setTimeout(() => startAudit(autoUrl), 500)
     }
   }, [autoUrl])
-  const [auditing, setAuditing] = useState(false)
-  const [jobId, setJobId] = useState(null)
-  const [progress, setProgress] = useState(null)
-  const [results, setResults] = useState(savedResults || null)
-  const savedResultsRef = React.useRef(null)
-  const [error, setError] = useState(null)
-  const [activeTab, setActiveTab] = useState('overview')
-  const pollRef = useRef(null)
 
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
