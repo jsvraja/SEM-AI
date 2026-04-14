@@ -1083,11 +1083,19 @@ async def agent_chat(request: Request):
             pass
 
     try:
-        response = chat_with_agent(message, campaigns, session_id)
+        import httpx as _hx, json as _json
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        camp_str = _json.dumps(campaigns[:3]) if campaigns else "No campaigns data"
+        prompt = f"""You are SEMA, an expert Google Ads AI assistant. Answer this question about the user's campaigns.
+Campaigns data: {camp_str}
+User question: {message}
+Give a clear, actionable response in 2-3 sentences."""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        resp = _hx.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
+        data = resp.json()
+        response = data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        response = f"Error: {str(e)}"
+        response = f"I encountered an error: {str(e)}"
     return {"response": response, "timestamp": datetime.now().isoformat()}
 
 
