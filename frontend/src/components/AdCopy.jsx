@@ -116,7 +116,10 @@ function AdPreview({ page, index }) {
 
 export default function AdCopy({ url, seoReport, adCopy, urlType, savedRecommendations, onRecommendations }) {
   const [loading, setLoading] = useState(false)
-  const [recommendations, setRecommendations] = useState(savedRecommendations || null)
+  const [recommendations, setRecommendations] = useState(() => {
+    if (savedRecommendations) return savedRecommendations
+    try { const s = sessionStorage.getItem('adcopy_recommendations'); return s ? JSON.parse(s) : null } catch(e) { return null }
+  })
   const [error, setError] = useState(null)
   const [maxPages, setMaxPages] = useState(50)
   const isWholeSite = urlType === 'whole_site'
@@ -142,6 +145,7 @@ export default function AdCopy({ url, seoReport, adCopy, urlType, savedRecommend
       if (data.error) throw new Error(data.error)
       setRecommendations(data)
       if (onRecommendations) onRecommendations(data)
+      try { sessionStorage.setItem('adcopy_recommendations', JSON.stringify(data)) } catch(e) {}
     } catch (e) {
       setError(e.message)
     } finally {
