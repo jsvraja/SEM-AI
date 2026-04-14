@@ -204,6 +204,7 @@ const TABS = [
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
+  const [siteAuditResults, setSiteAuditResults] = useState(null)
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
   const urlType = seo?.url_type || ((() => {
@@ -738,8 +739,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             )}
           </div>
         )}
-
-        {tab === 'site-audit' && <SiteAudit autoUrl={isWholeSite ? url : null} />}
 
         {tab === 'ai-traffic' && <AITraffic />}
 

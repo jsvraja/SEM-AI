@@ -34,10 +34,17 @@ function IssueIcon({ severity }) {
   return <CheckCircle size={14} color="var(--green)" />
 }
 
-export default function SiteAudit({ autoUrl = null }) {
+export default function SiteAudit({ autoUrl = null, savedResults = null, onResults = null }) {
   const [url, setUrl] = useState(autoUrl || '')
   const [maxPages, setMaxPages] = useState(100)
   const [autoStarted, setAutoStarted] = useState(false)
+
+  // Restore results when switching back to this tab
+  useEffect(() => {
+    if (savedResults && !results) {
+      setResults(savedResults)
+    }
+  }, [savedResults])
   
   // Restore saved results when switching back to this tab
   useEffect(() => {
@@ -56,7 +63,7 @@ export default function SiteAudit({ autoUrl = null }) {
   const [auditing, setAuditing] = useState(false)
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(null)
-  const [results, setResults] = useState(null)
+  const [results, setResults] = useState(savedResults || null)
   const savedResultsRef = React.useRef(null)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
@@ -88,6 +95,7 @@ export default function SiteAudit({ autoUrl = null }) {
     setAuditing(true)
     setError(null)
     setResults(null)
+    if (onResults) onResults(null)
     setJobId(null)
     setProgress({ status: 'starting', progress: 0, pages_found: 0, pages_crawled: 0, current_url: 'Initialising...' })
 
@@ -113,7 +121,7 @@ export default function SiteAudit({ autoUrl = null }) {
           if (status.status === 'complete') {
             clearInterval(pollRef.current)
             setResults(status.result)
-            savedResultsRef.current = status.result
+            if (onResults) onResults(status.result)
             setAuditing(false)
           } else if (status.status === 'error') {
             clearInterval(pollRef.current)
