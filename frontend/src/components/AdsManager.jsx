@@ -512,7 +512,22 @@ Respond ONLY with this JSON (no other text):
           </h2>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+        {pages.length > 0 && (
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Landing Page (from Ad Copy)
+              </label>
+              <select value={selectedPage ? pages.indexOf(selectedPage) : -1}
+                onChange={e => { const i = parseInt(e.target.value); setSelectedPage(i >= 0 ? pages[i] : null); if (i >= 0 && pages[i]) setCampaignName(pages[i].title?.slice(0,40) || campaignName) }}
+                style={{ width: '100%', padding: '8px 10px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '7px', color: 'var(--text)', fontSize: '13px' }}>
+                <option value={-1}>Use analysed URL: {url}</option>
+                {pages.map((p, i) => <option key={i} value={i}>#{i+1} {p.title?.slice(0,50)} — {p.url?.replace('https://','').slice(0,40)}</option>)}
+              </select>
+              {selectedPage && <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--accent)', padding: '4px 8px', background: 'var(--accent-bg)', borderRadius: '4px' }}>✓ Using ad copy from: {selectedPage.url}</div>}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Campaign Name
