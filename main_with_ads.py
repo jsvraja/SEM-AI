@@ -840,7 +840,7 @@ Rules:
 async def start_site_audit(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
     url = body.get("url", "")
-    max_pages = min(body.get("max_pages", 100), 20000)
+    max_pages = min(body.get("max_pages", 100), 500)
     if not url:
         raise HTTPException(status_code=400, detail="URL required")
     if not url.startswith(("http://", "https://")):
@@ -868,7 +868,7 @@ async def get_audit_status(job_id: str):
 async def site_audit(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
     url = body.get("url", "")
-    max_pages = min(body.get("max_pages", 100), 20000)
+    max_pages = min(body.get("max_pages", 100), 500)
     if not url:
         raise HTTPException(status_code=400, detail="URL required")
     if not url.startswith(("http://", "https://")):
@@ -884,7 +884,7 @@ async def site_audit(request: Request, background_tasks: BackgroundTasks):
 async def start_site_audit(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
     url = body.get("url", "")
-    max_pages = min(body.get("max_pages", 100), 20000)
+    max_pages = min(body.get("max_pages", 100), 500)
     if not url:
         raise HTTPException(status_code=400, detail="URL required")
     if not url.startswith(("http://", "https://")):
@@ -920,7 +920,7 @@ async def site_audit(request: Request, background_tasks: BackgroundTasks):
     """Legacy endpoint - starts job and returns job_id."""
     body = await request.json()
     url = body.get("url", "")
-    max_pages = min(body.get("max_pages", 100), 20000)
+    max_pages = min(body.get("max_pages", 100), 500)
     if not url:
         raise HTTPException(status_code=400, detail="URL required")
     if not url.startswith(("http://", "https://")):
