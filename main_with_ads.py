@@ -485,15 +485,15 @@ async def publish_campaign(req: PublishCampaignRequest):
         customer_id = req.customer_id or session.get("customer_id", os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", ""))
         refresh_token = session["refresh_token"]
 
-        result = create_google_ads_campaign(
+        result = create_campaign_from_report(
             customer_id=customer_id,
             refresh_token=refresh_token,
             campaign_name=req.campaign_name,
-            daily_budget_usd=req.daily_budget_usd,
+            daily_budget_inr=req.daily_budget_usd * 83,
             target_countries=req.target_countries,
             keywords=req.keywords,
-            headlines=req.headlines,
-            descriptions=req.descriptions,
+            ad_headlines=req.headlines,
+            ad_descriptions=req.descriptions,
             final_url=req.final_url,
         )
 
