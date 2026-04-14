@@ -229,7 +229,7 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
 
             # Crawl pages in batches of 20
             pages = []
-            batch_size = 20
+            batch_size = 5
             total = len(urls_to_fetch)
 
             for i in range(0, total, batch_size):
@@ -245,7 +245,7 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
                     if r and isinstance(r, dict):
                         pages.append(r)
 
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.5)
 
             job['pages_crawled'] = len(pages)
             job['progress'] = 100
