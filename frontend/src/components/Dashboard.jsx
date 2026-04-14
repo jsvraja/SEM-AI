@@ -314,7 +314,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>SEO Health</div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center' }}>
                   <ScoreRing score={seo.overall_seo_score} label="Overall SEO" />
-                  <ScoreRing score={seo.content_analysis?.quality_score || 0} label="Content" />
+                  <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
                 </div>
               </Card>
 
