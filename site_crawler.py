@@ -186,18 +186,16 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
             for sitemap_url in sitemap_candidates:
                 job['current_url'] = f'Checking: {sitemap_url}'
                 found = await get_urls_from_sitemap(client, sitemap_url, base_domain, max_pages * 10)
-                if found:
-                    # Filter to only URLs under the input path
-                    if url_path_prefix and url_path_prefix != '':
-                        filtered = [u for u in found if urlparse(u).path.startswith(url_path_prefix + "/") or urlparse(u).path == url_path_prefix]
-                        if filtered:
-                            urls_to_fetch = filtered[:max_pages]
-                            break  # Stop at first sitemap with matching URLs
-                            urls_to_fetch = filtered[:max_pages]
-                        else:
-                            urls_to_fetch = found[:max_pages]
-                    else:
-                        urls_to_fetch = found[:max_pages]
+                if not found:
+                    continue
+                if url_path_prefix:
+                    filtered = [u for u in found if urlparse(u).path.startswith(url_path_prefix + '/') or urlparse(u).path.rstrip('/') == url_path_prefix]
+                    if filtered:
+                        urls_to_fetch = filtered[:max_pages]
+                        break
+                else:
+                    urls_to_fetch = found[:max_pages]
+                    break
                     print(f"Found {len(found)} URLs from {sitemap_url}")
                     break
 
