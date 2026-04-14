@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { RefreshCw, Globe, CheckCircle, AlertTriangle, XCircle, Search } from 'lucide-react'
 import { BASE } from '../api_config'
 
@@ -38,6 +38,13 @@ export default function SiteAudit({ autoUrl = null }) {
   const [url, setUrl] = useState(autoUrl || '')
   const [maxPages, setMaxPages] = useState(100)
   const [autoStarted, setAutoStarted] = useState(false)
+  
+  // Restore saved results when switching back to this tab
+  useEffect(() => {
+    if (!results && savedResultsRef.current) {
+      setResults(savedResultsRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (autoUrl && !autoStarted) {
@@ -50,6 +57,7 @@ export default function SiteAudit({ autoUrl = null }) {
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(null)
   const [results, setResults] = useState(null)
+  const savedResultsRef = React.useRef(null)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const pollRef = useRef(null)
@@ -57,6 +65,17 @@ export default function SiteAudit({ autoUrl = null }) {
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
+
+  // Safety timeout - if still auditing after 10 min, reset
+  useEffect(() => {
+    if (!auditing) return
+    const timeout = setTimeout(() => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      setAuditing(false)
+      setError('Audit timed out. Please try again with fewer pages.')
+    }, 600000)
+    return () => clearTimeout(timeout)
+  }, [auditing])
 
   async function startAudit(overrideUrl = null) {
     const rawUrl = overrideUrl || url
@@ -94,6 +113,7 @@ export default function SiteAudit({ autoUrl = null }) {
           if (status.status === 'complete') {
             clearInterval(pollRef.current)
             setResults(status.result)
+            savedResultsRef.current = status.result
             setAuditing(false)
           } else if (status.status === 'error') {
             clearInterval(pollRef.current)
