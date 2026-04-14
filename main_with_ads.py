@@ -1082,7 +1082,12 @@ async def agent_chat(request: Request):
         except:
             pass
 
-    response = chat_with_agent(message, campaigns, session_id)
+    try:
+        response = chat_with_agent(message, campaigns, session_id)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        response = f"Error: {str(e)}"
     return {"response": response, "timestamp": datetime.now().isoformat()}
 
 
