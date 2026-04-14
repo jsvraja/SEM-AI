@@ -1,32 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, Globe, CheckCircle, AlertTriangle, XCircle, Search } from 'lucide-react'
 import { BASE } from '../api_config'
-
-function Card({ children, style }) {
-  return (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem', ...style }}>
-      {children}
-    </div>
-  )
-}
-
-function ScoreRing({ score, size = 64 }) {
-  const color = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)'
-  const r = (size / 2) - 6
-  const circ = 2 * Math.PI * r
-  const dash = (score / 100) * circ
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--bg4)" strokeWidth="5" />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5"
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" />
-      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="middle"
-        style={{ transform: `rotate(90deg) translate(0px, 0px)`, transformOrigin: `${size/2}px ${size/2}px`, fontSize: size > 50 ? '14px' : '11px', fontWeight: 700, fill: color }}>
-        {score}
-      </text>
-    </svg>
-  )
-}
 
 function IssueIcon({ severity }) {
   if (severity === 'critical') return <XCircle size={14} color="var(--red)" />
@@ -35,66 +9,49 @@ function IssueIcon({ severity }) {
 }
 
 export default function SiteAudit({ autoUrl = null, savedResults = null, onResults = null }) {
-  const [url, setUrl] = useState(autoUrl || '')
+  const [url, setUrl] = useState('')
   const [maxPages, setMaxPages] = useState(100)
-  const [autoStarted, setAutoStarted] = useState(false)
   const [auditing, setAuditing] = useState(false)
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(null)
-  const [results, setResults] = useState(savedResults || null)
+  const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const pollRef = useRef(null)
 
-  // Restore results when switching back to this tab
+  // Set URL from autoUrl prop
   useEffect(() => {
-    if (savedResults && !results) {
-      setResults(savedResults)
-    }
-  }, [savedResults])
-
-  useEffect(() => {
-    if (autoUrl && !autoStarted) {
-      setAutoStarted(true)
-      setTimeout(() => startAudit(autoUrl), 500)
-    }
+    if (autoUrl) setUrl(autoUrl)
   }, [autoUrl])
 
+  // Restore saved results
+  useEffect(() => {
+    if (savedResults && !results) setResults(savedResults)
+  }, [savedResults])
+
+  // Cleanup polling on unmount
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
 
-  // Safety timeout - if still auditing after 10 min, reset
-  useEffect(() => {
-    if (!auditing) return
-    const timeout = setTimeout(() => {
-      if (pollRef.current) clearInterval(pollRef.current)
-      setAuditing(false)
-      setError('Audit timed out. Please try again with fewer pages.')
-    }, 600000)
-    return () => clearTimeout(timeout)
-  }, [auditing])
+  async function startAudit() {
+    const auditUrl = url.trim()
+    if (!auditUrl) { setError('Please enter a URL'); return }
+    const finalUrl = auditUrl.startsWith('http') ? auditUrl : 'https://' + auditUrl
 
-  async function startAudit(overrideUrl = null) {
-    const rawUrl = overrideUrl || url
-    if (!rawUrl.trim()) { setError('Please enter a URL'); return }
-    let auditUrl = rawUrl.trim()
-    if (!auditUrl.startsWith('http')) auditUrl = 'https://' + auditUrl
-
-    // Stop any existing poll
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    if (pollRef.current) clearInterval(pollRef.current)
     setAuditing(true)
     setError(null)
     setResults(null)
-    if (onResults) onResults(null)
     setJobId(null)
-    setProgress({ status: 'starting', progress: 0, pages_found: 0, pages_crawled: 0, current_url: 'Initialising...' })
+    if (onResults) onResults(null)
+    setProgress({ status: 'starting', progress: 0, pages_found: 0, pages_crawled: 0, current_url: 'Starting...' })
 
     try {
       const res = await fetch(`${BASE}/api/site-audit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: auditUrl, max_pages: maxPages }),
+        body: JSON.stringify({ url: finalUrl, max_pages: maxPages }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
@@ -102,13 +59,11 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
       const id = data.job_id
       setJobId(id)
 
-      // Poll for progress every 2 seconds
       pollRef.current = setInterval(async () => {
         try {
-          const statusRes = await fetch(`${BASE}/api/site-audit/status/${id}`)
-          const status = await statusRes.json()
+          const sr = await fetch(`${BASE}/api/site-audit/status/${id}`)
+          const status = await sr.json()
           setProgress(status)
-
           if (status.status === 'complete') {
             clearInterval(pollRef.current)
             setResults(status.result)
@@ -119,23 +74,19 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
             setError(status.error || 'Audit failed')
             setAuditing(false)
           }
-        } catch (e) {
-          console.error('Poll error:', e)
-        }
+        } catch (e) { console.error('Poll error:', e) }
       }, 2000)
+
+      // Safety timeout 10 min
+      setTimeout(() => {
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+        setAuditing(false)
+      }, 600000)
 
     } catch (e) {
       setError(e.message)
       setAuditing(false)
     }
-  }
-
-  const statusLabels = {
-    starting: 'Starting...',
-    discovering: 'Discovering pages...',
-    crawling: 'Crawling pages...',
-    analyzing: 'Analysing results...',
-    complete: 'Complete!',
   }
 
   const tabs = [
@@ -148,7 +99,7 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:200px 0} }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -162,7 +113,7 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
       </div>
 
       {/* Input */}
-      <Card>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
         <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px' }}>Website to Audit</div>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
           <input
@@ -175,9 +126,8 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
           />
           <button onClick={startAudit} disabled={auditing} style={{
             padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-            background: auditing ? 'var(--bg3)' : 'var(--accent)',
-            border: 'none', color: auditing ? 'var(--text3)' : 'white',
-            cursor: auditing ? 'not-allowed' : 'pointer',
+            background: auditing ? 'var(--bg3)' : 'var(--accent)', border: 'none',
+            color: auditing ? 'var(--text3)' : 'white', cursor: auditing ? 'not-allowed' : 'pointer',
             display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
           }}>
             {auditing ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Search size={14} />}
@@ -193,234 +143,152 @@ export default function SiteAudit({ autoUrl = null, savedResults = null, onResul
               border: `1px solid ${maxPages === n ? 'var(--accent-border)' : 'var(--border)'}`,
               color: maxPages === n ? 'var(--accent)' : 'var(--text3)',
               cursor: auditing ? 'not-allowed' : 'pointer', fontWeight: maxPages === n ? 600 : 400,
-            }}>
-              {n >= 1000 ? `${n/1000}K` : n}
-            </button>
+            }}>{n >= 1000 ? `${n/1000}K` : n}</button>
           ))}
-          {maxPages >= 1000 && <span style={{ fontSize: '11px', color: 'var(--yellow)' }}>⚠ Large audit may take 10-20 minutes</span>}
         </div>
-      </Card>
+      </div>
 
       {/* Progress */}
       {auditing && progress && (
-        <Card>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>
-              {statusLabels[progress.status] || progress.status}
+            <span style={{ fontSize: '13px', fontWeight: 500 }}>
+              {progress.status === 'discovering' ? 'Discovering pages...' : progress.status === 'crawling' ? 'Crawling pages...' : progress.status === 'analyzing' ? 'Analysing...' : 'Starting...'}
             </span>
-            <span style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: 600 }}>{progress.progress}%</span>
+            <span style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: 600 }}>{progress.progress || 0}%</span>
           </div>
-
-          {/* Progress bar */}
           <div style={{ height: '8px', background: 'var(--bg4)', borderRadius: '4px', overflow: 'hidden', marginBottom: '12px' }}>
-            <div style={{
-              height: '100%', borderRadius: '4px',
-              background: 'linear-gradient(90deg, var(--accent), #7c3aed)',
-              width: `${Math.max(2, progress.progress)}%`,
-              transition: 'width 0.5s ease',
-            }} />
+            <div style={{ height: '100%', borderRadius: '4px', background: 'linear-gradient(90deg, var(--accent), #7c3aed)', width: `${Math.max(2, progress.progress || 0)}%`, transition: 'width 0.5s' }} />
           </div>
-
-          {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '10px' }}>
-            <div style={{ padding: '8px', background: 'var(--bg3)', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>{progress.pages_found || 0}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase' }}>Found</div>
-            </div>
-            <div style={{ padding: '8px', background: 'var(--bg3)', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--accent)' }}>{progress.pages_crawled || 0}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase' }}>Crawled</div>
-            </div>
-            <div style={{ padding: '8px', background: 'var(--bg3)', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>{maxPages >= 1000 ? `${maxPages/1000}K` : maxPages}</div>
-              <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase' }}>Target</div>
-            </div>
+            {[
+              { label: 'Found', val: progress.pages_found || 0 },
+              { label: 'Crawled', val: progress.pages_crawled || 0 },
+              { label: 'Target', val: maxPages >= 1000 ? `${maxPages/1000}K` : maxPages },
+            ].map(({ label, val }) => (
+              <div key={label} style={{ padding: '8px', background: 'var(--bg3)', borderRadius: '8px', textAlign: 'center' }}>
+                <div style={{ fontSize: '16px', fontWeight: 700 }}>{val}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase' }}>{label}</div>
+              </div>
+            ))}
           </div>
-
           {progress.current_url && (
             <div style={{ fontSize: '11px', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               🔍 {progress.current_url}
             </div>
           )}
-        </Card>
+        </div>
       )}
 
-      {error && <div style={{ padding: '10px 14px', background: 'var(--red-bg)', border: '1px solid rgba(163,45,45,0.2)', borderRadius: '8px', fontSize: '13px', color: 'var(--red)' }}>⚠ {error}</div>}
+      {error && <div style={{ padding: '10px 14px', background: 'var(--red-bg)', borderRadius: '8px', fontSize: '13px', color: 'var(--red)' }}>⚠ {error}</div>}
 
       {/* Results */}
       {results && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-          {/* Summary */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-            <Card style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px' }}>
-              <ScoreRing score={results.site_score || 0} size={52} />
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Site Score</div>
-                <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)' }}>
-                  {results.site_score >= 70 ? 'Good' : results.site_score >= 40 ? 'Needs work' : 'Poor'}
-                </div>
+            {[
+              { label: 'Site Score', val: results.site_score || 0, color: results.site_score >= 70 ? 'var(--green)' : results.site_score >= 40 ? 'var(--yellow)' : 'var(--red)' },
+              { label: 'Pages Audited', val: (results.pages_crawled || 0).toLocaleString(), color: 'var(--text)' },
+              { label: 'Critical Issues', val: results.critical_issues || 0, color: 'var(--red)' },
+              { label: 'Warnings', val: results.warnings || 0, color: 'var(--yellow)' },
+            ].map(({ label, val, color }) => (
+              <div key={label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
+                <div style={{ fontSize: '24px', fontWeight: 700, color }}>{val}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
               </div>
-            </Card>
-            <Card style={{ padding: '14px' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text)' }}>{results.pages_crawled?.toLocaleString() || 0}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pages Audited</div>
-            </Card>
-            <Card style={{ padding: '14px' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--red)' }}>{results.critical_issues || 0}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Critical Issues</div>
-            </Card>
-            <Card style={{ padding: '14px' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--yellow)' }}>{results.warnings || 0}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Warnings</div>
-            </Card>
+            ))}
           </div>
 
-          {/* Tabs */}
           <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
                 padding: '8px 14px', border: 'none', background: 'none', whiteSpace: 'nowrap',
                 borderBottom: activeTab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
                 color: activeTab === t.id ? 'var(--accent)' : 'var(--text3)',
-                fontSize: '12px', fontWeight: activeTab === t.id ? 600 : 400,
-                cursor: 'pointer', marginBottom: '-1px',
+                fontSize: '12px', fontWeight: activeTab === t.id ? 600 : 400, cursor: 'pointer', marginBottom: '-1px',
               }}>{t.label}</button>
             ))}
           </div>
 
-          {/* Overview */}
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <Card>
-                <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>Summary</div>
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Summary</div>
                 <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.7 }}>{results.summary}</p>
-              </Card>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <Card>
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--green)', marginBottom: '8px', textTransform: 'uppercase' }}>✓ Strengths</div>
                   {(results.strengths || []).map((s, i) => <div key={i} style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '5px', paddingLeft: '8px', borderLeft: '2px solid var(--green)' }}>{s}</div>)}
-                </Card>
-                <Card>
+                </div>
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--red)', marginBottom: '8px', textTransform: 'uppercase' }}>✗ Weaknesses</div>
                   {(results.weaknesses || []).map((w, i) => <div key={i} style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '5px', paddingLeft: '8px', borderLeft: '2px solid var(--red)' }}>{w}</div>)}
-                </Card>
+                </div>
               </div>
-              {results.score_breakdown && (
-                <Card>
-                  <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Score Breakdown</div>
-                  {Object.entries(results.score_breakdown).map(([key, val], i) => (
-                    <div key={i} style={{ marginBottom: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                        <span style={{ color: 'var(--text2)', textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</span>
-                        <span style={{ fontWeight: 600, color: val >= 70 ? 'var(--green)' : val >= 40 ? 'var(--yellow)' : 'var(--red)' }}>{val}%</span>
-                      </div>
-                      <div style={{ height: '5px', background: 'var(--bg4)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', borderRadius: '3px', width: `${val}%`, background: val >= 70 ? 'var(--green)' : val >= 40 ? 'var(--yellow)' : 'var(--red)', transition: 'width 0.5s' }} />
-                      </div>
-                    </div>
-                  ))}
-                </Card>
-              )}
             </div>
           )}
 
-          {/* Top Pages */}
           {activeTab === 'top' && (
-            <Card>
-              <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px', color: 'var(--green)' }}>🏆 Top Performing Pages</div>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--green)', marginBottom: '12px' }}>🏆 Top Performing Pages</div>
               {(results.top_pages || []).map((p, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                  <span style={{ fontWeight: 700, color: 'var(--accent)', width: '24px', fontSize: '12px', flexShrink: 0 }}>#{i+1}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--accent)', width: '24px', fontSize: '12px' }}>#{i+1}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title || p.url}</div>
-                    <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{p.url}</a>
-                    <span style={{ fontSize: '11px', color: 'var(--text3)' }}>{p.word_count} words</span>
+                    <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.url}</a>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontWeight: 700, color: p.score >= 70 ? 'var(--green)' : p.score >= 40 ? 'var(--yellow)' : 'var(--red)', fontSize: '16px' }}>{p.score}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text3)' }}>/ 100</div>
-                  </div>
+                  <div style={{ fontWeight: 700, color: p.score >= 70 ? 'var(--green)' : p.score >= 40 ? 'var(--yellow)' : 'var(--red)', fontSize: '16px', flexShrink: 0 }}>{p.score}</div>
                 </div>
               ))}
-            </Card>
+            </div>
           )}
 
-          {/* Bottom Pages */}
           {activeTab === 'bottom' && (
-            <Card>
-              <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px', color: 'var(--red)' }}>⚠ Lowest Performing Pages</div>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--red)', marginBottom: '12px' }}>⚠ Lowest Performing Pages</div>
               {(results.bottom_pages || []).map((p, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title || p.url}</div>
-                    <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{p.url}</a>
-                    {p.main_issue && <span style={{ fontSize: '11px', color: 'var(--red)', marginTop: '2px', display: 'block' }}>⚠ {p.main_issue}</span>}
+                    <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', display: 'block' }}>{p.url}</a>
+                    {p.main_issue && <span style={{ fontSize: '11px', color: 'var(--red)' }}>⚠ {p.main_issue}</span>}
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontWeight: 700, color: p.score >= 70 ? 'var(--green)' : p.score >= 40 ? 'var(--yellow)' : 'var(--red)', fontSize: '16px' }}>{p.score}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--text3)' }}>/ 100</div>
-                  </div>
+                  <div style={{ fontWeight: 700, color: p.score >= 70 ? 'var(--green)' : p.score >= 40 ? 'var(--yellow)' : 'var(--red)', fontSize: '16px', flexShrink: 0 }}>{p.score}</div>
                 </div>
               ))}
-            </Card>
+            </div>
           )}
 
-          {/* Issues */}
           {activeTab === 'issues' && (
-            <Card>
-              <div style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>All Issues Found</div>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', marginBottom: '12px' }}>All Issues</div>
               {(results.issues || []).map((issue, i) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', padding: '10px 0', borderBottom: '1px solid var(--border)', alignItems: 'flex-start' }}>
                   <IssueIcon severity={issue.severity} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>{issue.title}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '4px' }}>{issue.description}</div>
-                    {issue.affected_pages > 0 && (
-                      <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '4px', background: 'var(--bg4)', color: 'var(--text3)' }}>
-                        {issue.affected_pages.toLocaleString()} pages affected
-                      </span>
-                    )}
+                    <div style={{ fontSize: '12px', color: 'var(--text3)' }}>{issue.description}</div>
+                    {issue.affected_pages > 0 && <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '4px', background: 'var(--bg4)', color: 'var(--text3)' }}>{issue.affected_pages.toLocaleString()} pages</span>}
                   </div>
-                  <span style={{
-                    fontSize: '10px', padding: '2px 7px', borderRadius: '4px', flexShrink: 0,
-                    background: issue.severity === 'critical' ? 'var(--red-bg)' : issue.severity === 'warning' ? 'var(--yellow-bg)' : 'var(--green-bg)',
-                    color: issue.severity === 'critical' ? 'var(--red)' : issue.severity === 'warning' ? 'var(--yellow)' : 'var(--green)',
-                    fontWeight: 500, textTransform: 'capitalize',
-                  }}>{issue.severity}</span>
+                  <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '4px', background: issue.severity === 'critical' ? 'var(--red-bg)' : 'var(--yellow-bg)', color: issue.severity === 'critical' ? 'var(--red)' : 'var(--yellow)', fontWeight: 500 }}>{issue.severity}</span>
                 </div>
               ))}
-            </Card>
+            </div>
           )}
 
-          {/* Action Plan */}
           {activeTab === 'action' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {(results.action_plan || []).map((action, i) => (
-                <Card key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{
-                    width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-                    background: action.priority === 'high' ? 'var(--red-bg)' : action.priority === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '13px', fontWeight: 700,
-                    color: action.priority === 'high' ? 'var(--red)' : action.priority === 'medium' ? 'var(--yellow)' : 'var(--green)',
-                  }}>{i+1}</div>
+                <div key={i} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem', display: 'flex', gap: '12px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, background: action.priority === 'high' ? 'var(--red-bg)' : action.priority === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: action.priority === 'high' ? 'var(--red)' : action.priority === 'medium' ? 'var(--yellow)' : 'var(--green)' }}>{i+1}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 600 }}>{action.title}</span>
-                      <span style={{
-                        fontSize: '10px', padding: '1px 6px', borderRadius: '4px',
-                        background: action.priority === 'high' ? 'var(--red-bg)' : action.priority === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)',
-                        color: action.priority === 'high' ? 'var(--red)' : action.priority === 'medium' ? 'var(--yellow)' : 'var(--green)',
-                        fontWeight: 500, textTransform: 'capitalize',
-                      }}>{action.priority} priority</span>
-                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>{action.title}</div>
                     <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6 }}>{action.description}</div>
-                    {action.estimated_impact && (
-                      <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '4px' }}>📈 {action.estimated_impact}</div>
-                    )}
+                    {action.estimated_impact && <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: '4px' }}>📈 {action.estimated_impact}</div>}
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           )}
