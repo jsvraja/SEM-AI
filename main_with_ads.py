@@ -482,7 +482,7 @@ async def publish_campaign(req: PublishCampaignRequest):
         if req.daily_budget_usd < 1.0:
             raise HTTPException(status_code=400, detail=f"Daily budget too low")
 
-        customer_id = req.customer_id or session.get("customer_id", os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", ""))
+        customer_id = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "") or req.customer_id or session.get("customer_id", "")
         refresh_token = session["refresh_token"]
 
         result = create_campaign_from_report(
