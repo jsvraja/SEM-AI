@@ -192,6 +192,8 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
                         filtered = [u for u in found if urlparse(u).path.startswith(url_path_prefix + "/") or urlparse(u).path == url_path_prefix]
                         if filtered:
                             urls_to_fetch = filtered[:max_pages]
+                            break  # Stop at first sitemap with matching URLs
+                            urls_to_fetch = filtered[:max_pages]
                         else:
                             urls_to_fetch = found[:max_pages]
                     else:
