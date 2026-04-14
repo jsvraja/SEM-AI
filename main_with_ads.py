@@ -508,12 +508,6 @@ async def publish_campaign(req: PublishCampaignRequest):
             customer_id=customer_id,
             refresh_token=session["refresh_token"],
         )
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
     return result
 
 @app.get("/api/ads/campaigns/{session_id}")
