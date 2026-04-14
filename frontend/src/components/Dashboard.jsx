@@ -740,6 +740,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           </div>
         )}
 
+        {tab === 'site-audit' && <SiteAudit autoUrl={isWholeSite ? url : null} savedResults={siteAuditResults} onResults={setSiteAuditResults} />}
+
         {tab === 'ai-traffic' && <AITraffic />}
 
         {tab === 'social' && (
