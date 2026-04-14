@@ -226,8 +226,6 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
             if base_path:
                 urls_to_fetch = [u for u in urls_to_fetch if urlparse(u).path.startswith(base_path + '/') or urlparse(u).path.rstrip('/') == base_path]
             urls_to_fetch = urls_to_fetch[:max_pages]
-            else:
-                urls_to_fetch = urls_to_fetch[:max_pages]
 
             job['pages_found'] = len(urls_to_fetch)
             job['status'] = 'crawling'
