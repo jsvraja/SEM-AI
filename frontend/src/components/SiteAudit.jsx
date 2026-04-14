@@ -64,9 +64,12 @@ export default function SiteAudit({ autoUrl = null }) {
     let auditUrl = rawUrl.trim()
     if (!auditUrl.startsWith('http')) auditUrl = 'https://' + auditUrl
 
+    // Stop any existing poll
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
     setAuditing(true)
     setError(null)
     setResults(null)
+    setJobId(null)
     setProgress({ status: 'starting', progress: 0, pages_found: 0, pages_crawled: 0, current_url: 'Initialising...' })
 
     try {
