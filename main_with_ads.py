@@ -475,40 +475,39 @@ async def auth_status(session_id: str):
 
 @app.post("/api/ads/publish")
 async def publish_campaign(req: PublishCampaignRequest):
-    session = _sessions.get(req.session_id)
-    if not session or not session.get("refresh_token"):
-        raise HTTPException(status_code=401, detail="Not authenticated. Go to /auth/google to reconnect.")
-    if req.daily_budget_usd < 1.0:
-        raise HTTPException(status_code=400, detail=f"Daily budget ${req.daily_budget_usd:.2f} is below Google Ads minimum of $1.00/day.")
+    try:
+        session = _sessions.get(req.session_id)
+        if not session or not session.get("refresh_token"):
+            raise HTTPException(status_code=401, detail="Not authenticated. Go to /auth/google to reconnect.")
+        if req.daily_budget_usd < 1.0:
+            raise HTTPException(status_code=400, detail=f"Daily budget too low")
 
-    # Always use client account, never manager account
-    manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
-    client_id = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "")
-    resolved = resolve_customer_id(session, req.customer_id)
-    customer_id = client_id if (not resolved or resolved == manager_id) else resolved
-    print(f"[PUBLISH] Using customer_id: {customer_id} (manager={manager_id}, client={client_id})")
+        customer_id = req.customer_id or session.get("customer_id", os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", ""))
+        refresh_token = session["refresh_token"]
 
-    result = create_campaign_from_report(
-        customer_id=customer_id,
-        refresh_token=session["refresh_token"],
-        campaign_name=req.campaign_name,
-        daily_budget_usd=req.daily_budget_usd,
-        target_countries=req.target_countries,
-        keywords=req.keywords,
-        ad_headlines=req.headlines,
-        ad_descriptions=req.descriptions,
-        final_url=req.final_url,
-    )
-    if result.get("success"):
-        _sessions[req.session_id]["customer_id"] = customer_id
-        save_sessions(_sessions)
-        register_campaign(
-            campaign_resource_name=result["campaign_resource"],
-            monthly_budget_usd=req.monthly_budget_usd,
+        result = create_google_ads_campaign(
             customer_id=customer_id,
-            refresh_token=session["refresh_token"],
+            refresh_token=refresh_token,
+            campaign_name=req.campaign_name,
+            daily_budget_usd=req.daily_budget_usd,
+            target_countries=req.target_countries,
+            keywords=req.keywords,
+            headlines=req.headlines,
+            descriptions=req.descriptions,
+            final_url=req.final_url,
         )
-    return result
+
+        if result.get("success"):
+            _sessions[req.session_id]["customer_id"] = customer_id
+            save_sessions(_sessions)
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "detail": str(e)}
 
 @app.get("/api/ads/campaigns/{session_id}")
 async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(default="")):
