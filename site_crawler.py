@@ -221,15 +221,11 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
                     except:
                         pass
 
-            # Filter to relevant URLs
+            # Filter to relevant URLs only - no padding with other URLs
             base_path = parsed.path.rstrip('/')
-            if base_path and len(urls_to_fetch) > max_pages:
-                relevant = [u for u in urls_to_fetch if base_path in u]
-                other = [u for u in urls_to_fetch if base_path not in u]
-                if len(relevant) >= max_pages:
-                    urls_to_fetch = relevant[:max_pages]
-                else:
-                    urls_to_fetch = relevant + other[:max_pages - len(relevant)]
+            if base_path:
+                urls_to_fetch = [u for u in urls_to_fetch if urlparse(u).path.startswith(base_path + '/') or urlparse(u).path.rstrip('/') == base_path]
+            urls_to_fetch = urls_to_fetch[:max_pages]
             else:
                 urls_to_fetch = urls_to_fetch[:max_pages]
 
