@@ -189,7 +189,7 @@ async def run_audit_job(job_id: str, url: str, max_pages: int):
                 if found:
                     # Filter to only URLs under the input path
                     if url_path_prefix and url_path_prefix != '':
-                        filtered = [u for u in found if urlparse(u).path.startswith(url_path_prefix)]
+                        filtered = [u for u in found if urlparse(u).path.startswith(url_path_prefix + "/") or urlparse(u).path == url_path_prefix]
                         if filtered:
                             urls_to_fetch = filtered[:max_pages]
                         else:
