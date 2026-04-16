@@ -5,7 +5,6 @@ import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
 import ThemeToggle from './ThemeToggle'
-import { BASE } from '../api_config'
 import { useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -213,7 +212,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
     const timer = setTimeout(async () => {
       setLoadingSpeed(true)
       try {
-        const apiBase = typeof BASE !== 'undefined' ? BASE : 'https://sem-ai-production.up.railway.app'
+        const apiBase = 'https://sem-ai-production.up.railway.app'
         const res = await fetch(apiBase + '/api/pagespeed', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -463,7 +462,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     setLoadingSpeed(true)
                     setPageSpeed(null)
                     try {
-                      const res = await fetch(`${BASE}/api/pagespeed`, {
+                      const res = await fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ url }),
