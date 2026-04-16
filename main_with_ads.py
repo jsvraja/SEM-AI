@@ -282,6 +282,22 @@ async def full_report(req: FullReportRequest):
             sem['country_budgets'] = country_budgets
         sem['target_countries'] = [cb['code'] for cb in sem.get('country_budgets', [])]
         
+        # Ensure budget_calculation exists
+        if not sem.get('budget_calculation'):
+            budget = sem.get('monthly_budget_inr', 0)
+            cpc = sem.get('estimated_cpc_inr', 30)
+            daily = round(budget / 30)
+            clicks = round(budget / cpc) if cpc else 0
+            sem['budget_calculation'] = {
+                'target_daily_clicks': round(clicks / 30),
+                'avg_cpc_inr': cpc,
+                'daily_budget_inr': daily,
+                'monthly_budget_inr': budget,
+                'buffer_pct': 10,
+                'final_monthly_inr': budget,
+                'reasoning': f'Budget of ₹{budget:,}/mo calculated based on target CPC of ₹{cpc} and estimated {clicks:,} monthly clicks.'
+            }
+        
         seo_report['sem_recommendations'] = sem
     
     return {
@@ -366,19 +382,35 @@ Return this EXACT JSON structure (no extra text):
     "positioning_suggestion": "Position as the most comprehensive solution"
   }},
   "sem_recommendations": {{
-    "monthly_budget_inr": 15000,
-    "monthly_clicks_estimate": "500-1,500",
-    "estimated_cpc_inr": 20,
+    "industry": "SaaS/Software",
+    "monthly_budget_inr": 18000,
+    "monthly_clicks_estimate": "400-900",
+    "estimated_cpc_inr": 30,
     "campaign_type": "Search",
     "bidding_strategy": "Target CPA — focus on high-intent keywords",
+    "budget_calculation": {{
+      "target_daily_clicks": 25,
+      "avg_cpc_inr": 30,
+      "daily_budget_inr": 750,
+      "monthly_budget_inr": 22500,
+      "buffer_pct": 10,
+      "final_monthly_inr": 18000,
+      "reasoning": "Single page campaign focused on one product/service. Lower volume but higher intent. India avg CPC ₹15-30, US avg CPC ₹500-800."
+    }},
     "country_budgets": [
-      {{"country": "India", "code": "IN", "budget_pct": 60, "budget_inr": 9000, "avg_cpc_inr": 15, "monthly_clicks": "400-700", "competition": "medium", "notes": "Primary market focus"}},
-      {{"country": "United States", "code": "US", "budget_pct": 40, "budget_inr": 6000, "avg_cpc_inr": 75, "monthly_clicks": "50-100", "competition": "high", "notes": "High value leads"}}
+      {{"country": "India", "code": "IN", "budget_pct": 60, "budget_inr": 10800, "avg_cpc_inr": 18, "monthly_clicks": "350-650", "competition": "medium", "notes": "Primary market, cost-effective"}},
+      {{"country": "United States", "code": "US", "budget_pct": 40, "budget_inr": 7200, "avg_cpc_inr": 680, "monthly_clicks": "60-120", "competition": "high", "notes": "High value leads"}}
     ],
     "audience_segments": [
-      {{"segment": "Decision Makers", "age_range": "28-50", "interests": ["Business Software", "Productivity"]}}
+      {{"segment": "Decision Makers", "age_range": "28-50", "interests": ["Business Software", "Productivity", "Automation"]}}
     ]
   }}
+
+IMPORTANT BUDGET RULES:
+- Detect industry from the website content
+- Use realistic India CPC rates based on industry
+- Calculate budget from target clicks × CPC + 10% buffer
+- Always show reasoning
 }}"""
 
 
@@ -419,20 +451,38 @@ Return this EXACT JSON (no extra text):
     "positioning_suggestion": "Position as the most comprehensive enterprise solution"
   }},
   "sem_recommendations": {{
-    "monthly_budget_inr": 40000,
-    "monthly_clicks_estimate": "1,000-5,000",
-    "estimated_cpc_inr": 25,
+    "industry": "SaaS/Software",
+    "monthly_budget_inr": 45000,
+    "monthly_clicks_estimate": "1,200-2,500",
+    "estimated_cpc_inr": 35,
     "campaign_type": "Search + Display",
     "bidding_strategy": "Target CPA — focus on conversion-ready audiences",
+    "budget_calculation": {{
+      "target_daily_clicks": 60,
+      "avg_cpc_inr": 35,
+      "daily_budget_inr": 2100,
+      "monthly_budget_inr": 63000,
+      "buffer_pct": 10,
+      "final_monthly_inr": 45000,
+      "reasoning": "Based on SaaS industry benchmarks: India avg CPC ₹18-35, US avg CPC ₹600-900. Target 60 clicks/day across markets. 10% buffer added for bid fluctuations."
+    }},
     "country_budgets": [
-      {{"country": "India", "code": "IN", "budget_pct": 50, "budget_inr": 20000, "avg_cpc_inr": 15, "monthly_clicks": "800-1500", "competition": "medium", "notes": "High volume, lower CPC market"}},
-      {{"country": "United States", "code": "US", "budget_pct": 30, "budget_inr": 12000, "avg_cpc_inr": 80, "monthly_clicks": "100-200", "competition": "high", "notes": "Premium market, high intent leads"}},
-      {{"country": "United Kingdom", "code": "UK", "budget_pct": 20, "budget_inr": 8000, "avg_cpc_inr": 65, "monthly_clicks": "80-150", "competition": "high", "notes": "Strong enterprise market"}}
+      {{"country": "India", "code": "IN", "budget_pct": 50, "budget_inr": 22500, "avg_cpc_inr": 18, "monthly_clicks": "800-1500", "competition": "medium", "notes": "High volume, cost-effective leads"}},
+      {{"country": "United States", "code": "US", "budget_pct": 30, "budget_inr": 13500, "avg_cpc_inr": 750, "monthly_clicks": "100-200", "competition": "high", "notes": "Premium leads, high conversion value"}},
+      {{"country": "United Kingdom", "code": "UK", "budget_pct": 20, "budget_inr": 9000, "avg_cpc_inr": 620, "monthly_clicks": "80-150", "competition": "high", "notes": "Strong enterprise demand"}}
     ],
     "audience_segments": [
-      {{"segment": "IT Professionals", "age_range": "25-45", "interests": ["Technology", "Enterprise Software"]}}
+      {{"segment": "IT Decision Makers", "age_range": "28-50", "interests": ["Enterprise Software", "Cloud Computing", "IT Management"]}}
     ]
   }}
+
+IMPORTANT BUDGET RULES:
+- Detect industry from the website content (SaaS, E-commerce, Finance, Healthcare, Education, IT Services, Legal, Real Estate)
+- Use realistic India CPC: SaaS ₹18-45, E-commerce ₹8-25, Finance ₹40-120, Healthcare ₹30-80, Education ₹10-30, IT Services ₹20-60
+- Use realistic US CPC (multiply India CPC by 15-20x)
+- Calculate: monthly_budget = (target_daily_clicks × weighted_avg_cpc × 30) + 10% buffer
+- monthly_clicks_estimate = monthly_budget / avg_cpc (show as range ±20%)
+- Always explain the reasoning in budget_calculation.reasoning
 }}"""
 
 

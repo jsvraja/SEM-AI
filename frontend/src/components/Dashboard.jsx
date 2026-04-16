@@ -412,14 +412,30 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               </Card>
 
               <Card>
-                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Budget Range</div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Budget Range</div>
                 {seo.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
                       ₹{(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()}
                       <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>{(seo?.sem_recommendations?.bidding_strategy || "").split('—')[0]}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>{(seo?.sem_recommendations?.bidding_strategy || "").split('—')[0]}</div>
+                    {seo.sem_recommendations.budget_calculation && (
+                      <div style={{ marginTop: '8px', padding: '8px', background: 'var(--bg3)', borderRadius: '8px', fontSize: '11px' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text2)', marginBottom: '4px' }}>How calculated:</div>
+                        <div style={{ color: 'var(--text3)', lineHeight: 1.6 }}>
+                          <div>🎯 Target: {seo.sem_recommendations.budget_calculation.target_daily_clicks} clicks/day</div>
+                          <div>💰 Avg CPC: ₹{seo.sem_recommendations.budget_calculation.avg_cpc_inr}</div>
+                          <div>📅 Daily: ₹{(seo.sem_recommendations.budget_calculation.daily_budget_inr || 0).toLocaleString()}</div>
+                          <div>📦 Buffer: +{seo.sem_recommendations.budget_calculation.buffer_pct}%</div>
+                        </div>
+                        {seo.sem_recommendations.budget_calculation.reasoning && (
+                          <div style={{ marginTop: '4px', padding: '4px 6px', background: 'var(--accent-bg)', borderRadius: '5px', color: 'var(--accent)', fontSize: '10px', lineHeight: 1.5 }}>
+                            💡 {seo.sem_recommendations.budget_calculation.reasoning}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </Card>
