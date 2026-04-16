@@ -208,6 +208,25 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [pageSpeed, setPageSpeed] = useState(null)
   const [loadingSpeed, setLoadingSpeed] = useState(false)
 
+  // Auto-trigger pagespeed after SEO analysis loads
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      setLoadingSpeed(true)
+      try {
+        const apiBase = typeof BASE !== 'undefined' ? BASE : 'https://sem-ai-production.up.railway.app'
+        const res = await fetch(apiBase + '/api/pagespeed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        })
+        const data = await res.json()
+        setPageSpeed(data)
+      } catch(e) {}
+      setLoadingSpeed(false)
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [url, seo])
+
   const [siteAuditResults, setSiteAuditResults] = useState(null)
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
