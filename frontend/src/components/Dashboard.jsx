@@ -331,9 +331,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 {(() => {
                   const breakdown = seo.score_breakdown || {}
                   // Calculate scores based on actual scraped data
-                  const title = seo.page_metadata?.title || ''
-                  const meta = seo.page_metadata?.meta_description || ''
-                  const h1s = seo.page_metadata?.h1_tags || []
+                  const title = sc?.title || seo.page_metadata?.title || ''
+                  const meta = sc?.meta_description || seo.page_metadata?.meta_description || ''
+                  const h1s = sc?.h1_tags || seo.page_metadata?.h1_tags || []
                   const imgMissing = sc?.images_without_alt_count || 0
                   const totalImgs = sc?.images_count || 0
                   const wordCount = seo.content_analysis?.word_count || 0
