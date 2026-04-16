@@ -441,14 +441,14 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               </Card>
 
               <Card>
-                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Est. Monthly Clicks</div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Est. Monthly Clicks</div>
                 {seo.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--cyan)' }}>
                       {seo?.sem_recommendations?.estimated_monthly_clicks ? `${(seo.sem_recommendations.estimated_monthly_clicks.min || 0).toLocaleString()}-${(seo.sem_recommendations.estimated_monthly_clicks.max || 0).toLocaleString()}` : (seo?.sem_recommendations?.monthly_clicks_estimate || "N/A")}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>
-                      ₹{seo?.sem_recommendations?.estimated_cpc_inr || seo?.sem_recommendations?.estimated_cpc_usd?.min || 0} avg CPC
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>
+                      ₹{seo?.sem_recommendations?.estimated_cpc_inr || 0} avg CPC
                     </div>
                   </>
                 )}
