@@ -214,7 +214,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
       const fetchSpeed = async () => {
         setLoadingSpeed(true)
         try {
-          const res = await fetch(`${BASE}/api/pagespeed`, {
+          const apiUrl = BASE || "https://sem-ai-production.up.railway.app"
+      const res = await fetch(`${apiUrl}/api/pagespeed`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url }),
