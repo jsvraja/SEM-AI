@@ -207,6 +207,27 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
   const [loadingSpeed, setLoadingSpeed] = useState(false)
+
+  // Auto-load PageSpeed when analysis is done
+  useEffect(() => {
+    if (url && !pageSpeed && !loadingSpeed) {
+      const fetchSpeed = async () => {
+        setLoadingSpeed(true)
+        try {
+          const res = await fetch(`${BASE}/api/pagespeed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+          })
+          const data = await res.json()
+          setPageSpeed(data)
+        } catch(e) { console.error(e) }
+        setLoadingSpeed(false)
+      }
+      // Small delay to not block initial render
+      setTimeout(fetchSpeed, 2000)
+    }
+  }, [url])
   const [siteAuditResults, setSiteAuditResults] = useState(null)
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
@@ -437,7 +458,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             {/* PageSpeed Insights */}
             <Card>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <SectionTitle icon={BarChart3}>PageSpeed Insights (Google)</SectionTitle>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>⚡ Performance Analysis</div>
                 <button onClick={async () => {
                     if (loadingSpeed) return
                     setLoadingSpeed(true)
@@ -453,12 +474,12 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     } catch(e) { console.error(e) }
                     setLoadingSpeed(false)
                   }} style={{ padding: '6px 14px', borderRadius: '7px', background: loadingSpeed ? 'var(--bg3)' : 'var(--accent)', border: 'none', color: loadingSpeed ? 'var(--text3)' : 'white', fontSize: '12px', fontWeight: 600, cursor: loadingSpeed ? 'not-allowed' : 'pointer' }}>
-                  {loadingSpeed ? '⏳ Running...' : pageSpeed ? '↺ Re-run' : '🚀 Run PageSpeed Test'}
+                  {loadingSpeed ? '⏳ Running...' : pageSpeed ? '↺ Re-run' : '⚡ Analyse Performance'}
                 </button>
               </div>
               {!pageSpeed && !loadingSpeed && (
                 <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)', fontSize: '13px', background: 'var(--bg3)', borderRadius: '8px' }}>
-                  Click "Run PageSpeed Test" to get real Performance, SEO, Accessibility & Best Practices scores from Google
+                  Click "Analyse Performance" to get real Performance, SEO, Accessibility & Best Practices scores
                 </div>
               )}
               {loadingSpeed && (
@@ -475,20 +496,22 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     return (
                       <div key={strategy}>
                         <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                          {strategy === 'mobile' ? '📱 Mobile' : '🖥️ Desktop'}
+                          {strategy === 'mobile' ? '📱 Mobile' : '🖥 Desktop'}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px', marginBottom: '12px' }}>
                           {[
-                            { label: 'Performance', score: r.performance },
-                            { label: 'SEO', score: r.seo },
-                            { label: 'Accessibility', score: r.accessibility },
-                            { label: 'Best Practices', score: r.best_practices },
-                          ].map(({ label, score }) => {
+                            { label: 'Performance', score: r.performance, icon: '⚡' },
+                            { label: 'SEO', score: r.seo, icon: '🔍' },
+                            { label: 'Accessibility', score: r.accessibility, icon: '♿' },
+                            { label: 'Best Practices', score: r.best_practices, icon: '✅' },
+                          ].map(({ label, score, icon }) => {
                             const c = score >= 90 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)'
+                            const bg = score >= 90 ? 'var(--green-bg)' : score >= 50 ? 'var(--yellow-bg)' : 'var(--red-bg)'
                             return (
-                              <div key={label} style={{ textAlign: 'center', padding: '10px 6px', background: 'var(--bg3)', borderRadius: '10px', border: `2px solid ${c}` }}>
-                                <div style={{ fontSize: '22px', fontWeight: 700, color: c }}>{score}</div>
-                                <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
+                              <div key={label} style={{ textAlign: 'center', padding: '12px 6px', background: bg, borderRadius: '12px', border: `1px solid ${c}` }}>
+                                <div style={{ fontSize: '11px', marginBottom: '4px' }}>{icon}</div>
+                                <div style={{ fontSize: '26px', fontWeight: 800, color: c, letterSpacing: '-0.03em' }}>{score}</div>
+                                <div style={{ fontSize: '10px', color: c, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '2px', fontWeight: 600 }}>{label}</div>
                               </div>
                             )
                           })}
@@ -509,7 +532,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     )
                   })}
                   <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '6px 8px', background: 'var(--bg3)', borderRadius: '6px' }}>
-                    🟢 90-100 Good &nbsp;|&nbsp; 🟡 50-89 Needs Improvement &nbsp;|&nbsp; 🔴 0-49 Poor &nbsp;&nbsp; Powered by Google PageSpeed Insights
+                    🟢 90-100 Good &nbsp;|&nbsp; 🟡 50-89 Needs Improvement &nbsp;|&nbsp; 🔴 0-49 Poor
                   </div>
                 </div>
               )}
