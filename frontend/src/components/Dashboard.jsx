@@ -315,7 +315,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         {tab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Score row */}
-            <div style={{ display: 'grid', gridTemplateColumns: showGoogleScore && pageSpeed ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text3)', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>SEO Health <span style={{ color: 'var(--text3)', fontSize: '10px', fontWeight: 400 }}>(Our Score)</span></div>
@@ -367,7 +367,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 })()}
               </Card>
 
-              {!showGoogleScore && <Card>
+              <Card>
                 <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Budget Range</div>
                 {seo.sem_recommendations && (
                   <>
