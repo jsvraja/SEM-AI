@@ -6,7 +6,7 @@ import Competitor from './Competitor'
 import AdsManager from './AdsManager'
 import ThemeToggle from './ThemeToggle'
 import { BASE } from '../api_config'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, PieChart, Pie, Cell, Legend
@@ -208,27 +208,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [pageSpeed, setPageSpeed] = useState(null)
   const [loadingSpeed, setLoadingSpeed] = useState(false)
 
-  // Auto-load PageSpeed when analysis is done
-  useEffect(() => {
-    if (url && !pageSpeed && !loadingSpeed) {
-      const fetchSpeed = async () => {
-        setLoadingSpeed(true)
-        try {
-          const apiUrl = BASE || "https://sem-ai-production.up.railway.app"
-      const res = await fetch(`${apiUrl}/api/pagespeed`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url }),
-          })
-          const data = await res.json()
-          setPageSpeed(data)
-        } catch(e) { console.error(e) }
-        setLoadingSpeed(false)
-      }
-      // Small delay to not block initial render
-      setTimeout(fetchSpeed, 2000)
-    }
-  }, [url])
   const [siteAuditResults, setSiteAuditResults] = useState(null)
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
