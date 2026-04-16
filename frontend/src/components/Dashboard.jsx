@@ -375,11 +375,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   })()
 
                   const seoItems = [
-                    { label: 'Title Tag', score: breakdown.title_optimisation ?? titleScore, tip: \`Title: "\${title.slice(0,40)}..." (\${title.length} chars). Ideal: 30-60 chars\` },
-                    { label: 'Meta Description', score: breakdown.meta_descriptions ?? metaScore, tip: \`Meta: \${meta.length} chars. Ideal: 120-160 chars\${!meta ? ' — MISSING' : ''}\` },
-                    { label: 'H1 Tags', score: breakdown.heading_structure ?? h1Score, tip: \`Found \${h1s.length} H1 tag\${h1s.length !== 1 ? 's' : ''}. Ideal: exactly 1 H1\${!h1s.length ? ' — MISSING' : ''}\` },
-                    { label: 'Content Quality', score: contentScore, tip: \`Word count: \${wordCount}. Ideal: 800+ words for good SEO\` },
-                    { label: 'Image Alt Text', score: breakdown.image_optimisation ?? imgScore, tip: \`\${imgMissing} of \${totalImgs} images missing alt text\` },
+                    { label: 'Title Tag', score: breakdown.title_optimisation ?? titleScore, tip: `Title: "\${title.slice(0,40)}..." (\${title.length} chars). Ideal: 30-60 chars` },
+                    { label: 'Meta Description', score: breakdown.meta_descriptions ?? metaScore, tip: `Meta: \${meta.length} chars. Ideal: 120-160 chars\${!meta ? ' — MISSING' : ''}` },
+                    { label: 'H1 Tags', score: breakdown.heading_structure ?? h1Score, tip: `Found \${h1s.length} H1 tag\${h1s.length !== 1 ? 's' : ''}. Ideal: exactly 1 H1\${!h1s.length ? ' — MISSING' : ''}` },
+                    { label: 'Content Quality', score: contentScore, tip: `Word count: \${wordCount}. Ideal: 800+ words for good SEO` },
+                    { label: 'Image Alt Text', score: breakdown.image_optimisation ?? imgScore, tip: `\${imgMissing} of \${totalImgs} images missing alt text` },
                     { label: 'Schema Markup', score: sc?.has_schema_markup ? 95 : 0, tip: sc?.has_schema_markup ? 'Schema markup detected ✓' : 'No schema markup found — add Product/Organization schema' },
                   ]
                   return (
