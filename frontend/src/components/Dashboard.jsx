@@ -525,7 +525,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   </div>
                 </div>
               )}
-            </Card>
+            </Card>}
 
             {/* Charts row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
