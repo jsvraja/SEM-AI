@@ -1056,6 +1056,55 @@ async def analyze_competitors(request: Request):
         return {"error": str(e)}
 
 
+
+@app.post("/api/pagespeed")
+async def get_pagespeed(request: Request):
+    """Fetch real PageSpeed Insights scores from Google API."""
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        if not url:
+            raise HTTPException(status_code=400, detail="URL required")
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+
+        api_key = os.environ.get("PAGESPEED_API_KEY", "")
+        if not api_key:
+            return {"error": "PageSpeed API key not configured"}
+
+        results = {}
+        async with httpx.AsyncClient(timeout=30) as client:
+            for strategy in ["mobile", "desktop"]:
+                psi_url = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy={strategy}&key={api_key}&category=performance&category=accessibility&category=best-practices&category=seo"
+                resp = await client.get(psi_url)
+                data = resp.json()
+
+                if "error" in data:
+                    results[strategy] = {"error": data["error"].get("message", "API error")}
+                    continue
+
+                cats = data.get("lighthouseResult", {}).get("categories", {})
+                audits = data.get("lighthouseResult", {}).get("audits", {})
+
+                results[strategy] = {
+                    "performance": round((cats.get("performance", {}).get("score", 0) or 0) * 100),
+                    "accessibility": round((cats.get("accessibility", {}).get("score", 0) or 0) * 100),
+                    "best_practices": round((cats.get("best-practices", {}).get("score", 0) or 0) * 100),
+                    "seo": round((cats.get("seo", {}).get("score", 0) or 0) * 100),
+                    "fcp": audits.get("first-contentful-paint", {}).get("displayValue", "N/A"),
+                    "lcp": audits.get("largest-contentful-paint", {}).get("displayValue", "N/A"),
+                    "cls": audits.get("cumulative-layout-shift", {}).get("displayValue", "N/A"),
+                    "tbt": audits.get("total-blocking-time", {}).get("displayValue", "N/A"),
+                    "speed_index": audits.get("speed-index", {}).get("displayValue", "N/A"),
+                }
+
+        return {"url": url, "results": results}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+
 @app.get("/api/agent/status")
 async def agent_status():
     """Get AI agent status and recent activity."""

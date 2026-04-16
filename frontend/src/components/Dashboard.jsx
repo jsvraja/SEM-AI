@@ -5,6 +5,7 @@ import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
 import ThemeToggle from './ThemeToggle'
+import { BASE } from '../api_config'
 import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -204,6 +205,8 @@ const TABS = [
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
+  const [pageSpeed, setPageSpeed] = useState(null)
+  const [loadingSpeed, setLoadingSpeed] = useState(false)
   const [siteAuditResults, setSiteAuditResults] = useState(null)
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
