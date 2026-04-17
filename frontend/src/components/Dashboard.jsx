@@ -602,7 +602,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                         body: JSON.stringify({ url, email: reportEmail, seo_report: seo })
                       })
                       const data = await res.json()
-                      if (data.success) { setReportSent(true); setShowEmailInput(false) }
+                      if (data.success) { setReportSent(true); setShowEmailInput(false); alert("Report sent to jsvking@gmail.com!") }
                       else alert('Failed: ' + data.error)
                     } catch(e) { alert('Error: ' + e.message) }
                     setSendingReport(false)
