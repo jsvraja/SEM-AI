@@ -209,25 +209,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [showGoogleScore, setShowGoogleScore] = useState(false)
   const [trendData, setTrendData] = useState([])
 
-  // Save SEO score trend to sessionStorage on each analysis
-  useEffect(() => {
-    if (!seo?.overall_seo_score || !url) return
-    try {
-      const key = 'seo_trend_' + url.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 50)
-      const existing = JSON.parse(localStorage.getItem(key) || '[]')
-      const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
-      const last = existing[existing.length - 1]
-      // Only add if date changed or first entry
-      if (!last || last.date !== today) {
-        const newEntry = { date: today, score: seo.overall_seo_score, content: seo.content_analysis?.quality_score || 0 }
-        const updated = [...existing, newEntry].slice(-10) // Keep last 10
-        localStorage.setItem(key, JSON.stringify(updated))
-        setTrendData(updated)
-      } else {
-        setTrendData(existing)
-      }
-    } catch(e) {}
-  }, [seo?.overall_seo_score, url])
+
 
 
   const [siteAuditResults, setSiteAuditResults] = useState(null)
