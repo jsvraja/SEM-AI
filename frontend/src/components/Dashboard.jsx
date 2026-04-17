@@ -5,7 +5,7 @@ import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
 import ThemeToggle from './ThemeToggle'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, PieChart, Pie, Cell, Legend
@@ -206,29 +206,23 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
   const [sendingReport, setSendingReport] = useState(false)
-  const [alerts, setAlerts] = useState([])
   const [showAlerts, setShowAlerts] = useState(false)
 
-  // Generate alerts based on analysis data
-  useEffect(() => {
-    if (!seo) return
-    const newAlerts = []
+  const alerts = (() => {
+    if (!seo) return []
+    const a = []
     const score = seo?.overall_seo_score || 0
-    const meta = seo?.page_metadata?.meta_description || ''
-    const hasSchema = seo?.technical_issues?.some(i => i.type === 'schema') || !seo?.score_breakdown?.schema
-    const budget = seo?.sem_recommendations?.monthly_budget_inr || 0
-    const imgMissing = seo?.images_without_alt_count || 0
-
-    if (score < 50) newAlerts.push({ type: 'critical', icon: '🚨', title: 'Critical SEO Score', msg: 'SEO score is ' + score + '/100 — urgent fixes needed to avoid ranking drop', time: 'Just now' })
-    else if (score < 70) newAlerts.push({ type: 'warning', icon: '⚠️', title: 'Low SEO Score', msg: 'SEO score is ' + score + '/100 — several improvements needed', time: 'Just now' })
-    if (!meta || meta.length < 50) newAlerts.push({ type: 'critical', icon: '📝', title: 'Meta Description Missing/Short', msg: 'Missing or too short meta description hurts CTR by up to 30%', time: 'Just now' })
-    if (meta && meta.length > 160) newAlerts.push({ type: 'warning', icon: '✂️', title: 'Meta Description Too Long', msg: 'Meta is ' + meta.length + ' chars — Google will truncate at 160 chars', time: 'Just now' })
-    if (imgMissing > 0) newAlerts.push({ type: 'warning', icon: '🖼️', title: 'Images Missing Alt Text', msg: imgMissing + ' images without alt text — affects accessibility & SEO', time: 'Just now' })
-    if (budget > 100000) newAlerts.push({ type: 'warning', icon: '💰', title: 'High Budget Recommendation', msg: 'Recommended budget ₹' + budget.toLocaleString() + '/mo — verify this fits your goals', time: 'Just now' })
-    if (!seo?.page_metadata?.title) newAlerts.push({ type: 'critical', icon: '🏷️', title: 'Page Title Missing', msg: 'No title tag found — critical for SEO rankings', time: 'Just now' })
-    
-    setAlerts(newAlerts)
-  }, [seo?.overall_seo_score])
+    const meta = sc?.meta_description || ''
+    const imgMissing = sc?.images_without_alt_count || 0
+    const title = sc?.title || ''
+    if (score < 50) a.push({ type: 'critical', icon: '🚨', title: 'Critical SEO Score', msg: 'Score is ' + score + '/100 — urgent fixes needed', time: 'Just now' })
+    else if (score < 70) a.push({ type: 'warning', icon: '⚠️', title: 'Low SEO Score', msg: 'Score is ' + score + '/100 — improvements needed', time: 'Just now' })
+    if (!meta || meta.length < 50) a.push({ type: 'critical', icon: '📝', title: 'Meta Description Issue', msg: 'Missing or too short meta hurts CTR by 30%', time: 'Just now' })
+    if (meta && meta.length > 160) a.push({ type: 'warning', icon: '✂️', title: 'Meta Too Long', msg: 'Meta is ' + meta.length + ' chars — truncated at 160', time: 'Just now' })
+    if (imgMissing > 0) a.push({ type: 'warning', icon: '🖼️', title: imgMissing + ' Images Missing Alt', msg: 'Affects accessibility and SEO', time: 'Just now' })
+    if (!title) a.push({ type: 'critical', icon: '🏷️', title: 'Page Title Missing', msg: 'Critical for SEO rankings', time: 'Just now' })
+    return a
+  })()
   const [reportSent, setReportSent] = useState(false)
   const [reportEmail, setReportEmail] = useState('')
   const [showEmailInput, setShowEmailInput] = useState(false)
