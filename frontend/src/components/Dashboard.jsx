@@ -1319,33 +1319,55 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       })}
                     </div>
 
-                    {/* Internal links sample */}
+                    {/* All Links Table */}
                     {intSample.length > 0 && (
                       <div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase' }}>🔗 Internal Links Sample</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '150px', overflowY: 'auto' }}>
-                          {intSample.slice(0, 8).map((link, i) => (
-                            <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '11px', padding: '4px 8px', background: 'var(--bg3)', borderRadius: '5px' }}>
-                              <span style={{ color: 'var(--accent)', flexShrink: 0 }}>→</span>
-                              <span style={{ color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.text || link.url}</span>
-                              <span style={{ color: 'var(--text3)', flexShrink: 0, marginLeft: 'auto' }}>{(link.url || '').slice(0, 30)}</span>
-                            </div>
-                          ))}
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase' }}>🔗 Internal Links ({intSample.length})</div>
+                        <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                            <thead style={{ position: 'sticky', top: 0, background: 'var(--bg3)' }}>
+                              <tr>
+                                <th style={{ padding: '6px 10px', textAlign: 'left', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>#</th>
+                                <th style={{ padding: '6px 10px', textAlign: 'left', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Anchor Text</th>
+                                <th style={{ padding: '6px 10px', textAlign: 'left', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>URL</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {intSample.map((link, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--bg)' : 'var(--bg3)' }}>
+                                  <td style={{ padding: '5px 10px', color: 'var(--text3)' }}>{i+1}</td>
+                                  <td style={{ padding: '5px 10px', color: 'var(--accent)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.text || '—'}</td>
+                                  <td style={{ padding: '5px 10px', color: 'var(--text3)', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.url}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     )}
 
-                    {/* External links sample */}
                     {extSample.length > 0 && (
                       <div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase' }}>🌐 External Links Sample</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
-                          {extSample.slice(0, 5).map((link, i) => (
-                            <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '11px', padding: '4px 8px', background: 'var(--bg3)', borderRadius: '5px' }}>
-                              <span style={{ color: 'var(--cyan)', flexShrink: 0 }}>↗</span>
-                              <span style={{ color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.text || link.url}</span>
-                            </div>
-                          ))}
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase' }}>🌐 External Links ({extSample.length})</div>
+                        <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                            <thead style={{ position: 'sticky', top: 0, background: 'var(--bg3)' }}>
+                              <tr>
+                                <th style={{ padding: '6px 10px', textAlign: 'left', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>#</th>
+                                <th style={{ padding: '6px 10px', textAlign: 'left', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Anchor Text</th>
+                                <th style={{ padding: '6px 10px', textAlign: 'left', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>URL</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {extSample.map((link, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--bg)' : 'var(--bg3)' }}>
+                                  <td style={{ padding: '5px 10px', color: 'var(--text3)' }}>{i+1}</td>
+                                  <td style={{ padding: '5px 10px', color: 'var(--cyan)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.text || '—'}</td>
+                                  <td style={{ padding: '5px 10px', color: 'var(--text3)', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link.url}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     )}
