@@ -1169,7 +1169,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 const readingLevel = ca.reading_level || 'N/A'
                 const keywordDensity = ca.keyword_density || 'N/A'
                 const primaryKeyword = ca.primary_keyword || 'N/A'
-                const contentScore = ca.content_score || ca.quality_score || 0
+                const contentScore = ca.content_score || ca.quality_score || ca.readability_score || seo?.overall_seo_score || 0
                 const gaps = ca.content_gaps || []
                 const tone = ca.tone || 'N/A'
                 const hasCTA = ca.has_cta
