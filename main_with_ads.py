@@ -1275,6 +1275,22 @@ async def get_pagespeed(request: Request):
 
                 cats = data.get("lighthouseResult", {}).get("categories", {})
                 audits = data.get("lighthouseResult", {}).get("audits", {})
+                lr = data.get("lighthouseResult", {})
+                
+                # Screenshot thumbnail
+                screenshot = audits.get("final-screenshot", {}).get("details", {}).get("data", "")
+                
+                # Mobile specific issues
+                mobile_issues = []
+                if strategy == "mobile":
+                    if audits.get("viewport", {}).get("score", 1) == 0:
+                        mobile_issues.append("No viewport meta tag")
+                    if audits.get("font-size", {}).get("score", 1) == 0:
+                        mobile_issues.append("Text too small to read")
+                    if audits.get("tap-targets", {}).get("score", 1) == 0:
+                        mobile_issues.append("Tap targets too small")
+                    if audits.get("content-width", {}).get("score", 1) == 0:
+                        mobile_issues.append("Content wider than screen")
 
                 results[strategy] = {
                     "performance": round((cats.get("performance", {}).get("score", 0) or 0) * 100),
@@ -1286,6 +1302,9 @@ async def get_pagespeed(request: Request):
                     "cls": audits.get("cumulative-layout-shift", {}).get("displayValue", "N/A"),
                     "tbt": audits.get("total-blocking-time", {}).get("displayValue", "N/A"),
                     "speed_index": audits.get("speed-index", {}).get("displayValue", "N/A"),
+                    "screenshot": screenshot,
+                    "mobile_issues": mobile_issues,
+                    "interactive": audits.get("interactive", {}).get("displayValue", "N/A"),
                 }
 
         return {"url": url, "results": results}
