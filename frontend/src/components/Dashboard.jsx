@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 import {
   ArrowLeft, Globe, CheckCircle, AlertTriangle, XCircle,
-  TrendingUp, DollarSign, Target, Megaphone, Users,
+  TrendingUp, DollarSign, Target, FileText, Megaphone, Users,
   ChevronDown, ChevronUp, ChevronRight, Copy, Check, ExternalLink,
   Zap, Search, BarChart3, Share2
 } from 'lucide-react'
