@@ -1294,8 +1294,8 @@ async def send_seo_report(request: Request):
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {resend_api_key}", "Content-Type": "application/json"},
             json={
-                "from": "SEM AI <onboarding@resend.dev>",
-                "to": ["jsvking@gmail.com"],
+                "from": "SEM AI <reports@sakthivelraja.ai>",
+                "to": [email],
                 "reply_to": email,
                 "subject": f"SEO Report: {url} — Score {score}/100",
                 "html": html,
