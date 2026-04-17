@@ -205,6 +205,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
+  const [sendingReport, setSendingReport] = useState(false)
+  const [reportSent, setReportSent] = useState(false)
+  const [reportEmail, setReportEmail] = useState('')
+  const [showEmailInput, setShowEmailInput] = useState(false)
   const [loadingSpeed, setLoadingSpeed] = useState(false)
   const [showGoogleScore, setShowGoogleScore] = useState(false)
 
@@ -573,10 +577,40 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             <Card>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <SectionTitle icon={Zap}>AI Expert Analysis</SectionTitle>
-                <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '3px 8px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                  🤖 Gemini 2.5 Flash
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '3px 8px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                    🤖 Gemini 2.5 Flash
+                  </div>
+                  {!reportSent ? (
+                    <button onClick={() => setShowEmailInput(!showEmailInput)} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '7px', background: 'var(--accent)', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 600 }}>
+                      📧 Email Report
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>✅ Report Sent!</span>
+                  )}
                 </div>
               </div>
+              {showEmailInput && !reportSent && (
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                  <input value={reportEmail} onChange={e => setReportEmail(e.target.value)} placeholder="Enter email address" style={{ flex: 1, padding: '7px 10px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '7px', color: 'var(--text)', fontSize: '12px', outline: 'none' }} />
+                  <button disabled={sendingReport || !reportEmail} onClick={async () => {
+                    setSendingReport(true)
+                    try {
+                      const res = await fetch('https://sem-ai-production.up.railway.app/api/send-report', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url, email: reportEmail, seo_report: seo })
+                      })
+                      const data = await res.json()
+                      if (data.success) { setReportSent(true); setShowEmailInput(false) }
+                      else alert('Failed: ' + data.error)
+                    } catch(e) { alert('Error: ' + e.message) }
+                    setSendingReport(false)
+                  }} style={{ padding: '7px 14px', borderRadius: '7px', background: sendingReport ? 'var(--bg3)' : 'var(--green)', border: 'none', color: 'white', cursor: sendingReport ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>
+                    {sendingReport ? '⏳ Sending...' : '📤 Send'}
+                  </button>
+                </div>
+              )}
               {(() => {
                 const summary = seo?.ai_summary || seo?.summary || ''
                 if (!summary) return <p style={{ color: 'var(--text3)', fontSize: '13px' }}>AI analysis complete. Check sections below.</p>
