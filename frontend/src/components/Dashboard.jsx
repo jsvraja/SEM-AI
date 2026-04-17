@@ -1166,19 +1166,23 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 const ca = seo?.content_analysis || {}
                 const wordCount = ca.word_count || sc?.word_count || 0
                 const readability = ca.readability || 'N/A'
-                const readingLevel = ca.reading_level || 'N/A'
-                const keywordDensity = ca.keyword_density || 'N/A'
-                const primaryKeyword = ca.primary_keyword || 'N/A'
+                const readingLevel = sc?.reading_level || ca.reading_level || 'N/A'
+                const keywordDensity = sc?.keyword_density || ca.keyword_density || 'N/A'
+                const primaryKeyword = sc?.top_keyword || ca.primary_keyword || 'N/A'
                 const contentScore = ca.content_score || ca.quality_score || ca.readability_score || seo?.overall_seo_score || 0
                 const gaps = ca.content_gaps || []
-                const tone = ca.tone || 'N/A'
-                const hasCTA = ca.has_cta
-                const ctaText = ca.cta_text || ''
+                const tone = sc?.tone || ca.tone || 'N/A'
+                const hasCTA = sc?.has_cta ?? ca.has_cta
+                const ctaText = (sc?.cta_examples || []).join(', ') || ca.cta_text || ''
                 const strengths = ca.content_strengths || []
                 const weaknesses = ca.content_weaknesses || []
-                const kwInTitle = ca.keyword_in_title
-                const kwInMeta = ca.keyword_in_meta
-                const kwInH1 = ca.keyword_in_h1
+                const title2 = sc?.title || ''
+                const meta2 = sc?.meta_description || ''
+                const h1s2 = sc?.h1_tags || []
+                const pkLower = primaryKeyword.toLowerCase()
+                const kwInTitle = pkLower && title2 ? title2.toLowerCase().includes(pkLower) : ca.keyword_in_title
+                const kwInMeta = pkLower && meta2 ? meta2.toLowerCase().includes(pkLower) : ca.keyword_in_meta
+                const kwInH1 = pkLower && h1s2.length ? h1s2.some(h => h.toLowerCase().includes(pkLower)) : ca.keyword_in_h1
                 const wordColor = wordCount >= 800 ? 'var(--green)' : wordCount >= 400 ? 'var(--yellow)' : 'var(--red)'
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
