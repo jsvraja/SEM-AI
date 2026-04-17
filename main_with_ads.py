@@ -514,6 +514,22 @@ Return this EXACT JSON structure (no extra text):
     "content_strengths": ["strength based on actual content"],
     "content_weaknesses": ["weakness based on actual content"]
   }},
+  "fix_suggestions": [
+    {{
+      "issue": "Missing Schema Markup",
+      "priority": "high",
+      "effort": "medium",
+      "time_to_fix": "2-3 hours",
+      "impact": "Can improve CTR by 20-30% with rich snippets",
+      "exact_fix": "Add JSON-LD Product/Organization schema to page <head>",
+      "steps": [
+        "Open your page HTML file",
+        "Add the JSON-LD script tag before </head>",
+        "Test using Google Rich Results Test tool"
+      ],
+      "code_example": "<script type=\"application/ld+json\">{{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"SoftwareApplication\",\n  \"name\": \"Product Name\"\n}}</script>"
+    }}
+  ],
   "technical_issues": ["Missing meta description", "Images missing alt text"],
   "quick_wins": ["Add meta description (5 min fix)", "Add alt text to 3 images"],
   "recommendations": ["Write a 150-character meta description with primary keyword", "Expand content to 800+ words"],
