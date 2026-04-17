@@ -342,13 +342,13 @@ def detect_url_type(url: str) -> str:
 def build_seo_prompt_single_page(s: dict) -> str:
     """Deep SEO analysis for a single page."""
     return f"""You are a senior SEO specialist. Do a deep analysis of this SINGLE PAGE and return ONE JSON object only.
-URL: {s['url']} | Title: {s['title']} | Meta: {s['meta_description']} | H1: {s['h1_tags']} | Words: {s.get('word_count', 0)} | Images: {s['images_count']} | Images without alt: {s['images_without_alt_count']} | Schema: {s['has_schema_markup']} | Content: {str(s.get('full_text',''))[:2000]}
+URL: {s['url']} | Title: {s['title']} | Meta: {s['meta_description']} | H1: {s['h1_tags']} | Words: {s.get('word_count', 0)} | Images: {s['images_count']} | Images without alt: {s['images_without_alt_count']} | Schema: {s['has_schema_markup']} | Content: {str(s.get('full_text',''))[:3000]}
 
 Return this EXACT JSON structure (no extra text):
 {{
   "overall_seo_score": 72,
   "url_type": "single_page",
-  "ai_summary": "3 sentence assessment of this specific page SEO health and main opportunities",
+  "ai_summary": "5-6 sentence expert analysis covering: (1) overall SEO health with specific score explanation, (2) key strengths found in actual page data, (3) critical issues with specific details like word count/meta length/missing elements, (4) competitive positioning for target keywords, (5) top 2 immediate actions with expected score impact",
   "strengths": [
     {{"point": "Clear and descriptive title tag", "impact": "high"}}
   ],
@@ -417,13 +417,13 @@ IMPORTANT BUDGET RULES:
 def build_seo_prompt_whole_site(s: dict) -> str:
     """Site-wide SEO analysis based on homepage."""
     return f"""You are a senior SEO strategist. Analyse this WEBSITE and return ONE JSON object only.
-URL: {s['url']} | Title: {s['title']} | Meta: {s['meta_description']} | H1: {s['h1_tags']} | Images: {s['images_count']} | Schema: {s['has_schema_markup']} | Content: {str(s.get('full_text',''))[:2000]}
+URL: {s['url']} | Title: {s['title']} | Meta: {s['meta_description']} | H1: {s['h1_tags']} | Images: {s['images_count']} | Schema: {s['has_schema_markup']} | Content: {str(s.get('full_text',''))[:3000]}
 
 Return this EXACT JSON (no extra text):
 {{
   "overall_seo_score": 72,
   "url_type": "whole_site",
-  "ai_summary": "3 sentence overall assessment of the website SEO health and main opportunities",
+  "ai_summary": "5-6 sentence expert analysis covering: (1) overall website SEO health score explanation, (2) strongest pages and what makes them rank well, (3) critical technical issues affecting the whole site with specifics, (4) content gaps and opportunities, (5) top 2 priority fixes with expected impact on rankings",
   "strengths": [
     {{"point": "Clear value proposition on homepage", "impact": "high"}},
     {{"point": "Good use of H1 tags", "impact": "medium"}}
