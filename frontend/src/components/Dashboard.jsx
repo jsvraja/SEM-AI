@@ -207,7 +207,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [pageSpeed, setPageSpeed] = useState(null)
   const [loadingSpeed, setLoadingSpeed] = useState(false)
   const [showGoogleScore, setShowGoogleScore] = useState(false)
-  const [trendData, setTrendData] = useState([])
 
 
 
@@ -738,55 +737,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 </Card>
               )
             })()}
-
-            {/* SEO Health Trend */}
-            {trendData.length >= 2 && (
-              <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <SectionTitle icon={TrendingUp}>SEO Health Trend</SectionTitle>
-                  <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Last {trendData.length} analyses</div>
-                </div>
-                <ResponsiveContainer width="100%" height={160}>
-                  <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text3)' }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text3)' }} />
-                    <Tooltip
-                      contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px' }}
-                      formatter={(val, name) => [val + '/100', name === 'score' ? 'SEO Score' : 'Content Score']}
-                    />
-                    <Line type="monotone" dataKey="score" stroke="var(--accent)" strokeWidth={2} dot={{ fill: 'var(--accent)', r: 4 }} name="score" />
-                    <Line type="monotone" dataKey="content" stroke="var(--cyan)" strokeWidth={2} dot={{ fill: 'var(--cyan)', r: 4 }} name="content" strokeDasharray="4 4" />
-                  </LineChart>
-                </ResponsiveContainer>
-                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text3)' }}>
-                    <div style={{ width: '16px', height: '2px', background: 'var(--accent)' }} /> SEO Score
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text3)' }}>
-                    <div style={{ width: '16px', height: '2px', background: 'var(--cyan)', borderTop: '2px dashed var(--cyan)' }} /> Content Score
-                  </div>
-                </div>
-                {(() => {
-                  const first = trendData[0]?.score || 0
-                  const last = trendData[trendData.length - 1]?.score || 0
-                  const diff = last - first
-                  if (diff === 0) return null
-                  return (
-                    <div style={{ marginTop: '8px', padding: '6px 10px', borderRadius: '6px', background: diff > 0 ? 'var(--green-bg)' : 'var(--red-bg)', border: '1px solid ' + (diff > 0 ? 'var(--green)' : 'var(--red)'), fontSize: '12px', color: diff > 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600, textAlign: 'center' }}>
-                      {diff > 0 ? '📈 Improved by +' + diff + ' points since first analysis!' : '📉 Dropped by ' + Math.abs(diff) + ' points — check what changed'}
-                    </div>
-                  )
-                })()}
-              </Card>
-            )}
-            {trendData.length === 1 && (
-              <Card>
-                <SectionTitle icon={TrendingUp}>SEO Health Trend</SectionTitle>
-                <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text3)', fontSize: '12px' }}>
-                  📊 Re-analyse this URL tomorrow to start tracking your SEO score trend over time
-                </div>
-              </Card>
-            )}
 
             {/* SERP Preview */}
             <Card>
