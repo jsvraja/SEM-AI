@@ -208,6 +208,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [pageSpeed, setPageSpeed] = useState(null)
   const [sendingReport, setSendingReport] = useState(false)
   const [showAlerts, setShowAlerts] = useState(false)
+  const [expandedFix, setExpandedFix] = useState(null)
 
   const [reportSent, setReportSent] = useState(false)
   const [reportEmail, setReportEmail] = useState('')
@@ -1207,14 +1208,14 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {items.slice(0, 5).map((fix, i) => {
+                      {items.slice(0, 6).map((fix, i) => {
                         const priorityColor = fix.priority === 'high' ? 'var(--red)' : fix.priority === 'medium' ? 'var(--yellow)' : 'var(--green)'
                         const priorityBg = fix.priority === 'high' ? 'var(--red-bg)' : fix.priority === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)'
                         const effortColor = fix.effort === 'easy' ? 'var(--green)' : fix.effort === 'medium' ? 'var(--yellow)' : 'var(--red)'
                         return (
                           <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', borderLeft: '3px solid ' + priorityColor }}>
-                            {/* Header */}
-                            <div style={{ padding: '12px 14px', background: priorityBg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            {/* Header - clickable */}
+                            <div onClick={() => setExpandedFix(expandedFix === i ? null : i)} style={{ padding: '12px 14px', background: priorityBg, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{ fontSize: '16px' }}>{fix.priority === 'high' ? '🚨' : fix.priority === 'medium' ? '⚠️' : '💡'}</span>
                                 <span style={{ fontSize: '13px', fontWeight: 700, color: priorityColor }}>{fix.issue}</span>
