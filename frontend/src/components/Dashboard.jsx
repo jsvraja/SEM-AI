@@ -208,6 +208,18 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [sendingReport, setSendingReport] = useState(false)
   const [showAlerts, setShowAlerts] = useState(false)
 
+  const [reportSent, setReportSent] = useState(false)
+  const [reportEmail, setReportEmail] = useState('')
+  const [showEmailInput, setShowEmailInput] = useState(false)
+  const [loadingSpeed, setLoadingSpeed] = useState(false)
+  const [showGoogleScore, setShowGoogleScore] = useState(false)
+
+
+
+
+
+  const [siteAuditResults, setSiteAuditResults] = useState(null)
+  const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   const alerts = (() => {
     if (!seo) return []
     const a = []
@@ -223,18 +235,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
     if (!title) a.push({ type: 'critical', icon: '🏷️', title: 'Page Title Missing', msg: 'Critical for SEO rankings', time: 'Just now' })
     return a
   })()
-  const [reportSent, setReportSent] = useState(false)
-  const [reportEmail, setReportEmail] = useState('')
-  const [showEmailInput, setShowEmailInput] = useState(false)
-  const [loadingSpeed, setLoadingSpeed] = useState(false)
-  const [showGoogleScore, setShowGoogleScore] = useState(false)
-
-
-
-
-
-  const [siteAuditResults, setSiteAuditResults] = useState(null)
-  const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
   
   const urlType = seo?.url_type || ((() => {
     const path = url.replace(/https?:\/\//, '').split('?')[0]
