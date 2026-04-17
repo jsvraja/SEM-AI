@@ -99,8 +99,28 @@ async def scrape_website(url: str) -> dict:
     h1s = [h.get_text(strip=True) for h in soup.find_all("h1")]
     h2s = [h.get_text(strip=True) for h in soup.find_all("h2")][:10]
     all_links = soup.find_all("a", href=True)
-    internal_links = [l["href"] for l in all_links if url in l["href"] or l["href"].startswith("/")]
-    external_links = [l["href"] for l in all_links if l["href"].startswith("http") and url not in l["href"]]
+    from urllib.parse import urlparse as _urlparse
+    _base = _urlparse(url).netloc
+    internal_links_raw = []
+    external_links_raw = []
+    for l in all_links:
+        href = l.get("href", "").strip()
+        text = l.get_text(strip=True)[:50]
+        if not href or href.startswith(("#", "mailto:", "tel:", "javascript:")):
+            continue
+        if href.startswith("/") or _base in href:
+            internal_links_raw.append({"url": href, "text": text})
+        elif href.startswith("http"):
+            external_links_raw.append({"url": href, "text": text})
+    internal_links = internal_links_raw
+    external_links = external_links_raw[:20]
+    
+    # Nofollow links
+    nofollow_count = len([l for l in all_links if 'nofollow' in (l.get('rel') or [])])
+    
+    # Anchor text analysis
+    anchor_texts = [l.get_text(strip=True) for l in all_links if l.get_text(strip=True)]
+    empty_anchors = len([a for a in anchor_texts if not a or a.lower() in ['click here', 'here', 'read more', 'more']])
     images = soup.find_all("img")
     images_without_alt = [img.get("src", "") for img in images if not img.get("alt")]
     schema_tags = soup.find_all("script", attrs={"type": "application/ld+json"})
@@ -158,6 +178,10 @@ async def scrape_website(url: str) -> dict:
         "h1_tags": h1s, "h2_tags": h2s,
         "internal_links_count": len(internal_links),
         "external_links_count": len(external_links),
+        "internal_links_sample": internal_links[:15],
+        "external_links_sample": external_links[:10],
+        "nofollow_count": nofollow_count,
+        "empty_anchors": empty_anchors,
         "images_count": len(images),
         "images_without_alt_count": len(images_without_alt),
         "alt_text_coverage": alt_coverage,
@@ -363,6 +387,11 @@ async def full_report(req: FullReportRequest):
             "images_without_alt_count": scraped["images_without_alt_count"],
             "alt_text_coverage": scraped.get("alt_text_coverage", 0),
             "internal_links_count": scraped["internal_links_count"],
+            "external_links_count": scraped.get("external_links_count", 0),
+            "internal_links_sample": scraped.get("internal_links_sample", []),
+            "external_links_sample": scraped.get("external_links_sample", []),
+            "nofollow_count": scraped.get("nofollow_count", 0),
+            "empty_anchors": scraped.get("empty_anchors", 0),
             "has_schema_markup": scraped["has_schema_markup"],
             "html_size_kb": scraped["html_size_kb"],
             "word_count": scraped.get("word_count", 0),
