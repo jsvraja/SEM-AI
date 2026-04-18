@@ -1462,7 +1462,7 @@ async def send_seo_report(request: Request):
 
 SC_CLIENT_ID = os.environ.get("SEARCH_CONSOLE_CLIENT_ID", "")
 SC_CLIENT_SECRET = os.environ.get("SEARCH_CONSOLE_CLIENT_SECRET", "")
-SC_REDIRECT_URI = os.environ.get("SEARCH_CONSOLE_REDIRECT_URI", "https://sem-ai-production.up.railway.app/api/search-console/callback")
+SC_REDIRECT_URI = os.environ.get("SEARCH_CONSOLE_REDIRECT_URI", "https://heartfelt-reprieve-production-637b.up.railway.app/api/search-console/callback")
 SC_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
 # In-memory token store (per session)
