@@ -1188,6 +1188,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               </div>
             </Card>
 
+            {(seo?.fix_suggestions?.length > 0 || seo?.weaknesses?.length > 0) && (
             <Card>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <SectionTitle icon={Zap}>AI Fix Suggestions</SectionTitle>
