@@ -1468,6 +1468,50 @@ SC_SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 # In-memory token store (per session)
 sc_tokens = {}
 
+def save_sc_token(session_id: str, tokens: dict):
+    """Save Search Console token to DB."""
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sc_tokens (
+                    session_id TEXT PRIMARY KEY,
+                    tokens JSONB,
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            import json
+            cur.execute("""
+                INSERT INTO sc_tokens (session_id, tokens) VALUES (%s, %s)
+                ON CONFLICT (session_id) DO UPDATE SET tokens = %s, updated_at = NOW()
+            """, (session_id, json.dumps(tokens), json.dumps(tokens)))
+            conn.commit()
+            cur.close()
+            conn.close()
+    except Exception as e:
+        print(f"DB save error: {e}")
+    sc_tokens[session_id] = tokens
+
+def load_sc_token(session_id: str) -> dict:
+    """Load Search Console token from DB."""
+    if session_id in sc_tokens:
+        return sc_tokens[session_id]
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("SELECT tokens FROM sc_tokens WHERE session_id = %s", (session_id,))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                sc_tokens[session_id] = row[0]
+                return row[0]
+    except Exception as e:
+        print(f"DB load error: {e}")
+    return None
+
 @app.get("/api/search-console/auth")
 async def search_console_auth(session_id: str = "default"):
     """Generate OAuth URL for Search Console authorization."""
@@ -1504,7 +1548,7 @@ async def search_console_callback(code: str, state: str = "default"):
             )
             tokens = resp.json()
             if "access_token" in tokens:
-                sc_tokens[state] = tokens
+                save_sc_token(state, tokens)
                 return HTMLResponse("""
                 <html><body style="font-family:sans-serif;text-align:center;padding:50px;background:#0f172a;color:white">
                 <h2>✅ Search Console Connected!</h2>
@@ -1523,7 +1567,7 @@ async def search_console_callback(code: str, state: str = "default"):
 @app.get("/api/search-console/status")
 async def search_console_status(session_id: str = "default"):
     """Check if Search Console is connected."""
-    return {"connected": session_id in sc_tokens}
+    return {"connected": load_sc_token(session_id) is not None}
 
 @app.post("/api/search-console/data")
 async def get_search_console_data(request: Request):
@@ -1534,10 +1578,9 @@ async def get_search_console_data(request: Request):
         session_id = body.get("session_id", "default")
         days = body.get("days", 28)
         
-        if session_id not in sc_tokens:
+        tokens = load_sc_token(session_id)
+        if not tokens:
             return {"error": "Search Console not connected", "connected": False}
-        
-        tokens = sc_tokens[session_id]
         access_token = tokens.get("access_token", "")
         
         # Get site URL from URL
@@ -1583,7 +1626,8 @@ async def get_search_console_data(request: Request):
                     )
                     new_tokens = refresh_resp.json()
                     if "access_token" in new_tokens:
-                        sc_tokens[session_id].update(new_tokens)
+                        merged = {**load_sc_token(session_id), **new_tokens}
+                        save_sc_token(session_id, merged)
                         return {"error": "Token refreshed, please retry"}
                 return {"error": "Authentication expired, please reconnect"}
             
