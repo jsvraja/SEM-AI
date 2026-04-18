@@ -1631,6 +1631,10 @@ async def get_search_console_data(request: Request):
                         return {"error": "Token refreshed, please retry"}
                 return {"error": "Authentication expired, please reconnect"}
             
+            print(f"SC API status: {resp.status_code}")
+            print(f"SC API response: {resp.text[:500]}")
+            if not resp.text.strip():
+                return {"error": "Empty response from Search Console API - check if site is verified", "connected": False}
             data = resp.json()
             rows = data.get("rows", [])
             
