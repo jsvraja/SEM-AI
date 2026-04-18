@@ -1593,6 +1593,13 @@ async def get_search_console_data(request: Request):
         start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
         
         async with httpx.AsyncClient() as client:
+            # First check what sites are available
+            sites_resp = await client.get(
+                "https://www.googleapis.com/webmasters/v3/sites",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            print(f"Available sites: {sites_resp.text[:500]}")
+            
             # Get search analytics for this page
             resp = await client.post(
                 f"https://searchconsole.googleapis.com/webmasters/v3/sites/{site_url}/searchAnalytics/query",
