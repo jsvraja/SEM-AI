@@ -1588,10 +1588,12 @@ async def get_search_console_data(request: Request):
             return {"error": "Search Console not connected", "connected": False}
         access_token = tokens.get("access_token", "")
         
-        # Get site URL from URL
+        # Get site URL from URL - use domain property format
         from urllib.parse import urlparse
         parsed = urlparse(url)
-        site_url = f"{parsed.scheme}://{parsed.netloc}/"
+        domain = parsed.netloc.replace("www.", "")
+        site_url = f"sc-domain:{domain}"
+        print(f"Using site_url: {site_url}")
         
         from datetime import datetime, timedelta
         end_date = datetime.now().strftime("%Y-%m-%d")
