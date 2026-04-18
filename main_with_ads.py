@@ -1506,8 +1506,13 @@ def load_sc_token(session_id: str) -> dict:
             cur.close()
             conn.close()
             if row:
-                sc_tokens[session_id] = row[0]
-                return row[0]
+                import json
+                token_data = row[0]
+                if isinstance(token_data, str):
+                    token_data = json.loads(token_data)
+                sc_tokens[session_id] = token_data
+                print(f"Loaded SC token from DB for {session_id}")
+                return token_data
     except Exception as e:
         print(f"DB load error: {e}")
     return None
