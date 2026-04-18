@@ -1270,9 +1270,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       })}
                     </div>
                   )
-              })()}
+                })()}
             </Card>
-          )}
+            )}
 
             {/* Core Web Vitals */}
             <Card>
