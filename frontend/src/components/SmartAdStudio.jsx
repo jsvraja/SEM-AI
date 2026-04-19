@@ -164,8 +164,13 @@ function CampaignMonitor({ sessionId: propSessionId }) {
                   })
                   const removeData = await removeRes.json()
                   console.log('Remove result:', removeData)
-                  // Always refresh list
-                  setTimeout(() => fetchCampaigns(), 500)
+                  // Always refresh list - remove from local state immediately
+                  if (removeData.success) {
+                    setCampaigns(prev => prev.filter(camp => camp.id !== c.id))
+                  } else {
+                    // Force refresh anyway
+                    setTimeout(() => fetchCampaigns(), 1000)
+                  }
                 } catch(e) {}
               }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--red)', background: 'var(--red-bg)', cursor: 'pointer', fontSize: '11px', color: 'var(--red)' }}>
                 ✕ Remove
