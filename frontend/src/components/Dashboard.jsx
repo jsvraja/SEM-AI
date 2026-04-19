@@ -329,7 +329,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         </nav>
 
         {/* Bottom - Google status + theme */}
-        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
           {googleEmail ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
               <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }} />
@@ -369,10 +369,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           }} id="export-pdf-btn" style={{
             fontSize: '11px', padding: '5px 10px', borderRadius: '7px',
             background: 'var(--accent)', border: 'none', color: 'white',
-            cursor: 'pointer', fontWeight: 600
-          }}>📄 PDF</button>
+            cursor: 'pointer', fontWeight: 600, width: '100%', marginBottom: '6px'
+          }}>📄 Export PDF</button>
           <button onClick={onReset} style={{
-            marginTop: '8px', width: '100%', padding: '6px 10px',
+            width: '100%', padding: '6px 10px',
             border: '1px solid var(--border)', borderRadius: 'var(--radius)',
             background: 'transparent', color: 'var(--text3)',
             fontSize: '12px', cursor: 'pointer',
