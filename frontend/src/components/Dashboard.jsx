@@ -303,7 +303,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         </div>
 
         {/* Nav items */}
-        <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
+        <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto', minHeight: 0 }}>
           {TABS.map(t => {
             const Icon = t.icon
             const isActive = tab === t.id
@@ -329,7 +329,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         </nav>
 
         {/* Export PDF Button */}
-        <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
           <button onClick={async () => {
             const btn = document.getElementById('export-pdf-btn')
             if(btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true }
