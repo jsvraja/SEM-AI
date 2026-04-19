@@ -106,20 +106,20 @@ function CampaignMonitor({ sessionId: propSessionId }) {
     try {
       const res = await fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=7836650842`)
       const d = await res.json()
-      setCampaigns((Array.isArray(d) ? d : d.campaigns || []).map(c => ({...c, id: c.campaign_id || c.id, name: c.campaign_name || c.name, budget: c.budget_usd ? Math.round(c.budget_usd * 83) : 0, status: c.status, clicks: c.clicks || 0, impressions: c.impressions || 0, ctr: c.ctr || 0, spend: c.spend_today_usd ? Math.round(c.spend_today_usd * 83) : 0})))
+      setCampaigns((Array.isArray(d) ? d : d.campaigns || []).map(c => ({...c, id: c.campaign_id || c.id, name: c.campaign_name || c.name, resource_name: c.resource_name, budget: c.budget_usd ? Math.round(c.budget_usd * 83) : 0, status: c.status, clicks: c.clicks || 0, impressions: c.impressions || 0, ctr: c.ctr || 0, spend: c.spend_today_usd ? Math.round(c.spend_today_usd * 83) : 0})))
     } catch(e) {}
     setLoading(false)
   }
 
-  async function toggleCampaign(id, status) {
+  async function toggleCampaign(id, status, resourceName) {
     setActionLoading(p => ({ ...p, [id]: true }))
     try {
-      await fetch(`${BASE}/api/ads/campaigns/${id}/${status === 'ENABLED' ? 'pause' : 'enable'}`, {
+      await fetch(`${BASE}/api/ads/${status === 'ENABLED' ? 'pause' : 'resume'}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId })
+        body: JSON.stringify({ session_id: sessionId, campaign_resource_name: resourceName })
       })
       fetchCampaigns()
-    } catch(e) {}
+    } catch(e) { console.error(e) }
     setActionLoading(p => ({ ...p, [id]: false }))
   }
 
@@ -152,17 +152,19 @@ function CampaignMonitor({ sessionId: propSessionId }) {
               <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: c.status === 'ENABLED' ? 'var(--green-bg)' : 'var(--yellow-bg)', color: c.status === 'ENABLED' ? 'var(--green)' : 'var(--yellow)' }}>
                 {c.status === 'ENABLED' ? '● Running' : '⏸ Paused'}
               </span>
-              <button onClick={() => toggleCampaign(c.id, c.status)} disabled={actionLoading[c.id]} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg3)', cursor: 'pointer', fontSize: '11px' }}>
+              <button onClick={() => toggleCampaign(c.id, c.status, c.resource_name)} disabled={actionLoading[c.id]} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg3)', cursor: 'pointer', fontSize: '11px' }}>
                 {actionLoading[c.id] ? '⏳' : c.status === 'ENABLED' ? '⏸ Pause' : '▶ Resume'}
               </button>
               <button onClick={async () => {
                 if (!window.confirm('Remove this campaign?')) return
                 try {
-                  await fetch(`${BASE}/api/ads/campaigns/${c.id}/remove`, {
+                  const removeRes = await fetch(`${BASE}/api/ads/campaigns/${c.id}/remove`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId })
+                    body: JSON.stringify({ session_id: sessionId, campaign_resource_name: c.resource_name })
                   })
-                  fetchCampaigns()
+                  const removeData = await removeRes.json()
+                  console.log('Remove result:', removeData)
+                  await fetchCampaigns()
                 } catch(e) {}
               }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--red)', background: 'var(--red-bg)', cursor: 'pointer', fontSize: '11px', color: 'var(--red)' }}>
                 ✕ Remove
