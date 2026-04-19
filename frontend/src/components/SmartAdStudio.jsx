@@ -394,7 +394,7 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
       )}
 
       {/* SEMA Tab */}
-      {mainTab === 'sema' && <SEMAAgent sessionId={sessionId} campaigns={campaigns} />}
+      {mainTab === 'sema' && <SEMAAgent sessionId={sessionId} campaigns={[]} />}
 
       {/* Create Campaign Tab */}
       {mainTab === 'create' && (
