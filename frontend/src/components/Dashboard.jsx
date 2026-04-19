@@ -2022,11 +2022,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   Run a URL analysis first to enable competitor analysis
                 </div>
             }
-          url 
-            ? <Competitor url={url} seoReport={seo} />
-            : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>
-                Run a URL analysis first to enable competitor analysis
-              </div>
+          </div>
         )}
 
         {tab === 'google-ads' && (
