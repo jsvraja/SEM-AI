@@ -335,7 +335,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             if(btn) { btn.textContent = '⏳...'; btn.disabled = true }
             try {
               const seoEl = document.getElementById('seo-report-content')
-              if (!seoEl) { alert('Open SEO Report tab first!'); if(btn){btn.textContent='📄 Export PDF';btn.disabled=false}; return }
+              if (!seoEl) { if(btn){btn.textContent='📄 Export PDF';btn.disabled=false}; return }
               const canvas = await html2canvas(seoEl, {
                 scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
                 onclone: (doc) => {
@@ -1039,8 +1039,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         )}
 
         {/* ── SEO TAB ── */}
-        {tab === 'seo' && (
-          <div id="seo-report-content" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div id="seo-report-content" style={{ display: tab === 'seo' ? 'flex' : 'none', flexDirection: 'column', gap: '1rem' }}>
             {/* URL type banner */}
             <div style={{ padding: '10px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
               background: isWholeSite ? 'var(--accent-bg)' : 'var(--purple-bg)',
@@ -1852,7 +1851,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
 
           </div>
-        )}
 
         {/* ── ADS TAB ── */}
         {tab === 'ads' && (
