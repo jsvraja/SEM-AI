@@ -1934,36 +1934,38 @@ async def remove_campaign(campaign_id: str, request: Request):
     try:
         body = await request.json()
         session_id = body.get("session_id", "")
+        campaign_resource_name = body.get("campaign_resource_name", "")
         
         if session_id not in _sessions:
             raise HTTPException(status_code=401, detail="Not authenticated")
         
         session = _sessions[session_id]
-        access_token = session.get("access_token", "")
         customer_id = session.get("customer_id", DEFAULT_CUSTOMER_ID)
+        refresh_token = session.get("refresh_token", "")
         
         if not customer_id:
             raise HTTPException(status_code=400, detail="No customer ID")
 
         customer_id = customer_id.replace("-", "")
-        campaign_resource = f"customers/{customer_id}/campaigns/{campaign_id}"
         
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"https://googleads.googleapis.com/v23/customers/{customer_id}/campaigns:mutate",
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "developer-token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", ""),
-                    "login-customer-id": os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", ""),
-                    "Content-Type": "application/json",
-                },
-                json={"operations": [{"remove": campaign_resource}]}
-            )
-            
-            if resp.status_code == 200:
-                return {"success": True, "message": "Campaign removed"}
-            else:
-                return {"success": False, "error": resp.text}
+        # Use resource_name if provided, else construct it
+        if not campaign_resource_name:
+            campaign_resource_name = f"customers/{customer_id}/campaigns/{campaign_id}"
+        
+        from ads_manager import get_headers
+        headers = get_headers(refresh_token)
+        
+        resp = httpx.post(
+            f"https://googleads.googleapis.com/v23/customers/{customer_id}/campaigns:mutate",
+            headers=headers,
+            json={"operations": [{"remove": campaign_resource_name}]},
+            timeout=30
+        )
+        
+        if resp.status_code == 200:
+            return {"success": True, "message": "Campaign removed"}
+        else:
+            return {"success": False, "error": resp.text}
                 
     except Exception as e:
         return {"success": False, "error": str(e)}
