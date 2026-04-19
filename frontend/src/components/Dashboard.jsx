@@ -340,6 +340,58 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           ) : null}
           <ThemeToggle />
 
+          <button onClick={async () => {
+            const btn = document.getElementById('export-pdf-btn')
+            if(btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true }
+            try {
+              const element = document.getElementById('seo-report-content') || document.querySelector('main') || document.body
+              const canvas = await html2canvas(element, {
+                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
+                onclone: (doc) => {
+                  doc.documentElement.style.setProperty('--bg', '#ffffff')
+                  doc.documentElement.style.setProperty('--bg2', '#f8f9fa')
+                  doc.documentElement.style.setProperty('--bg3', '#f1f3f5')
+                  doc.documentElement.style.setProperty('--text', '#111111')
+                  doc.documentElement.style.setProperty('--text2', '#333333')
+                  doc.documentElement.style.setProperty('--text3', '#666666')
+                  doc.documentElement.style.setProperty('--border', '#cccccc')
+                  doc.documentElement.style.setProperty('--accent', '#2563eb')
+                  doc.documentElement.style.setProperty('--green', '#16a34a')
+                  doc.documentElement.style.setProperty('--red', '#dc2626')
+                  doc.documentElement.style.setProperty('--yellow', '#b45309')
+                  doc.documentElement.style.setProperty('--green-bg', '#f0fdf4')
+                  doc.documentElement.style.setProperty('--red-bg', '#fef2f2')
+                  doc.documentElement.style.setProperty('--yellow-bg', '#fffbeb')
+                  doc.querySelectorAll('button, aside, nav').forEach(el => el.style.display = 'none')
+                }
+              })
+              const imgData = canvas.toDataURL('image/jpeg', 0.85)
+              const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+              const pageWidth = pdf.internal.pageSize.getWidth()
+              const pageHeight = pdf.internal.pageSize.getHeight()
+              const imgWidth = pageWidth
+              const imgHeight = (canvas.height * pageWidth) / canvas.width
+              let heightLeft = imgHeight
+              let position = 0
+              pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+              heightLeft -= pageHeight
+              while (heightLeft > 0) {
+                position = heightLeft - imgHeight
+                pdf.addPage()
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+                heightLeft -= pageHeight
+              }
+              const domain = url.replace(/https?:\/\//, '').split('/')[0]
+              pdf.save(`SEM-AI-Report-${domain}.pdf`)
+            } catch(e) { alert('PDF failed: ' + e.message) }
+            if(btn) { btn.textContent = '📄 Export PDF'; btn.disabled = false }
+          }} id="export-pdf-btn" style={{
+            fontSize: '12px', padding: '6px 14px', borderRadius: '8px',
+            background: 'var(--accent)', border: 'none', color: 'white',
+            cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px'
+          }}>
+            📄 Export PDF
+          </button>
           <button onClick={onReset} style={{
             marginTop: '8px', width: '100%', padding: '6px 10px',
             border: '1px solid var(--border)', borderRadius: 'var(--radius)',
@@ -1977,72 +2029,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         )}
 
         {tab === 'competitor' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {url 
-              ? <Competitor url={url} seoReport={seo} />
-              : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>
-                  Run a URL analysis first to enable competitor analysis
-                </div>
-            }
-            {/* Export PDF Button */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0' }}>
-              <button onClick={async () => {
-                const btn = document.getElementById('export-pdf-btn')
-                if(btn) btn.textContent = '⏳ Generating...'
-                try {
-                  const element = document.getElementById('seo-report-content') || document.querySelector('main') || document.body
-                  const canvas = await html2canvas(element, {
-                    scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
-                    onclone: (doc) => {
-                      doc.documentElement.style.setProperty('--bg', '#ffffff')
-                      doc.documentElement.style.setProperty('--bg2', '#f8f9fa')
-                      doc.documentElement.style.setProperty('--bg3', '#f1f3f5')
-                      doc.documentElement.style.setProperty('--text', '#111111')
-                      doc.documentElement.style.setProperty('--text2', '#333333')
-                      doc.documentElement.style.setProperty('--text3', '#666666')
-                      doc.documentElement.style.setProperty('--border', '#cccccc')
-                      doc.documentElement.style.setProperty('--accent', '#2563eb')
-                      doc.documentElement.style.setProperty('--green', '#16a34a')
-                      doc.documentElement.style.setProperty('--red', '#dc2626')
-                      doc.documentElement.style.setProperty('--yellow', '#b45309')
-                      doc.documentElement.style.setProperty('--green-bg', '#f0fdf4')
-                      doc.documentElement.style.setProperty('--red-bg', '#fef2f2')
-                      doc.documentElement.style.setProperty('--yellow-bg', '#fffbeb')
-                      doc.querySelectorAll('button, aside, nav').forEach(el => el.style.display = 'none')
-                    }
-                  })
-                  const imgData = canvas.toDataURL('image/jpeg', 0.85)
-                  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-                  const pageWidth = pdf.internal.pageSize.getWidth()
-                  const pageHeight = pdf.internal.pageSize.getHeight()
-                  const imgWidth = pageWidth
-                  const imgHeight = (canvas.height * pageWidth) / canvas.width
-                  let heightLeft = imgHeight
-                  let position = 0
-                  pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-                  heightLeft -= pageHeight
-                  while (heightLeft > 0) {
-                    position = heightLeft - imgHeight
-                    pdf.addPage()
-                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-                    heightLeft -= pageHeight
-                  }
-                  const domain = url.replace(/https?:\/\//, '').split('/')[0]
-                  pdf.save(`SEM-AI-Report-${domain}.pdf`)
-                } catch(e) {
-                  alert('PDF generation failed: ' + e.message)
-                }
-                if(btn) btn.textContent = '📄 Export Full SEO Report'
-              }} id="export-pdf-btn" style={{
-                fontSize: '13px', padding: '10px 20px', borderRadius: '8px',
-                background: 'var(--accent)', border: 'none', color: 'white',
-                cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
-                boxShadow: '0 2px 8px rgba(37,99,235,0.3)'
-              }}>
-                📄 Export Full SEO Report
-              </button>
-            </div>
-          </div>
+          url 
+            ? <Competitor url={url} seoReport={seo} />
+            : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>
+                Run a URL analysis first to enable competitor analysis
+              </div>
         )}
 
         {tab === 'google-ads' && (
