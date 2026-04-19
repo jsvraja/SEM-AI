@@ -7,7 +7,7 @@ import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
 import ThemeToggle from './ThemeToggle'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, PieChart, Pie, Cell, Legend,
