@@ -321,6 +321,34 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             </div>
           ) : null}
           <ThemeToggle />
+          <button onClick={() => {
+            // Export PDF
+            const style = document.createElement('style')
+            style.id = 'print-style'
+            style.innerHTML = `
+              @media print {
+                body { background: white !important; color: black !important; }
+                nav, aside, .no-print, button { display: none !important; }
+                .card { break-inside: avoid; border: 1px solid #ddd !important; background: white !important; }
+                * { color-scheme: light !important; }
+                :root {
+                  --bg: #ffffff; --bg2: #f8f9fa; --bg3: #f0f0f0;
+                  --text: #111111; --text2: #333333; --text3: #666666;
+                  --border: #dddddd; --accent: #2563eb;
+                  --green: #16a34a; --red: #dc2626; --yellow: #ca8a04;
+                }
+              }
+            `
+            document.head.appendChild(style)
+            window.print()
+            setTimeout(() => document.getElementById('print-style')?.remove(), 1000)
+          }} style={{
+            fontSize: '12px', padding: '6px 14px', borderRadius: '8px',
+            background: 'var(--accent)', border: 'none', color: 'white',
+            cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px'
+          }}>
+            📄 Export PDF
+          </button>
           <button onClick={onReset} style={{
             marginTop: '8px', width: '100%', padding: '6px 10px',
             border: '1px solid var(--border)', borderRadius: 'var(--radius)',
