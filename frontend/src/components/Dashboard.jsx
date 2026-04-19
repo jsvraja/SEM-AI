@@ -217,6 +217,23 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const scSessionId = 'default'
   const [cwvTab, setCwvTab] = useState('vitals')
 
+  // Auto-load Core Web Vitals on mount
+  useEffect(() => {
+    if (url && !pageSpeed && !loadingSpeed) {
+      setLoadingSpeed(true)
+      fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      }).then(r => r.json()).then(d => { setPageSpeed(d); setLoadingSpeed(false) })
+        .catch(() => { setPageSpeed({ error: 'Network error' }); setLoadingSpeed(false) })
+    }
+    // Check SC connection
+    fetch('https://sem-ai-production.up.railway.app/api/search-console/status?session_id=default')
+      .then(r => r.json()).then(d => { if (d.connected) setScConnected(true) })
+      .catch(() => {})
+  }, [url])
+
   const [reportSent, setReportSent] = useState(false)
   const [reportEmail, setReportEmail] = useState('')
   const [showEmailInput, setShowEmailInput] = useState(false)
@@ -330,10 +347,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               // Find the main content area
               const element = document.getElementById('seo-report-content') || document.querySelector('main') || document.body
               const canvas = await html2canvas(element, {
-                scale: 1.5,
+                scale: 2,
                 useCORS: true,
                 backgroundColor: '#ffffff',
                 logging: false,
+                windowWidth: 1200,
                 onclone: (doc) => {
                   // Force light mode in clone
                   doc.documentElement.style.setProperty('--bg', '#ffffff')
