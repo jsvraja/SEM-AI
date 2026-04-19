@@ -141,6 +141,29 @@ function CampaignMonitor({ sessionId: propSessionId }) {
   )
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Account Status */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '4px' }}>
+        <a href="https://ads.google.com/aw/billing/summary" target="_blank" rel="noreferrer" style={{
+          display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
+          background: 'var(--green-bg)', border: '1px solid var(--green)', borderRadius: '10px', textDecoration: 'none'
+        }}>
+          <span style={{ fontSize: '20px' }}>💳</span>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--green)' }}>✅ Billing Ready</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Manage billing →</div>
+          </div>
+        </a>
+        <a href="https://ads.google.com/aw/identity/verification" target="_blank" rel="noreferrer" style={{
+          display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
+          background: 'var(--green-bg)', border: '1px solid var(--green)', borderRadius: '10px', textDecoration: 'none'
+        }}>
+          <span style={{ fontSize: '20px' }}>🛡️</span>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--green)' }}>✅ Advertiser Verified</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)' }}>View verification →</div>
+          </div>
+        </a>
+      </div>
       {campaigns.map(c => (
         <div key={c.id} style={{ padding: '14px', background: 'var(--bg2)', borderRadius: '10px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
