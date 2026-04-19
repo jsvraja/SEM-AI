@@ -328,6 +328,64 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           })}
         </nav>
 
+        {/* Export PDF Button */}
+        <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)' }}>
+          <button onClick={async () => {
+            const btn = document.getElementById('export-pdf-btn')
+            if(btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true }
+            try {
+              const seoEl = document.getElementById('seo-report-content')
+              if (!seoEl) { alert('Please open SEO Report tab first!'); if(btn) { btn.textContent = '📄 Export PDF'; btn.disabled = false }; return }
+              const canvas = await html2canvas(seoEl, {
+                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
+                onclone: (doc) => {
+                  doc.documentElement.style.setProperty('--bg', '#ffffff')
+                  doc.documentElement.style.setProperty('--bg2', '#f8f9fa')
+                  doc.documentElement.style.setProperty('--bg3', '#f1f3f5')
+                  doc.documentElement.style.setProperty('--text', '#111111')
+                  doc.documentElement.style.setProperty('--text2', '#333333')
+                  doc.documentElement.style.setProperty('--text3', '#666666')
+                  doc.documentElement.style.setProperty('--border', '#cccccc')
+                  doc.documentElement.style.setProperty('--accent', '#2563eb')
+                  doc.documentElement.style.setProperty('--green', '#16a34a')
+                  doc.documentElement.style.setProperty('--red', '#dc2626')
+                  doc.documentElement.style.setProperty('--yellow', '#b45309')
+                  doc.documentElement.style.setProperty('--green-bg', '#f0fdf4')
+                  doc.documentElement.style.setProperty('--red-bg', '#fef2f2')
+                  doc.documentElement.style.setProperty('--yellow-bg', '#fffbeb')
+                  doc.querySelectorAll('button, aside, nav').forEach(el => el.style.display = 'none')
+                }
+              })
+              const imgData = canvas.toDataURL('image/jpeg', 0.9)
+              const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+              const pageWidth = pdf.internal.pageSize.getWidth()
+              const pageHeight = pdf.internal.pageSize.getHeight()
+              const imgWidth = pageWidth
+              const imgHeight = (canvas.height * pageWidth) / canvas.width
+              let heightLeft = imgHeight
+              let position = 0
+              pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+              heightLeft -= pageHeight
+              while (heightLeft > 0) {
+                position = heightLeft - imgHeight
+                pdf.addPage()
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+                heightLeft -= pageHeight
+              }
+              const domain = url.replace(/https?:\/\//, '').split('/')[0]
+              pdf.save(`SEM-AI-SEO-Report-${domain}.pdf`)
+            } catch(e) { alert('PDF failed: ' + e.message) }
+            if(btn) { btn.textContent = '📄 Export PDF'; btn.disabled = false }
+          }} id="export-pdf-btn" style={{
+            width: '100%', fontSize: '12px', padding: '8px 12px', borderRadius: '8px',
+            background: 'var(--accent)', border: 'none', color: 'white',
+            cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', 
+            justifyContent: 'center', gap: '5px'
+          }}>
+            📄 Export PDF
+          </button>
+        </div>
+
         {/* Bottom - Google status + theme */}
         <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
           {googleEmail ? (
@@ -1984,64 +2042,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   Run a URL analysis first to enable competitor analysis
                 </div>
             }
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0' }}>
-              <button onClick={async () => {
-                const btn = document.getElementById('export-pdf-btn')
-                if(btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true }
-                try {
-                  // Switch to SEO tab first, capture, then switch back
-                  const seoEl = document.getElementById('seo-report-content')
-                  if (!seoEl) { alert('Please view SEO Report tab first, then export.'); return }
-                  const canvas = await html2canvas(seoEl, {
-                    scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
-                    onclone: (doc) => {
-                      doc.documentElement.style.setProperty('--bg', '#ffffff')
-                      doc.documentElement.style.setProperty('--bg2', '#f8f9fa')
-                      doc.documentElement.style.setProperty('--bg3', '#f1f3f5')
-                      doc.documentElement.style.setProperty('--text', '#111111')
-                      doc.documentElement.style.setProperty('--text2', '#333333')
-                      doc.documentElement.style.setProperty('--text3', '#666666')
-                      doc.documentElement.style.setProperty('--border', '#cccccc')
-                      doc.documentElement.style.setProperty('--accent', '#2563eb')
-                      doc.documentElement.style.setProperty('--green', '#16a34a')
-                      doc.documentElement.style.setProperty('--red', '#dc2626')
-                      doc.documentElement.style.setProperty('--yellow', '#b45309')
-                      doc.documentElement.style.setProperty('--green-bg', '#f0fdf4')
-                      doc.documentElement.style.setProperty('--red-bg', '#fef2f2')
-                      doc.documentElement.style.setProperty('--yellow-bg', '#fffbeb')
-                      doc.querySelectorAll('button, aside, nav, [data-no-print]').forEach(el => el.style.display = 'none')
-                    }
-                  })
-                  const imgData = canvas.toDataURL('image/jpeg', 0.9)
-                  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-                  const pageWidth = pdf.internal.pageSize.getWidth()
-                  const pageHeight = pdf.internal.pageSize.getHeight()
-                  const imgWidth = pageWidth
-                  const imgHeight = (canvas.height * pageWidth) / canvas.width
-                  let heightLeft = imgHeight
-                  let position = 0
-                  pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-                  heightLeft -= pageHeight
-                  while (heightLeft > 0) {
-                    position = heightLeft - imgHeight
-                    pdf.addPage()
-                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
-                    heightLeft -= pageHeight
-                  }
-                  const domain = url.replace(/https?:\/\//, '').split('/')[0]
-                  pdf.save(`SEM-AI-SEO-Report-${domain}.pdf`)
-                } catch(e) { alert('PDF failed: ' + e.message) }
-                if(btn) { btn.textContent = '📄 Export SEO Report PDF'; btn.disabled = false }
-              }} id="export-pdf-btn" style={{
-                fontSize: '13px', padding: '10px 20px', borderRadius: '8px',
-                background: 'var(--accent)', border: 'none', color: 'white',
-                cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px',
-                boxShadow: '0 2px 8px rgba(37,99,235,0.3)'
-              }}>
-                📄 Export SEO Report PDF
-              </button>
-            </div>
-          </div>
+          url 
+            ? <Competitor url={url} seoReport={seo} />
+            : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>
+                Run a URL analysis first to enable competitor analysis
+              </div>
         )}
 
         {tab === 'google-ads' && (
