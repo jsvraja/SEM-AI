@@ -336,15 +336,24 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             try {
               const seoEl = document.getElementById('seo-report-content')
               if (!seoEl) { if(btn){btn.textContent='📄 Export PDF';btn.disabled=false}; return }
+              const wasHidden = seoEl.style.display === 'none'
+              if (wasHidden) seoEl.style.display = 'flex'
               const canvas = await html2canvas(seoEl, {
-                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
+                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
+                windowWidth: 1200,
+                width: seoEl.scrollWidth,
+                height: seoEl.scrollHeight,
+                scrollX: 0, scrollY: 0,
                 onclone: (doc) => {
+                  const el = doc.getElementById('seo-report-content')
+                  if(el) { el.style.display = 'flex'; el.style.height = 'auto'; el.style.overflow = 'visible' }
                   ['--bg:#ffffff','--bg2:#f8f9fa','--bg3:#f1f3f5','--text:#111111','--text2:#333333','--text3:#666666','--border:#cccccc','--accent:#2563eb','--green:#16a34a','--red:#dc2626','--yellow:#b45309','--green-bg:#f0fdf4','--red-bg:#fef2f2','--yellow-bg:#fffbeb'].forEach(v => {
                     const [k,val] = v.split(':'); doc.documentElement.style.setProperty(k, val)
                   })
                   doc.querySelectorAll('button,aside,nav').forEach(el => el.style.display='none')
                 }
               })
+              if (wasHidden) seoEl.style.display = 'none'
               const imgData = canvas.toDataURL('image/jpeg', 0.9)
               const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'})
               const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight()
