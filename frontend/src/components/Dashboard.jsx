@@ -1,3 +1,5 @@
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 import AITraffic from './AITraffic'
 import AdCopy from './AdCopy'
 import SiteAudit from './SiteAudit'
@@ -321,43 +323,61 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             </div>
           ) : null}
           <ThemeToggle />
-          <button onClick={() => {
-            const style = document.createElement('style')
-            style.id = 'print-style'
-            style.innerHTML = `
-              @media print {
-                @page { margin: 15mm; size: A4; }
-                body { background: white !important; color: #111 !important; font-size: 11px !important; }
-                aside, nav, footer, .no-print { display: none !important; }
-                button { display: none !important; }
-                main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-                div[style*="position: fixed"] { display: none !important; }
-                :root {
-                  --bg: #ffffff !important; --bg2: #f8f9fa !important; --bg3: #f1f3f5 !important;
-                  --text: #111111 !important; --text2: #333333 !important; --text3: #666666 !important;
-                  --border: #cccccc !important; --accent: #2563eb !important;
-                  --green: #16a34a !important; --red: #dc2626 !important; --yellow: #b45309 !important;
-                  --green-bg: #f0fdf4 !important; --red-bg: #fef2f2 !important; --yellow-bg: #fffbeb !important;
-                  --accent-bg: #eff6ff !important; --accent-border: #bfdbfe !important;
+          <button onClick={async () => {
+            const btn = document.querySelector('[data-pdf-btn]')
+            if(btn) btn.textContent = '⏳ Generating...'
+            try {
+              // Find the main content area
+              const element = document.querySelector('main') || document.querySelector('[data-pdf-content]') || document.body
+              const canvas = await html2canvas(element, {
+                scale: 1.5,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                onclone: (doc) => {
+                  // Force light mode in clone
+                  doc.documentElement.style.setProperty('--bg', '#ffffff')
+                  doc.documentElement.style.setProperty('--bg2', '#f8f9fa')
+                  doc.documentElement.style.setProperty('--bg3', '#f1f3f5')
+                  doc.documentElement.style.setProperty('--text', '#111111')
+                  doc.documentElement.style.setProperty('--text2', '#333333')
+                  doc.documentElement.style.setProperty('--text3', '#666666')
+                  doc.documentElement.style.setProperty('--border', '#cccccc')
+                  doc.documentElement.style.setProperty('--accent', '#2563eb')
+                  doc.documentElement.style.setProperty('--green', '#16a34a')
+                  doc.documentElement.style.setProperty('--red', '#dc2626')
+                  doc.documentElement.style.setProperty('--yellow', '#b45309')
+                  doc.documentElement.style.setProperty('--green-bg', '#f0fdf4')
+                  doc.documentElement.style.setProperty('--red-bg', '#fef2f2')
+                  doc.documentElement.style.setProperty('--yellow-bg', '#fffbeb')
+                  // Hide buttons and sidebar
+                  doc.querySelectorAll('button, aside, nav').forEach(el => el.style.display = 'none')
                 }
-                * { color-scheme: light !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .card, [class*="card"] { 
-                  break-inside: avoid !important; 
-                  page-break-inside: avoid !important;
-                  border: 1px solid #ddd !important; 
-                  background: white !important;
-                  margin-bottom: 12px !important;
-                  padding: 14px !important;
-                  border-radius: 8px !important;
-                }
-                table { break-inside: avoid !important; width: 100% !important; }
-                h1, h2, h3 { break-after: avoid !important; }
+              })
+              const imgData = canvas.toDataURL('image/jpeg', 0.85)
+              const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+              const pageWidth = pdf.internal.pageSize.getWidth()
+              const pageHeight = pdf.internal.pageSize.getHeight()
+              const imgWidth = pageWidth
+              const imgHeight = (canvas.height * pageWidth) / canvas.width
+              let heightLeft = imgHeight
+              let position = 0
+              pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+              heightLeft -= pageHeight
+              while (heightLeft > 0) {
+                position = heightLeft - imgHeight
+                pdf.addPage()
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+                heightLeft -= pageHeight
               }
-            `
-            document.head.appendChild(style)
-            window.print()
-            setTimeout(() => document.getElementById('print-style')?.remove(), 2000)
-          }} style={{
+              const domain = url.replace(/https?:\/\//, '').split('/')[0]
+              pdf.save(`SEM-AI-Report-${domain}.pdf`)
+            } catch(e) {
+              console.error('PDF error:', e)
+              alert('PDF generation failed: ' + e.message)
+            }
+            if(btn) btn.textContent = '📄 Export PDF'
+          }} data-pdf-btn style={{
             fontSize: '12px', padding: '6px 14px', borderRadius: '8px',
             background: 'var(--accent)', border: 'none', color: 'white',
             cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px'
