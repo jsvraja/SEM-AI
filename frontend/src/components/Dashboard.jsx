@@ -328,7 +328,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             if(btn) btn.textContent = '⏳ Generating...'
             try {
               // Find the main content area
-              const element = document.querySelector('main') || document.querySelector('[data-pdf-content]') || document.body
+              const element = document.getElementById('seo-report-content') || document.querySelector('main') || document.body
               const canvas = await html2canvas(element, {
                 scale: 1.5,
                 useCORS: true,
@@ -1046,7 +1046,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         {/* ── SEO TAB ── */}
         {tab === 'seo' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div id="seo-report-content" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* URL type banner */}
             <div style={{ padding: '10px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
               background: isWholeSite ? 'var(--accent-bg)' : 'var(--purple-bg)',
