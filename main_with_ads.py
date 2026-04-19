@@ -1926,3 +1926,44 @@ Return ONLY valid JSON:
         import traceback
         traceback.print_exc()
         return {"error": str(e), "variants": []}
+
+# ─── Remove Campaign Endpoint ─────────────────────────────────────────────────
+@app.post("/api/ads/campaigns/{campaign_id}/remove")
+async def remove_campaign(campaign_id: str, request: Request):
+    """Remove/delete a campaign."""
+    try:
+        body = await request.json()
+        session_id = body.get("session_id", "")
+        
+        if session_id not in _sessions:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        
+        session = _sessions[session_id]
+        access_token = session.get("access_token", "")
+        customer_id = session.get("customer_id", DEFAULT_CUSTOMER_ID)
+        
+        if not customer_id:
+            raise HTTPException(status_code=400, detail="No customer ID")
+
+        customer_id = customer_id.replace("-", "")
+        campaign_resource = f"customers/{customer_id}/campaigns/{campaign_id}"
+        
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"https://googleads.googleapis.com/v23/customers/{customer_id}/campaigns:mutate",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "developer-token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", ""),
+                    "login-customer-id": os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", ""),
+                    "Content-Type": "application/json",
+                },
+                json={"operations": [{"remove": campaign_resource}]}
+            )
+            
+            if resp.status_code == 200:
+                return {"success": True, "message": "Campaign removed"}
+            else:
+                return {"success": False, "error": resp.text}
+                
+    except Exception as e:
+        return {"success": False, "error": str(e)}
