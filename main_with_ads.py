@@ -1783,3 +1783,83 @@ async def agent_clear_chat():
     """Clear chat history."""
     clear_agent_chat()
     return {"success": True}
+
+# ─── Smart Ad Variants Endpoint ───────────────────────────────────────────────
+@app.post("/api/ads/generate-variants")
+async def generate_ad_variants(request: Request):
+    """Generate multiple ad variations with different angles."""
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        seo_report = body.get("seo_report", {})
+
+        # Build context from SEO report
+        title = seo_report.get("page_metadata", {}).get("title", "") or ""
+        keywords = [k.get("keyword", "") for k in (seo_report.get("keyword_suggestions") or [])[:5]]
+        strengths = [s.get("point", s) if isinstance(s, dict) else s for s in (seo_report.get("strengths") or [])[:3]]
+        summary = seo_report.get("ai_summary", "") or seo_report.get("summary", "")
+
+        prompt = f"""You are a Google Ads expert. Generate 6 high-converting ad variations for this website.
+
+URL: {url}
+Page Title: {title}
+Top Keywords: {", ".join(keywords)}
+Key Strengths: {", ".join([str(s) for s in strengths])}
+Summary: {summary[:300] if summary else ""}
+
+Generate 6 ad variations with these angles:
+1. Pain Point - address user problems
+2. Benefit - highlight key benefits  
+3. Social Proof - trust and credibility
+4. Urgency - time-sensitive offer
+5. Question - engage curiosity
+6. Solution - direct solution angle
+
+For EACH variation return:
+- angle: the angle name
+- predicted_score: CTR prediction 60-95 (integer)
+- why: one sentence why this angle works
+- headlines: array of 5 headlines (MAX 30 chars each - STRICTLY enforce this)
+- descriptions: array of 2 descriptions (MAX 90 chars each - STRICTLY enforce this)
+- keywords: array of 5 target keywords
+
+Return ONLY valid JSON:
+{{
+  "variants": [
+    {{
+      "angle": "Pain Point",
+      "predicted_score": 85,
+      "why": "Directly addresses the main user frustration",
+      "headlines": ["headline1", "headline2", "headline3", "headline4", "headline5"],
+      "descriptions": ["description1 max 90 chars", "description2 max 90 chars"],
+      "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+    }}
+  ]
+}}"""
+
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+
+        # Clean JSON
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0].strip()
+
+        import json
+        data = json.loads(text)
+
+        # Enforce character limits
+        for variant in data.get("variants", []):
+            variant["headlines"] = [h[:30] for h in variant.get("headlines", [])]
+            variant["descriptions"] = [d[:90] for d in variant.get("descriptions", [])]
+
+        return data
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e), "variants": []}

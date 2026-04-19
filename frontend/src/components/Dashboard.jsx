@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import AITraffic from './AITraffic'
+import SmartAdStudio from './SmartAdStudio'
 import AdCopy from './AdCopy'
 import SiteAudit from './SiteAudit'
 import SocialMedia from './SocialMedia'
@@ -195,9 +196,9 @@ function AdVariant({ variant, url }) {
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'seo', label: 'SEO Report', icon: Search },
-  { id: 'ads', label: 'Ad Copy', icon: Megaphone },
+  { id: 'ads', label: 'Ad Studio', icon: Megaphone },
   { id: 'sem', label: 'SEM Plan', icon: TrendingUp },
-  { id: 'google-ads', label: 'Google Ads', icon: Zap },
+
   { id: 'site-audit', label: 'Site Audit', icon: Globe },
   { id: 'ai-traffic', label: 'AI Traffic', icon: Globe },
   { id: 'social', label: 'Social Media', icon: Share2 },
@@ -1864,13 +1865,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         {/* ── ADS TAB ── */}
         {tab === 'ads' && (
-          <AdCopy 
-            url={url} 
-            seoReport={seo} 
-            adCopy={ads} 
-            urlType={urlType}
-            savedRecommendations={recommendedPages.length > 0 ? {recommended_pages: recommendedPages} : null}
-            onRecommendations={(data) => setRecommendedPages(data.recommended_pages || [])}
+          <SmartAdStudio
+            url={url}
+            seoReport={seo}
+            sessionId={sessionId}
+            googleEmail={googleEmail}
           />
         )}
 
