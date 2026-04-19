@@ -340,37 +340,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           ) : null}
           <ThemeToggle />
 
-          <button onClick={async () => {
-            const btn = document.getElementById('export-pdf-btn')
-            if(btn) { btn.textContent = '⏳...'; btn.disabled = true }
-            try {
-              const seoEl = document.getElementById('seo-report-content')
-              if (!seoEl) { alert('Please open SEO Report tab first!'); if(btn){btn.textContent='📄 PDF';btn.disabled=false}; return }
-              const canvas = await html2canvas(seoEl, {
-                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
-                onclone: (doc) => {
-                  ['--bg:#ffffff','--bg2:#f8f9fa','--bg3:#f1f3f5','--text:#111111','--text2:#333333','--text3:#666666','--border:#cccccc','--accent:#2563eb','--green:#16a34a','--red:#dc2626','--yellow:#b45309','--green-bg:#f0fdf4','--red-bg:#fef2f2','--yellow-bg:#fffbeb'].forEach(v => {
-                    const [k,val] = v.split(':'); doc.documentElement.style.setProperty(k, val)
-                  })
-                  doc.querySelectorAll('button,aside,nav').forEach(el => el.style.display='none')
-                }
-              })
-              const imgData = canvas.toDataURL('image/jpeg', 0.9)
-              const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'})
-              const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight()
-              const iw = pw, ih = (canvas.height * pw) / canvas.width
-              let left = ih, pos = 0
-              pdf.addImage(imgData,'JPEG',0,pos,iw,ih)
-              left -= ph
-              while(left > 0) { pos = left-ih; pdf.addPage(); pdf.addImage(imgData,'JPEG',0,pos,iw,ih); left-=ph }
-              pdf.save(`SEO-Report-${url.replace(/https?:\/\//,'').split('/')[0]}.pdf`)
-            } catch(e) { alert('PDF failed: '+e.message) }
-            if(btn) { btn.textContent='📄 PDF'; btn.disabled=false }
-          }} id="export-pdf-btn" style={{
-            fontSize: '11px', padding: '5px 10px', borderRadius: '7px',
-            background: 'var(--accent)', border: 'none', color: 'white',
-            cursor: 'pointer', fontWeight: 600, width: '100%', marginBottom: '6px'
-          }}>📄 Export PDF</button>
+
           <button onClick={onReset} style={{
             width: '100%', padding: '6px 10px',
             border: '1px solid var(--border)', borderRadius: 'var(--radius)',
@@ -420,13 +390,47 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
 
         {/* Page header */}
-        <div style={{ marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>
-            {TABS.find(t => t.id === tab)?.label || 'Overview'}
-          </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text3)' }}>
-            {domain} · Analysed today
-          </p>
+        <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>
+              {TABS.find(t => t.id === tab)?.label || 'Overview'}
+            </h1>
+            <p style={{ fontSize: '13px', color: 'var(--text3)' }}>
+              {domain} · Analysed today
+            </p>
+          </div>
+          <button onClick={async () => {
+            const btn = document.getElementById('export-pdf-btn')
+            if(btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true }
+            try {
+              const seoEl = document.getElementById('seo-report-content')
+              if (!seoEl) { alert('Please open SEO Report tab first!'); if(btn){btn.textContent='📄 Export PDF';btn.disabled=false}; return }
+              const canvas = await html2canvas(seoEl, {
+                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, windowWidth: 1200,
+                onclone: (doc) => {
+                  ['--bg:#ffffff','--bg2:#f8f9fa','--bg3:#f1f3f5','--text:#111111','--text2:#333333','--text3:#666666','--border:#cccccc','--accent:#2563eb','--green:#16a34a','--red:#dc2626','--yellow:#b45309','--green-bg:#f0fdf4','--red-bg:#fef2f2','--yellow-bg:#fffbeb'].forEach(v => {
+                    const [k,val] = v.split(':'); doc.documentElement.style.setProperty(k, val)
+                  })
+                  doc.querySelectorAll('button,aside,nav').forEach(el => el.style.display='none')
+                }
+              })
+              const imgData = canvas.toDataURL('image/jpeg', 0.9)
+              const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'})
+              const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight()
+              const iw = pw, ih = (canvas.height * pw) / canvas.width
+              let left = ih, pos = 0
+              pdf.addImage(imgData,'JPEG',0,pos,iw,ih)
+              left -= ph
+              while(left > 0) { pos=left-ih; pdf.addPage(); pdf.addImage(imgData,'JPEG',0,pos,iw,ih); left-=ph }
+              pdf.save(`SEO-Report-${url.replace(/https?:\/\//,'').split('/')[0]}.pdf`)
+            } catch(e) { alert('PDF failed: '+e.message) }
+            if(btn) { btn.textContent='📄 Export PDF'; btn.disabled=false }
+          }} id="export-pdf-btn" style={{
+            fontSize: '12px', padding: '7px 14px', borderRadius: '8px',
+            background: 'var(--accent)', border: 'none', color: 'white',
+            cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px',
+            flexShrink: 0
+          }}>📄 Export PDF</button>
         </div>
 
         {tab === 'overview' && (
