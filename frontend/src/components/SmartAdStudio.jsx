@@ -488,8 +488,9 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
           </div>
         </div>
       )}
-
-
+      </div>
+      )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }
