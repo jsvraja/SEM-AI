@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BASE } from '../api_config'
 import { Zap, RefreshCw, Copy, Check, ChevronDown, ChevronUp, ArrowRight, ExternalLink, MessageSquare, BarChart3, Plus } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 
 function CopyBtn({ text }) {
   const [ok, setOk] = useState(false)
@@ -266,7 +267,20 @@ function SEMAAgent({ sessionId, campaigns }) {
                 {m.role === 'sema' ? '🤖' : '👤'}
               </div>
               <div style={{ maxWidth: '75%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', lineHeight: 1.6, background: m.role === 'sema' ? 'var(--bg3)' : 'var(--accent-bg)', color: m.role === 'sema' ? 'var(--text)' : 'var(--accent)', border: `1px solid ${m.role === 'sema' ? 'var(--border)' : 'var(--accent-border)'}` }}>
-                {m.text}
+                {m.role === 'sema' ? (
+                  <ReactMarkdown components={{
+                    h1: ({children}) => <div style={{fontSize:'15px',fontWeight:700,marginBottom:'8px',color:'var(--accent)'}}>{children}</div>,
+                    h2: ({children}) => <div style={{fontSize:'13px',fontWeight:700,marginTop:'10px',marginBottom:'6px',color:'var(--text)'}}>{children}</div>,
+                    h3: ({children}) => <div style={{fontSize:'12px',fontWeight:600,marginTop:'8px',marginBottom:'4px',color:'var(--text2)'}}>{children}</div>,
+                    p: ({children}) => <div style={{marginBottom:'6px',lineHeight:1.6}}>{children}</div>,
+                    strong: ({children}) => <strong style={{color:'var(--accent)',fontWeight:700}}>{children}</strong>,
+                    li: ({children}) => <div style={{display:'flex',gap:'6px',marginBottom:'4px'}}><span style={{color:'var(--accent)',flexShrink:0}}>•</span><span>{children}</span></div>,
+                    ul: ({children}) => <div style={{marginBottom:'8px'}}>{children}</div>,
+                    ol: ({children}) => <div style={{marginBottom:'8px'}}>{children}</div>,
+                    hr: () => <div style={{borderTop:'1px solid var(--border)',margin:'10px 0'}} />,
+                    code: ({children}) => <code style={{background:'var(--bg4)',padding:'2px 6px',borderRadius:'4px',fontSize:'11px',color:'var(--cyan)'}}>{children}</code>,
+                  }}>{m.text}</ReactMarkdown>
+                ) : m.text}
               </div>
             </div>
           ))}
