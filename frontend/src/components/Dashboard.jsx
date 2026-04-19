@@ -322,26 +322,41 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           ) : null}
           <ThemeToggle />
           <button onClick={() => {
-            // Export PDF
             const style = document.createElement('style')
             style.id = 'print-style'
             style.innerHTML = `
               @media print {
-                body { background: white !important; color: black !important; }
-                nav, aside, .no-print, button { display: none !important; }
-                .card { break-inside: avoid; border: 1px solid #ddd !important; background: white !important; }
-                * { color-scheme: light !important; }
+                @page { margin: 15mm; size: A4; }
+                body { background: white !important; color: #111 !important; font-size: 11px !important; }
+                aside, nav, footer, .no-print { display: none !important; }
+                button { display: none !important; }
+                main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+                div[style*="position: fixed"] { display: none !important; }
                 :root {
-                  --bg: #ffffff; --bg2: #f8f9fa; --bg3: #f0f0f0;
-                  --text: #111111; --text2: #333333; --text3: #666666;
-                  --border: #dddddd; --accent: #2563eb;
-                  --green: #16a34a; --red: #dc2626; --yellow: #ca8a04;
+                  --bg: #ffffff !important; --bg2: #f8f9fa !important; --bg3: #f1f3f5 !important;
+                  --text: #111111 !important; --text2: #333333 !important; --text3: #666666 !important;
+                  --border: #cccccc !important; --accent: #2563eb !important;
+                  --green: #16a34a !important; --red: #dc2626 !important; --yellow: #b45309 !important;
+                  --green-bg: #f0fdf4 !important; --red-bg: #fef2f2 !important; --yellow-bg: #fffbeb !important;
+                  --accent-bg: #eff6ff !important; --accent-border: #bfdbfe !important;
                 }
+                * { color-scheme: light !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                .card, [class*="card"] { 
+                  break-inside: avoid !important; 
+                  page-break-inside: avoid !important;
+                  border: 1px solid #ddd !important; 
+                  background: white !important;
+                  margin-bottom: 12px !important;
+                  padding: 14px !important;
+                  border-radius: 8px !important;
+                }
+                table { break-inside: avoid !important; width: 100% !important; }
+                h1, h2, h3 { break-after: avoid !important; }
               }
             `
             document.head.appendChild(style)
             window.print()
-            setTimeout(() => document.getElementById('print-style')?.remove(), 1000)
+            setTimeout(() => document.getElementById('print-style')?.remove(), 2000)
           }} style={{
             fontSize: '12px', padding: '6px 14px', borderRadius: '8px',
             background: 'var(--accent)', border: 'none', color: 'white',
