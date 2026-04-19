@@ -217,23 +217,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const scSessionId = 'default'
   const [cwvTab, setCwvTab] = useState('vitals')
 
-  // Auto-load Core Web Vitals on mount
-  useEffect(() => {
-    if (url && !pageSpeed && !loadingSpeed) {
-      setLoadingSpeed(true)
-      fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      }).then(r => r.json()).then(d => { setPageSpeed(d); setLoadingSpeed(false) })
-        .catch(() => { setPageSpeed({ error: 'Network error' }); setLoadingSpeed(false) })
-    }
-    // Check SC connection
-    fetch('https://sem-ai-production.up.railway.app/api/search-console/status?session_id=default')
-      .then(r => r.json()).then(d => { if (d.connected) setScConnected(true) })
-      .catch(() => {})
-  }, [url])
-
   const [reportSent, setReportSent] = useState(false)
   const [reportEmail, setReportEmail] = useState('')
   const [showEmailInput, setShowEmailInput] = useState(false)
@@ -246,6 +229,22 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
   const [siteAuditResults, setSiteAuditResults] = useState(null)
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
+
+  // Auto-load Core Web Vitals on mount
+  useEffect(() => {
+    if (url && !pageSpeed && !loadingSpeed) {
+      setLoadingSpeed(true)
+      fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      }).then(r => r.json()).then(d => { setPageSpeed(d); setLoadingSpeed(false) })
+        .catch(() => { setPageSpeed({ error: 'Network error' }); setLoadingSpeed(false) })
+    }
+    fetch('https://sem-ai-production.up.railway.app/api/search-console/status?session_id=default')
+      .then(r => r.json()).then(d => { if (d.connected) setScConnected(true) })
+      .catch(() => {})
+  }, [])
   const alerts = (() => {
     if (!seo) return []
     const a = []
