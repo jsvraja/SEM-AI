@@ -1839,7 +1839,7 @@ Return ONLY valid JSON:
 
         import google.generativeai as genai
         genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(prompt)
         text = response.text.strip()
 
