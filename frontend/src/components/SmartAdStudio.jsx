@@ -144,7 +144,7 @@ function CampaignMonitor({ sessionId }) {
         <div key={c.id} style={{ padding: '14px', background: 'var(--bg2)', borderRadius: '10px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name || 'Campaign ' + c.id}</div>
+              <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name && c.name !== 'undefined' ? c.name : 'Campaign #' + (c.id?.toString().slice(-4) || '?')}</div>
               <div style={{ fontSize: '11px', color: 'var(--text3)' }}>₹{c.budget || 0}/day</div>
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
@@ -153,6 +153,18 @@ function CampaignMonitor({ sessionId }) {
               </span>
               <button onClick={() => toggleCampaign(c.id, c.status)} disabled={actionLoading[c.id]} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg3)', cursor: 'pointer', fontSize: '11px' }}>
                 {actionLoading[c.id] ? '⏳' : c.status === 'ENABLED' ? '⏸ Pause' : '▶ Resume'}
+              </button>
+              <button onClick={async () => {
+                if (!window.confirm('Remove this campaign?')) return
+                try {
+                  await fetch(`${BASE}/api/ads/campaigns/${c.id}/remove`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                  })
+                  fetchCampaigns()
+                } catch(e) {}
+              }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--red)', background: 'var(--red-bg)', cursor: 'pointer', fontSize: '11px', color: 'var(--red)' }}>
+                ✕ Remove
               </button>
             </div>
           </div>
