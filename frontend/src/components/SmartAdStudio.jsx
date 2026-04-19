@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BASE } from '../api_config'
-import { Zap, RefreshCw, Copy, Check, ChevronDown, ChevronUp, ArrowRight, ExternalLink } from 'lucide-react'
+import { Zap, RefreshCw, Copy, Check, ChevronDown, ChevronUp, ArrowRight, ExternalLink, MessageSquare, BarChart3, Plus } from 'lucide-react'
 
 function CopyBtn({ text }) {
   const [ok, setOk] = useState(false)
@@ -93,16 +93,36 @@ function AdCard({ ad, url, selected, onSelect }) {
 function CampaignMonitor({ sessionId }) {
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState({})
 
-  useState(() => {
+  useEffect(() => {
     if (!sessionId) return
-    setLoading(true)
-    fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=7836650842`)
-      .then(r => r.json()).then(d => { setCampaigns(Array.isArray(d) ? d : d.campaigns || []); setLoading(false) })
-      .catch(() => setLoading(false))
+    fetchCampaigns()
   }, [sessionId])
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)' }}>⏳ Loading...</div>
+  async function fetchCampaigns() {
+    setLoading(true)
+    try {
+      const res = await fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=7836650842`)
+      const d = await res.json()
+      setCampaigns(Array.isArray(d) ? d : d.campaigns || [])
+    } catch(e) {}
+    setLoading(false)
+  }
+
+  async function toggleCampaign(id, status) {
+    setActionLoading(p => ({ ...p, [id]: true }))
+    try {
+      await fetch(`${BASE}/api/ads/campaigns/${id}/${status === 'ENABLED' ? 'pause' : 'enable'}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId })
+      })
+      fetchCampaigns()
+    } catch(e) {}
+    setActionLoading(p => ({ ...p, [id]: false }))
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)' }}>⏳ Loading campaigns...</div>
   if (!campaigns.length) return (
     <div style={{ textAlign: 'center', padding: '24px', background: 'var(--bg3)', borderRadius: '10px', color: 'var(--text3)' }}>
       <div style={{ fontSize: '24px', marginBottom: '8px' }}>📊</div>
@@ -113,14 +133,19 @@ function CampaignMonitor({ sessionId }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {campaigns.map(c => (
         <div key={c.id} style={{ padding: '14px', background: 'var(--bg2)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>{c.name}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text3)' }}>₹{c.budget}/day</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name || 'Campaign ' + c.id}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text3)' }}>₹{c.budget || 0}/day</div>
             </div>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: c.status === 'ENABLED' ? 'var(--green-bg)' : 'var(--yellow-bg)', color: c.status === 'ENABLED' ? 'var(--green)' : 'var(--yellow)' }}>
-              {c.status === 'ENABLED' ? '● Running' : '⏸ Paused'}
-            </span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: c.status === 'ENABLED' ? 'var(--green-bg)' : 'var(--yellow-bg)', color: c.status === 'ENABLED' ? 'var(--green)' : 'var(--yellow)' }}>
+                {c.status === 'ENABLED' ? '● Running' : '⏸ Paused'}
+              </span>
+              <button onClick={() => toggleCampaign(c.id, c.status)} disabled={actionLoading[c.id]} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg3)', cursor: 'pointer', fontSize: '11px' }}>
+                {actionLoading[c.id] ? '⏳' : c.status === 'ENABLED' ? '⏸ Pause' : '▶ Resume'}
+              </button>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px' }}>
             {[{ label: 'Clicks', value: c.clicks || 0 }, { label: 'Impressions', value: c.impressions || 0 }, { label: 'CTR', value: (c.ctr || 0) + '%' }, { label: 'Spend', value: '₹' + (c.spend || 0) }].map(({ label, value }) => (
@@ -136,7 +161,84 @@ function CampaignMonitor({ sessionId }) {
   )
 }
 
+
+// ─── SEMA Agent ──────────────────────────────────────────────────────────────
+function SEMAAgent({ sessionId }) {
+  const [chat, setChat] = useState([
+    { role: 'sema', text: 'Hi! I am SEMA, your AI SEM expert. I can help you optimize your campaigns, analyze performance, and suggest improvements. What would you like to know?' }
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function sendMessage() {
+    if (!input.trim() || loading) return
+    const userMsg = input.trim()
+    setInput('')
+    setChat(c => [...c, { role: 'user', text: userMsg }])
+    setLoading(true)
+    try {
+      const res = await fetch(`${BASE}/api/agent/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, session_id: sessionId })
+      })
+      const data = await res.json()
+      setChat(c => [...c, { role: 'sema', text: data.response || 'No response received.' }])
+    } catch(e) {
+      setChat(c => [...c, { role: 'sema', text: 'Error connecting to SEMA. Please try again.' }])
+    }
+    setLoading(false)
+  }
+
+  const suggestions = [
+    'Which campaign is performing best?',
+    'Pause low performing ads',
+    'Suggest budget optimization',
+    'Generate weekly report',
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>🤖 SEMA — AI SEM Expert</div>
+        <div style={{ fontSize: '12px', color: 'var(--text3)' }}>Ask anything about your campaigns, performance, and optimization</div>
+      </div>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ height: '350px', overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {chat.map((m, i) => (
+            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', background: m.role === 'sema' ? 'var(--accent-bg)' : 'var(--bg3)', border: '1px solid var(--border)' }}>
+                {m.role === 'sema' ? '🤖' : '👤'}
+              </div>
+              <div style={{ maxWidth: '75%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', lineHeight: 1.6, background: m.role === 'sema' ? 'var(--bg3)' : 'var(--accent-bg)', color: m.role === 'sema' ? 'var(--text)' : 'var(--accent)', border: `1px solid ${m.role === 'sema' ? 'var(--border)' : 'var(--accent-border)'}` }}>
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', background: 'var(--accent-bg)' }}>🤖</div>
+              <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--bg3)', border: '1px solid var(--border)', fontSize: '13px', color: 'var(--text3)' }}>⏳ Thinking...</div>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            placeholder="Ask SEMA anything..." style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', fontSize: '13px', outline: 'none' }} />
+          <button onClick={sendMessage} disabled={loading || !input.trim()} style={{ padding: '8px 16px', borderRadius: '8px', background: input.trim() ? 'var(--accent)' : 'var(--bg3)', border: 'none', color: input.trim() ? 'white' : 'var(--text3)', cursor: input.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '13px' }}>Send</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {suggestions.map((s, i) => (
+          <button key={i} onClick={() => { setInput(s); }} style={{ fontSize: '12px', padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)', cursor: 'pointer' }}>{s}</button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }) {
+  const [mainTab, setMainTab] = useState('create') // create | campaigns | sema
   const [step, setStep] = useState('generate')
   const [generating, setGenerating] = useState(false)
   const [adVariants, setAdVariants] = useState([])
@@ -187,7 +289,8 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setLaunched(true)
-      setStep('monitor')
+      setMainTab('campaigns')
+      setStep('generate')
     } catch(e) { setError(e.message) }
     setLaunching(false)
   }
@@ -196,15 +299,53 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
     { id: 'generate', label: '1. Generate', icon: '⚡' },
     { id: 'select', label: '2. Select', icon: '✅' },
     { id: 'launch', label: '3. Launch', icon: '🚀' },
-    { id: 'monitor', label: '4. Monitor', icon: '📊' },
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
 
-      {/* Progress */}
-      <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg2)', borderRadius: '12px', padding: '12px 16px', border: '1px solid var(--border)' }}>
+      {/* Main Tabs */}
+      <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', paddingBottom: '0' }}>
+        {[
+          { id: 'create', label: '⚡ Create Campaign', icon: Plus },
+          { id: 'campaigns', label: '📊 My Campaigns', icon: BarChart3 },
+          { id: 'sema', label: '🤖 SEMA Agent', icon: MessageSquare },
+        ].map(t => (
+          <button key={t.id} onClick={() => setMainTab(t.id)} style={{
+            padding: '10px 18px', border: 'none', borderBottom: mainTab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+            background: 'transparent', color: mainTab === t.id ? 'var(--accent)' : 'var(--text3)',
+            fontWeight: mainTab === t.id ? 700 : 500, fontSize: '13px', cursor: 'pointer',
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {error && <div style={{ padding: '10px 14px', background: 'var(--red-bg)', border: '1px solid var(--red)', borderRadius: '8px', fontSize: '13px', color: 'var(--red)' }}>⚠ {error}</div>}
+
+      {/* My Campaigns Tab */}
+      {mainTab === 'campaigns' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {launched && (
+            <div style={{ padding: '12px 16px', background: 'var(--green-bg)', border: '1px solid var(--green)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '20px' }}>🎉</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--green)' }}>Campaign Launched!</div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Ads will appear in 1-2 hours</div>
+              </div>
+            </div>
+          )}
+          <CampaignMonitor sessionId={sessionId} />
+        </div>
+      )}
+
+      {/* SEMA Tab */}
+      {mainTab === 'sema' && <SEMAAgent sessionId={sessionId} />}
+
+      {/* Create Campaign Tab */}
+      {mainTab === 'create' && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Progress Steps */}
+      <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg2)', borderRadius: '12px', padding: '10px 16px', border: '1px solid var(--border)' }}>
         {steps.map((s, i) => (
           <div key={s.id} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
             <div onClick={() => adVariants.length > 0 && setStep(s.id)} style={{
@@ -216,12 +357,10 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
             }}>
               <span>{s.icon}</span><span>{s.label}</span>
             </div>
-            {i < 3 && <ArrowRight size={14} color="var(--text3)" style={{ flexShrink: 0 }} />}
+            {i < 2 && <ArrowRight size={14} color="var(--text3)" style={{ flexShrink: 0 }} />}
           </div>
         ))}
       </div>
-
-      {error && <div style={{ padding: '10px 14px', background: 'var(--red-bg)', border: '1px solid var(--red)', borderRadius: '8px', fontSize: '13px', color: 'var(--red)' }}>⚠ {error}</div>}
 
       {/* Step 1: Generate */}
       {step === 'generate' && (
@@ -350,23 +489,7 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
         </div>
       )}
 
-      {/* Step 4: Monitor */}
-      {step === 'monitor' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {launched && (
-            <div style={{ padding: '16px', background: 'var(--green-bg)', border: '1px solid var(--green)', borderRadius: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--green)' }}>Campaign Launched!</div>
-              <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '4px' }}>Ads will appear in 1-2 hours</div>
-            </div>
-          )}
-          <div style={{ fontSize: '14px', fontWeight: 700 }}>📊 Live Campaigns</div>
-          <CampaignMonitor sessionId={sessionId} />
-          <button onClick={() => { setStep('generate'); setAdVariants([]); setSelectedAds([]) }} style={{
-            padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg3)', cursor: 'pointer', fontSize: '13px', color: 'var(--text3)'
-          }}>+ Create New Campaign</button>
-        </div>
-      )}
+
     </div>
   )
 }
