@@ -329,7 +329,7 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
           </div>
 
           {!isConnected ? (
-            <a href={`${BASE}/auth/google`} style={{
+            <a href={`${BASE}/auth/google`} target="_blank" rel="noreferrer" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               padding: '14px', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
               background: 'linear-gradient(135deg, #4285f4, #34a853)', color: 'white', textDecoration: 'none',
@@ -344,6 +344,9 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
               {launching ? <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Launching...</> : <>🚀 Launch on Google Ads</>}
             </button>
           )}
+          <div style={{ fontSize: '11px', color: 'var(--text3)', textAlign: 'center', marginTop: '8px' }}>
+            Connected as: {googleEmail || 'Not connected'}
+          </div>
         </div>
       )}
 
