@@ -37,7 +37,45 @@ app.add_middleware(
 # ─── Persistent Session Store ─────────────────────────────────────────────────
 SESSIONS_FILE = os.path.join(os.path.dirname(__file__), ".sessions.json")
 
+def get_db_connection():
+    """Get PostgreSQL connection."""
+    try:
+        db_url = os.environ.get("DATABASE_URL", "")
+        if db_url:
+            import psycopg2
+            conn = psycopg2.connect(db_url)
+            return conn
+    except Exception as e:
+        print(f"DB connection error: {e}")
+    return None
+
 def load_sessions():
+    """Load sessions from DB first, fallback to file."""
+    sessions = {}
+    # Try DB
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS google_sessions (
+                    session_id TEXT PRIMARY KEY,
+                    data JSONB,
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            conn.commit()
+            cur.execute("SELECT session_id, data FROM google_sessions")
+            rows = cur.fetchall()
+            for row in rows:
+                sessions[row[0]] = row[1] if isinstance(row[1], dict) else json.loads(row[1])
+            cur.close()
+            conn.close()
+            print(f"Loaded {len(sessions)} sessions from DB")
+            return sessions
+    except Exception as e:
+        print(f"DB load error: {e}")
+    # Fallback to file
     try:
         if os.path.exists(SESSIONS_FILE):
             with open(SESSIONS_FILE, "r") as f:
@@ -47,11 +85,36 @@ def load_sessions():
     return {}
 
 def save_sessions(sessions):
+    """Save sessions to DB and file."""
+    # Save to DB
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS google_sessions (
+                    session_id TEXT PRIMARY KEY,
+                    data JSONB,
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            for sid, data in sessions.items():
+                cur.execute("""
+                    INSERT INTO google_sessions (session_id, data)
+                    VALUES (%s, %s)
+                    ON CONFLICT (session_id) DO UPDATE SET data = %s, updated_at = NOW()
+                """, (sid, json.dumps(data), json.dumps(data)))
+            conn.commit()
+            cur.close()
+            conn.close()
+    except Exception as e:
+        print(f"DB save error: {e}")
+    # Also save to file as backup
     try:
         with open(SESSIONS_FILE, "w") as f:
             json.dump(sessions, f, indent=2)
     except Exception as e:
-        print(f"Warning: could not save sessions: {e}")
+        print(f"Warning: could not save sessions to file: {e}")
 
 _sessions = load_sessions()
 print(f"Loaded {len(_sessions)} saved session(s)")
