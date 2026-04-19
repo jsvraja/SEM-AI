@@ -213,6 +213,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [scData, setScData] = useState(null)
   const [scLoading, setScLoading] = useState(false)
   const scSessionId = 'default'
+  const [cwvTab, setCwvTab] = useState('vitals')
 
   const [reportSent, setReportSent] = useState(false)
   const [reportEmail, setReportEmail] = useState('')
