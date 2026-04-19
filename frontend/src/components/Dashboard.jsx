@@ -1275,8 +1275,29 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             </Card>
             )}
 
-            {/* Core Web Vitals */}
+            {/* Core Web Vitals + Search Console Tabs */}
             <Card>
+              {/* Tab Header */}
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '16px', gap: '4px' }}>
+                {[
+                  { id: 'vitals', label: '⚡ Core Web Vitals', desc: 'Auto loaded' },
+                  { id: 'searchconsole', label: '🔍 Search Console', desc: scConnected ? '✅ Connected' : 'Connect Google' },
+                ].map(tab => (
+                  <button key={tab.id} onClick={() => setCwvTab(tab.id)} style={{
+                    padding: '8px 16px', border: 'none', borderBottom: cwvTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
+                    background: 'transparent', color: cwvTab === tab.id ? 'var(--accent)' : 'var(--text3)',
+                    fontWeight: cwvTab === tab.id ? 700 : 500, fontSize: '13px', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px'
+                  }}>
+                    <span>{tab.label}</span>
+                    <span style={{ fontSize: '10px', color: tab.id === 'searchconsole' && scConnected ? 'var(--green)' : 'var(--text3)' }}>{tab.desc}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Core Web Vitals Tab */}
+              {cwvTab === 'vitals' && (
+              <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <SectionTitle icon={Zap}>Core Web Vitals</SectionTitle>
                 {!pageSpeed && !loadingSpeed && (
@@ -1394,6 +1415,109 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '8px 10px', background: 'var(--bg3)', borderRadius: '8px', textAlign: 'center' }}>
                     🟢 Good &nbsp;|&nbsp; 🟡 Needs Improvement &nbsp;|&nbsp; 🔴 Poor &nbsp;|&nbsp; Data from Google PageSpeed Insights
                   </div>
+                </div>
+              )}
+              </div>
+              )}
+
+              {/* Search Console Tab */}
+              {cwvTab === 'searchconsole' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <SectionTitle icon={Search}>Search Console Data</SectionTitle>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {scConnected && <span style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>✅ Connected</span>}
+                      {!scConnected ? (
+                        <button onClick={async () => {
+                          try {
+                            const res = await fetch('https://sem-ai-production.up.railway.app/api/search-console/auth?session_id=default')
+                            const data = await res.json()
+                            if (data.auth_url) {
+                              const popup = window.open(data.auth_url, 'SC Auth', 'width=500,height=600')
+                              window.addEventListener('message', async (e) => {
+                                if (e.data?.type === 'SC_AUTH_SUCCESS') {
+                                  popup?.close()
+                                  setScConnected(true)
+                                  setScLoading(true)
+                                  const dr = await fetch('https://sem-ai-production.up.railway.app/api/search-console/data', {
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ url, session_id: 'default' })
+                                  })
+                                  setScData(await dr.json())
+                                  setScLoading(false)
+                                }
+                              }, { once: true })
+                            }
+                          } catch(e) { console.error(e) }
+                        }} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px', background: '#4285f4', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 600 }}>
+                          🔍 Connect Google Search Console
+                        </button>
+                      ) : (
+                        <button onClick={async () => {
+                          setScLoading(true)
+                          const res = await fetch('https://sem-ai-production.up.railway.app/api/search-console/data', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url, session_id: 'default' })
+                          })
+                          setScData(await res.json())
+                          setScLoading(false)
+                        }} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', cursor: 'pointer' }}>↺ Refresh</button>
+                      )}
+                    </div>
+                  </div>
+                  {!scConnected && (
+                    <div style={{ textAlign: 'center', padding: '24px', background: 'var(--bg3)', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>Connect Google Search Console</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text3)', lineHeight: 1.6 }}>
+                        Get real impressions, clicks, rankings and keyword data directly from Google.<br/>
+                        <span style={{ color: 'var(--accent)' }}>Your data stays private — read-only access only.</span>
+                      </div>
+                    </div>
+                  )}
+                  {scLoading && <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)' }}>⏳ Fetching Search Console data...</div>}
+                  {scData?.error && <div style={{ color: 'var(--red)', fontSize: '13px', padding: '10px', background: 'var(--red-bg)', borderRadius: '8px' }}>⚠ {scData.error}</div>}
+                  {scData?.connected && scData?.page_metrics && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px' }}>
+                        {[
+                          { label: 'Total Clicks', value: scData.page_metrics.clicks.toLocaleString(), color: 'var(--accent)', icon: '👆' },
+                          { label: 'Impressions', value: scData.page_metrics.impressions.toLocaleString(), color: 'var(--cyan)', icon: '👁' },
+                          { label: 'Avg CTR', value: scData.page_metrics.ctr + '%', color: scData.page_metrics.ctr >= 3 ? 'var(--green)' : 'var(--yellow)', icon: '📈' },
+                          { label: 'Avg Position', value: '#' + scData.page_metrics.position, color: scData.page_metrics.position <= 10 ? 'var(--green)' : 'var(--yellow)', icon: '🏆' },
+                        ].map(({ label, value, color, icon }) => (
+                          <div key={label} style={{ textAlign: 'center', padding: '12px 8px', background: 'var(--bg3)', borderRadius: '10px' }}>
+                            <div style={{ fontSize: '18px', marginBottom: '4px' }}>{icon}</div>
+                            <div style={{ fontSize: '20px', fontWeight: 800, color }}>{value}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {scData.top_queries?.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: '8px', textTransform: 'uppercase' }}>🔑 Top Search Queries</div>
+                          <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                              <thead style={{ background: 'var(--bg3)' }}>
+                                <tr>{['Keyword','Clicks','Impressions','CTR','Position'].map(h => <th key={h} style={{ padding: '7px 10px', textAlign: h==='Keyword'?'left':'center', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>{h}</th>)}</tr>
+                              </thead>
+                              <tbody>
+                                {scData.top_queries.map((q, i) => (
+                                  <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i%2===0?'var(--bg)':'var(--bg3)' }}>
+                                    <td style={{ padding: '6px 10px', color: 'var(--accent)', fontWeight: 500 }}>{q.keyword}</td>
+                                    <td style={{ padding: '6px 10px', textAlign: 'center', fontWeight: 600 }}>{q.clicks}</td>
+                                    <td style={{ padding: '6px 10px', textAlign: 'center', color: 'var(--text3)' }}>{q.impressions}</td>
+                                    <td style={{ padding: '6px 10px', textAlign: 'center', color: q.ctr>=3?'var(--green)':'var(--yellow)' }}>{q.ctr}%</td>
+                                    <td style={{ padding: '6px 10px', textAlign: 'center', color: q.position<=10?'var(--green)':q.position<=20?'var(--yellow)':'var(--red)', fontWeight: 700 }}>#{Math.round(q.position)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </Card>
