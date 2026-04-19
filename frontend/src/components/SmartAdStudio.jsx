@@ -122,6 +122,15 @@ function CampaignMonitor({ sessionId }) {
     setActionLoading(p => ({ ...p, [id]: false }))
   }
 
+  if (!sessionId) return (
+    <div style={{ textAlign: 'center', padding: '24px', background: 'var(--bg3)', borderRadius: '10px' }}>
+      <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔗</div>
+      <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Connect Google Ads to view campaigns</div>
+      <a href={BASE + '/auth/google'} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 18px', borderRadius: '8px', background: 'linear-gradient(135deg, #4285f4, #34a853)', color: 'white', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+        Connect Google Ads
+      </a>
+    </div>
+  )
   if (loading) return <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)' }}>⏳ Loading campaigns...</div>
   if (!campaigns.length) return (
     <div style={{ textAlign: 'center', padding: '24px', background: 'var(--bg3)', borderRadius: '10px', color: 'var(--text3)' }}>
