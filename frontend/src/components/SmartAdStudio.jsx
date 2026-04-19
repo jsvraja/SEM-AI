@@ -216,7 +216,7 @@ function CampaignMonitor({ sessionId: propSessionId }) {
 
 
 // ─── SEMA Agent ──────────────────────────────────────────────────────────────
-function SEMAAgent({ sessionId }) {
+function SEMAAgent({ sessionId, campaigns }) {
   const [chat, setChat] = useState([
     { role: 'sema', text: 'Hi! I am SEMA, your AI SEM expert. I can help you optimize your campaigns, analyze performance, and suggest improvements. What would you like to know?' }
   ])
@@ -233,7 +233,7 @@ function SEMAAgent({ sessionId }) {
       const res = await fetch(`${BASE}/api/agent/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, session_id: sessionId })
+        body: JSON.stringify({ message: userMsg, session_id: sessionId, campaigns_context: campaigns })
       })
       const data = await res.json()
       setChat(c => [...c, { role: 'sema', text: data.response || 'No response received.' }])
@@ -244,10 +244,12 @@ function SEMAAgent({ sessionId }) {
   }
 
   const suggestions = [
-    'Which campaign is performing best?',
-    'Pause low performing ads',
-    'Suggest budget optimization',
-    'Generate weekly report',
+    'Analyse all campaigns and suggest improvements',
+    'Which campaign should I increase budget for?',
+    'Are there any underperforming ads I should pause?',
+    'What bid changes do you recommend?',
+    'Generate a performance report',
+    'How can I improve my CTR?',
   ]
 
   return (
@@ -392,7 +394,7 @@ export default function SmartAdStudio({ url, seoReport, sessionId, googleEmail }
       )}
 
       {/* SEMA Tab */}
-      {mainTab === 'sema' && <SEMAAgent sessionId={sessionId} />}
+      {mainTab === 'sema' && <SEMAAgent sessionId={sessionId} campaigns={campaigns} />}
 
       {/* Create Campaign Tab */}
       {mainTab === 'create' && (

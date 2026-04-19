@@ -1790,11 +1790,27 @@ async def agent_chat(request: Request):
     try:
         import httpx as _hx, json as _json
         api_key = os.environ.get("GEMINI_API_KEY", "")
-        camp_str = _json.dumps(campaigns[:3]) if campaigns else "No campaigns data"
-        prompt = f"""You are SEMA, an expert Google Ads AI assistant. Answer this question about the user's campaigns.
-Campaigns data: {camp_str}
-User question: {message}
-Give a clear, actionable response in 2-3 sentences."""
+        camp_str = _json.dumps(campaigns) if campaigns else "No campaigns data available yet"
+        prompt = f"""You are SEMA, an expert Google Ads AI assistant and performance analyst.
+
+CAMPAIGN DATA:
+{camp_str}
+
+ANALYSIS GUIDELINES:
+- If CTR < 1%: suggest ad copy improvements
+- If CPC is high: suggest bid adjustments or keyword refinement  
+- If impressions are 0: check ad approval status, budget, targeting
+- If spend is 0 but campaign enabled: check billing and policy issues
+- Compare campaigns and identify best/worst performers
+- Suggest specific actionable changes with expected impact
+
+USER QUESTION: {message}
+
+Provide a detailed, actionable response with:
+1. Current performance assessment
+2. Specific recommendations (bid changes, budget adjustments, ad copy improvements)
+3. Priority actions to take today
+Be specific with numbers and percentages where possible."""
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         resp = _hx.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
         data = resp.json()
