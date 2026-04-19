@@ -164,7 +164,8 @@ function CampaignMonitor({ sessionId: propSessionId }) {
                   })
                   const removeData = await removeRes.json()
                   console.log('Remove result:', removeData)
-                  await fetchCampaigns()
+                  // Always refresh list
+                  setTimeout(() => fetchCampaigns(), 500)
                 } catch(e) {}
               }} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--red)', background: 'var(--red-bg)', cursor: 'pointer', fontSize: '11px', color: 'var(--red)' }}>
                 ✕ Remove
