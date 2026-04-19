@@ -90,7 +90,8 @@ function AdCard({ ad, url, selected, onSelect }) {
   )
 }
 
-function CampaignMonitor({ sessionId }) {
+function CampaignMonitor({ sessionId: propSessionId }) {
+  const sessionId = propSessionId || sessionStorage.getItem('sem_session_id')
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
