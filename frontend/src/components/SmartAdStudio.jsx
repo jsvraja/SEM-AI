@@ -106,7 +106,7 @@ function CampaignMonitor({ sessionId: propSessionId }) {
     try {
       const res = await fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=7836650842`)
       const d = await res.json()
-      setCampaigns((Array.isArray(d) ? d : d.campaigns || []).map(c => ({...c, id: c.campaign_id || c.id, name: c.campaign_name || c.name, resource_name: c.resource_name, budget: c.budget_usd ? Math.round(c.budget_usd * 83) : 0, status: c.status, clicks: c.clicks || 0, impressions: c.impressions || 0, ctr: c.ctr || 0, spend: c.spend_today_usd ? Math.round(c.spend_today_usd * 83) : 0})))
+      setCampaigns((Array.isArray(d) ? d : d.campaigns || []).filter(c => c.status !== 'REMOVED').map(c => ({...c, id: c.campaign_id || c.id, name: c.campaign_name || c.name, resource_name: c.resource_name, budget: c.budget_usd ? Math.round(c.budget_usd * 83) : 0, status: c.status, clicks: c.clicks || 0, impressions: c.impressions || 0, ctr: c.ctr || 0, spend: c.spend_today_usd ? Math.round(c.spend_today_usd * 83) : 0})))
     } catch(e) {}
     setLoading(false)
   }
