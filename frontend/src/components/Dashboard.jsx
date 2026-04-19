@@ -350,9 +350,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   doc.querySelectorAll('[style*="display: none"]').forEach(el => {
                     if(!el.closest('aside') && !el.closest('nav')) el.style.display = 'block'
                   })
-                  ['--bg:#ffffff','--bg2:#f8f9fa','--bg3:#f1f3f5','--text:#111111','--text2:#333333','--text3:#666666','--border:#cccccc','--accent:#2563eb','--green:#16a34a','--red:#dc2626','--yellow:#b45309','--green-bg:#f0fdf4','--red-bg:#fef2f2','--yellow-bg:#fffbeb'].forEach(v => {
-                    const [k,val] = v.split(':'); doc.documentElement.style.setProperty(k, val)
-                  })
+                  const cssVars = {'--bg':'#ffffff','--bg2':'#f8f9fa','--bg3':'#f1f3f5','--text':'#111111','--text2':'#333333','--text3':'#666666','--border':'#cccccc','--accent':'#2563eb','--green':'#16a34a','--red':'#dc2626','--yellow':'#b45309','--green-bg':'#f0fdf4','--red-bg':'#fef2f2','--yellow-bg':'#fffbeb'}
+                  Object.entries(cssVars).forEach(([k,v]) => doc.documentElement.style.setProperty(k, v))
                   doc.querySelectorAll('button,aside,nav').forEach(el => el.style.display='none')
                 }
               })
