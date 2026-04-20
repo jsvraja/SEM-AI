@@ -143,8 +143,8 @@ export default function SEMExperimentLab({ url, seoReport, sessionId }) {
             <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '16px' }}>Simulate different scenarios and see projected impact</div>
             
             {[
-              { label: 'Double my budget', icon: '💰', current: `₹${budget.toLocaleString()}/mo`, projected: `₹${(budget*2).toLocaleString()}/mo`, impact: `+${Math.round(clicks.toString().split('-')[0] * 1.8).toLocaleString()} clicks`, positive: true },
-              { label: 'Reduce budget by 30%', icon: '📉', current: `₹${budget.toLocaleString()}/mo`, projected: `₹${Math.round(budget*0.7).toLocaleString()}/mo`, impact: `-${Math.round(parseInt(clicks)*0.35).toLocaleString()} clicks`, positive: false },
+              { label: 'Double my budget', icon: '💰', current: `₹${budget.toLocaleString()}/mo`, projected: `₹${(budget*2).toLocaleString()}/mo`, impact: `+${Math.round(parseInt(clicks.toString().split('-')[0] || '0') * 1.8).toLocaleString()} clicks`, positive: true },
+              { label: 'Reduce budget by 30%', icon: '📉', current: `₹${budget.toLocaleString()}/mo`, projected: `₹${Math.round(budget*0.7).toLocaleString()}/mo`, impact: `-${Math.round(parseInt(clicks.toString().split('-')[0] || '0') * 0.35).toLocaleString()} clicks`, positive: false },
               { label: 'Target India only', icon: '🇮🇳', current: 'Multiple countries', projected: 'India focus', impact: 'Lower CPC, Higher volume', positive: true },
               { label: 'Increase bids by 20%', icon: '⬆️', current: `₹${cpc} avg CPC`, projected: `₹${Math.round(cpc*1.2)} avg CPC`, impact: 'Better ad position, +15% CTR', positive: true },
               { label: 'Switch to broad match', icon: '🎯', current: 'Exact match', projected: 'Broad match', impact: '+40% reach, +25% CPC', positive: null },
