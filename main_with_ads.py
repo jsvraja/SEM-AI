@@ -2067,20 +2067,24 @@ async def single_page_audit(request: Request):
 
         # PageSpeed API
         ps_score = 0
-        lcp = fid = cls = 0
+        lcp = fid = cls = "N/A"
         try:
             api_key = os.environ.get("PAGESPEED_API_KEY", "")
-            ps_resp = _hx.get(
-                f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy=mobile&key={api_key}",
-                timeout=20
-            )
-            ps_data = ps_resp.json()
-            ps_score = int(ps_data.get('lighthouseResult', {}).get('categories', {}).get('performance', {}).get('score', 0) * 100)
-            metrics = ps_data.get('lighthouseResult', {}).get('audits', {})
-            lcp = metrics.get('largest-contentful-paint', {}).get('displayValue', 'N/A')
-            fid = metrics.get('total-blocking-time', {}).get('displayValue', 'N/A')
-            cls = metrics.get('cumulative-layout-shift', {}).get('displayValue', 'N/A')
-        except: pass
+            if api_key:
+                ps_resp = httpx.get(
+                    f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy=mobile&key={api_key}&category=performance",
+                    timeout=25
+                )
+                ps_data = ps_resp.json()
+                perf_score = ps_data.get("lighthouseResult", {}).get("categories", {}).get("performance", {}).get("score", 0)
+                ps_score = int((perf_score or 0) * 100)
+                metrics = ps_data.get("lighthouseResult", {}).get("audits", {})
+                lcp = metrics.get("largest-contentful-paint", {}).get("displayValue", "N/A")
+                fid = metrics.get("total-blocking-time", {}).get("displayValue", "N/A")
+                cls = metrics.get("cumulative-layout-shift", {}).get("displayValue", "N/A")
+        except Exception as ps_err:
+            print(f"[PageSpeed Error] {ps_err}")
+            ps_score = 0
 
         # Calculate scores
         seo_score = 100
