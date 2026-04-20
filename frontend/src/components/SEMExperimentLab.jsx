@@ -12,7 +12,12 @@ export default function SEMExperimentLab({ url, seoReport, sessionId }) {
   const sem = seoReport?.sem_recommendations || {}
   const budget = sem.monthly_budget_inr || 0
   const cpc = sem.estimated_cpc_inr || 35
-  const clicks = sem.monthly_clicks_estimate || '0'
+  const clicksRaw = sem.monthly_clicks_estimate || '0'
+  const clicksNum = typeof clicksRaw === 'number' ? clicksRaw : 
+    clicksRaw.toString().includes('-') ? 
+    Math.round((parseInt(clicksRaw.split('-')[0].replace(/,/g,'')) + parseInt(clicksRaw.split('-')[1].replace(/,/g,''))) / 2) :
+    parseInt(clicksRaw.toString().replace(/,/g,'')) || 0
+  const clicks = clicksNum
 
   async function generateAnalysis() {
     setLoading(true)
