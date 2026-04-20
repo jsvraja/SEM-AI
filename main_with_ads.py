@@ -2031,3 +2031,161 @@ Return ONLY valid JSON:
         return {"insights": [
             {"icon": "💡", "title": "SEM Opportunity", "description": f"Analysis ready for {url}", "action": "Launch your first campaign"}
         ]}
+
+# ─── Single Page Deep Audit ───────────────────────────────────────────────────
+@app.post("/api/site-audit/single-page")
+async def single_page_audit(request: Request):
+    """Deep audit a single page with SEM eligibility analysis."""
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        if not url:
+            return {"error": "URL required"}
+
+        import httpx as _hx, json as _json
+        from bs4 import BeautifulSoup
+
+        # Fetch the page
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; SEMAudit/1.0)"}
+        resp = _hx.get(url, headers=headers, timeout=15, follow_redirects=True)
+        html = resp.text
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # Extract page data
+        title = soup.find('title')
+        title_text = title.get_text().strip() if title else ''
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        meta_desc_text = meta_desc.get('content', '') if meta_desc else ''
+        h1s = [h.get_text().strip() for h in soup.find_all('h1')]
+        h2s = [h.get_text().strip() for h in soup.find_all('h2')]
+        images = soup.find_all('img')
+        images_no_alt = [img for img in images if not img.get('alt')]
+        links = soup.find_all('a', href=True)
+        word_count = len(soup.get_text().split())
+        has_schema = bool(soup.find('script', type='application/ld+json'))
+        canonical = soup.find('link', rel='canonical')
+
+        # PageSpeed API
+        ps_score = 0
+        lcp = fid = cls = 0
+        try:
+            api_key = os.environ.get("PAGESPEED_API_KEY", "")
+            ps_resp = _hx.get(
+                f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy=mobile&key={api_key}",
+                timeout=20
+            )
+            ps_data = ps_resp.json()
+            ps_score = int(ps_data.get('lighthouseResult', {}).get('categories', {}).get('performance', {}).get('score', 0) * 100)
+            metrics = ps_data.get('lighthouseResult', {}).get('audits', {})
+            lcp = metrics.get('largest-contentful-paint', {}).get('displayValue', 'N/A')
+            fid = metrics.get('total-blocking-time', {}).get('displayValue', 'N/A')
+            cls = metrics.get('cumulative-layout-shift', {}).get('displayValue', 'N/A')
+        except: pass
+
+        # Calculate scores
+        seo_score = 100
+        if not title_text: seo_score -= 20
+        elif len(title_text) > 60: seo_score -= 10
+        if not meta_desc_text: seo_score -= 15
+        elif len(meta_desc_text) > 160: seo_score -= 5
+        if not h1s: seo_score -= 15
+        if images_no_alt: seo_score -= min(20, len(images_no_alt) * 5)
+        if not has_schema: seo_score -= 10
+
+        content_score = 100
+        if word_count < 300: content_score -= 30
+        elif word_count < 500: content_score -= 15
+        if not h2s: content_score -= 20
+
+        technical_score = max(0, ps_score) if ps_score else 60
+
+        overall_score = int((seo_score + content_score + technical_score) / 3)
+
+        # SEM Eligibility
+        sem_blockers = []
+        sem_suggestions = []
+
+        if not title_text: sem_blockers.append("Missing page title — required for ad relevance")
+        if not meta_desc_text: sem_blockers.append("Missing meta description — affects Quality Score")
+        if word_count < 300: sem_blockers.append(f"Thin content ({word_count} words) — Google prefers 500+ words for ad landing pages")
+        if not h1s: sem_blockers.append("Missing H1 tag — affects landing page quality score")
+        if ps_score > 0 and ps_score < 50: sem_blockers.append(f"Low page speed score ({ps_score}/100) — slow pages increase bounce rate and lower Quality Score")
+        if images_no_alt: sem_blockers.append(f"{len(images_no_alt)} images missing alt text — affects accessibility and Quality Score")
+
+        if not sem_blockers:
+            sem_suggestions.append("Add a clear CTA button above the fold for better conversion rate")
+            sem_suggestions.append("Consider adding testimonials or social proof to improve landing page quality")
+            sem_suggestions.append("Ensure your landing page content matches your ad keywords closely")
+            sem_suggestions.append("Add a contact form or lead capture to maximize ad ROI")
+        else:
+            sem_suggestions.append("Fix the blockers above to improve your Google Ads Quality Score")
+            sem_suggestions.append("Higher Quality Score = lower CPC and better ad positions")
+
+        eligible = len(sem_blockers) == 0
+
+        # AI Analysis
+        prompt = f"""Analyze this webpage for SEM/Google Ads eligibility and provide insights.
+
+URL: {url}
+Title: {title_text}
+Meta Description: {meta_desc_text}
+H1: {h1s[0] if h1s else 'None'}
+Word Count: {word_count}
+Page Speed Score: {ps_score}/100
+Images without alt: {len(images_no_alt)}
+Schema Markup: {has_schema}
+SEM Eligible: {eligible}
+Blockers: {sem_blockers}
+
+Return ONLY valid JSON:
+{{
+  "sem_analysis": {{
+    "eligible": {str(eligible).lower()},
+    "readiness_score": {overall_score},
+    "reason": "2-3 sentence explanation of SEM readiness",
+    "estimated_cpc": {35},
+    "estimated_ctr": 2.5,
+    "competition": "Medium",
+    "blockers": {_json.dumps(sem_blockers)},
+    "suggestions": {_json.dumps(sem_suggestions)}
+  }},
+  "content_analysis": {{
+    "word_count": {word_count},
+    "readability": "Professional",
+    "keyword_density": "Good",
+    "improvements": ["improvement 1", "improvement 2", "improvement 3"]
+  }},
+  "technical_checks": [
+    {{"label": "Page Title", "status": "{'pass' if title_text else 'fail'}", "value": "{title_text[:40] + '...' if len(title_text) > 40 else title_text}"}},
+    {{"label": "Meta Description", "status": "{'pass' if meta_desc_text else 'fail'}", "value": "{'Present' if meta_desc_text else 'Missing'}"}},
+    {{"label": "H1 Tag", "status": "{'pass' if h1s else 'fail'}", "value": "{'Present' if h1s else 'Missing'}"}},
+    {{"label": "Schema Markup", "status": "{'pass' if has_schema else 'warning'}", "value": "{'Present' if has_schema else 'Missing'}"}},
+    {{"label": "Page Speed", "status": "{'pass' if ps_score >= 70 else 'warning' if ps_score >= 50 else 'fail'}", "value": "{ps_score}/100"}},
+    {{"label": "Images Alt Text", "status": "{'pass' if not images_no_alt else 'warning'}", "value": "{len(images_no_alt)} missing"}},
+    {{"label": "Word Count", "status": "{'pass' if word_count >= 500 else 'warning' if word_count >= 300 else 'fail'}", "value": "{word_count} words"}},
+    {{"label": "Canonical URL", "status": "{'pass' if canonical else 'warning'}", "value": "{'Present' if canonical else 'Missing'}"}}
+  ]
+}}"""
+
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        ai_resp = model.generate_content(prompt)
+        text = ai_resp.text.strip()
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0].strip()
+
+        data = _json.loads(text)
+        data["overall_score"] = overall_score
+        data["seo_score"] = seo_score
+        data["content_score"] = content_score
+        data["technical_score"] = technical_score
+        data["url"] = url
+        return data
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}

@@ -1883,6 +1883,15 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           />
         )}
 
+        {tab === 'site-audit' && (
+          <SiteAudit
+            autoUrl={url}
+            urlType={urlType}
+            savedResults={siteAuditResults}
+            onResults={(r) => setSiteAuditResults(r)}
+          />
+        )}
+
         {tab === 'ai-traffic' && <AITraffic />}
 
         {tab === 'social' && (
