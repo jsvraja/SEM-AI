@@ -1985,3 +1985,49 @@ async def remove_campaign(campaign_id: str, request: Request):
                 
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+# ─── SEM Experiment Analysis Endpoint ────────────────────────────────────────
+@app.post("/api/sem/experiment-analysis")
+async def sem_experiment_analysis(request: Request):
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        seo_report = body.get("seo_report", {})
+
+        keywords = [k.get("keyword", "") for k in (seo_report.get("keyword_suggestions") or [])[:5]]
+        budget = seo_report.get("sem_recommendations", {}).get("monthly_budget_inr", 0)
+        cpc = seo_report.get("sem_recommendations", {}).get("estimated_cpc_inr", 35)
+
+        prompt = f"""You are a SEM expert. Analyze this website's SEM potential and provide insights.
+
+URL: {url}
+Monthly Budget: ₹{budget}
+Avg CPC: ₹{cpc}
+Keywords: {", ".join(keywords)}
+
+Return ONLY valid JSON:
+{{
+  "insights": [
+    {{"icon": "🎯", "title": "insight title", "description": "detailed description", "action": "specific action to take"}},
+    {{"icon": "💡", "title": "insight title", "description": "detailed description", "action": "specific action to take"}},
+    {{"icon": "⚠️", "title": "insight title", "description": "detailed description", "action": "specific action to take"}},
+    {{"icon": "🚀", "title": "insight title", "description": "detailed description", "action": "specific action to take"}},
+    {{"icon": "📈", "title": "insight title", "description": "detailed description", "action": "specific action to take"}}
+  ]
+}}"""
+
+        import google.generativeai as genai
+        import json
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0].strip()
+        return json.loads(text)
+    except Exception as e:
+        return {"insights": [
+            {"icon": "💡", "title": "SEM Opportunity", "description": f"Analysis ready for {url}", "action": "Launch your first campaign"}
+        ]}

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import AITraffic from './AITraffic'
 import SmartAdStudio from './SmartAdStudio'
+import SEMExperimentLab from './SEMExperimentLab'
 import AdCopy from './AdCopy'
 import SiteAudit from './SiteAudit'
 import SocialMedia from './SocialMedia'
@@ -1875,140 +1876,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         
         {tab === 'sem' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ padding: '10px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
-              background: isWholeSite ? 'var(--accent-bg)' : 'var(--purple-bg)',
-              border: `1px solid ${isWholeSite ? 'var(--accent-border)' : 'rgba(83,74,183,0.2)'}`,
-            }}>
-              <span style={{ fontSize: '18px' }}>{isWholeSite ? '🌐' : '📄'}</span>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: isWholeSite ? 'var(--accent)' : 'var(--purple)' }}>
-                  {isWholeSite ? 'Site-Wide SEM Strategy' : 'Single Page SEM Strategy'}
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>
-                  {isWholeSite ? 'Campaign strategy based on full website analysis.' : `Optimised for: ${url}`}
-                </div>
-              </div>
-            </div>
-
-            {!seo?.sem_recommendations ? (
-              <div style={{ padding: '14px', background: 'var(--bg3)', borderRadius: '10px', textAlign: 'center', color: 'var(--text3)', fontSize: '13px' }}>
-                No SEM recommendations available. Try re-analysing the URL.
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                  {[
-                    { label: 'Monthly Budget', value: `₹${(seo.sem_recommendations.monthly_budget_inr || 0).toLocaleString()}/mo`, icon: DollarSign, color: 'var(--green)' },
-                    { label: 'Est. Clicks/mo', value: seo.sem_recommendations.monthly_clicks_estimate || 'N/A', icon: TrendingUp, color: 'var(--cyan)' },
-                    { label: 'Avg CPC', value: `₹${seo.sem_recommendations.estimated_cpc_inr || 0}`, icon: Target, color: 'var(--accent)' },
-                  ].map(({ label, value, icon: Icon, color }) => (
-                    <Card key={label}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <Icon size={15} color={color} />
-                        <span style={{ fontSize: '11px', color: 'var(--text3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
-                      </div>
-                      <div style={{ fontSize: '22px', fontWeight: 600, color: color, letterSpacing: '-0.02em' }}>{value}</div>
-                    </Card>
-                  ))}
-                </div>
-
-                <Card>
-                  <SectionTitle icon={Target}>Bidding Strategy</SectionTitle>
-                  <p style={{ fontSize: '14px', color: 'var(--text2)', lineHeight: 1.7 }}>{seo.sem_recommendations.bidding_strategy || ''}</p>
-                </Card>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <Card>
-                    <SectionTitle icon={Globe}>Country-Wise Budget</SectionTitle>
-                    {(seo.sem_recommendations.country_budgets || []).length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {(seo.sem_recommendations.country_budgets || []).map((cb, i) => {
-                          const cc = cb.competition === 'high' ? 'var(--red)' : cb.competition === 'medium' ? 'var(--yellow)' : 'var(--green)'
-                          const cbg = cb.competition === 'high' ? 'var(--red-bg)' : cb.competition === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)'
-                          const flag = {IN:'🇮🇳',US:'🇺🇸',GB:'🇬🇧',UK:'🇬🇧',AU:'🇦🇺',CA:'🇨🇦',SG:'🇸🇬',AE:'🇦🇪'}[cb.code] || '🌍'
-                          return (
-                            <div key={i} style={{ padding: '10px 12px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontSize: '16px' }}>{flag}</span>
-                                  <div>
-                                    <div style={{ fontSize: '12px', fontWeight: 600 }}>{cb.country}</div>
-                                    <div style={{ fontSize: '10px', color: 'var(--text3)' }}>{cb.notes}</div>
-                                  </div>
-                                </div>
-                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: cbg, color: cc, fontWeight: 500 }}>{cb.competition}</span>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px' }}>
-                                {[
-                                  { label: 'Budget', val: '\u20b9' + (cb.budget_inr||0).toLocaleString(), color: 'var(--green)' },
-                                  { label: 'Share', val: cb.budget_pct + '%', color: 'var(--accent)' },
-                                  { label: 'Avg CPC', val: '\u20b9' + cb.avg_cpc_inr, color: 'var(--yellow)' },
-                                  { label: 'Clicks', val: cb.monthly_clicks, color: 'var(--cyan)' },
-                                ].map(({ label, val, color }) => (
-                                  <div key={label} style={{ textAlign: 'center', padding: '5px', background: 'var(--bg4)', borderRadius: '5px' }}>
-                                    <div style={{ fontSize: '12px', fontWeight: 700, color }}>{val}</div>
-                                    <div style={{ fontSize: '9px', color: 'var(--text3)', textTransform: 'uppercase' }}>{label}</div>
-                                  </div>
-                                ))}
-                              </div>
-                              <div style={{ marginTop: '6px', height: '4px', background: 'var(--bg4)', borderRadius: '2px' }}>
-                                <div style={{ height: '100%', width: cb.budget_pct + '%', background: 'var(--accent)', borderRadius: '2px' }} />
-                              </div>
-                            </div>
-                          )
-                        })}
-                        <div style={{ padding: '8px 10px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: '8px', fontSize: '11px', color: 'var(--accent-text)', lineHeight: 1.5 }}>
-                          US/UK markets cost more per click but deliver higher-value leads. India offers volume at lower cost.
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        {(seo.sem_recommendations.target_countries || []).map((c, i) => (
-                          <span key={i} className="badge badge-blue">{c}</span>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                  <Card>
-                    <SectionTitle icon={Users}>Audience Segments</SectionTitle>
-                    {(seo.sem_recommendations.audience_segments || []).map((seg, i) => (
-                      <div key={i} style={{ padding: '10px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '6px' }}>
-                        <div style={{ fontWeight: 500, fontSize: '13px', marginBottom: '4px' }}>{seg.segment}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '6px' }}>Age: {seg.age_range}</div>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {(seg.interests || []).map((int, j) => (
-                            <span key={j} className="badge badge-gray">{int}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </Card>
-                </div>
-
-                {budgetData.length > 0 && (
-                  <Card>
-                    <SectionTitle icon={BarChart3}>Budget Allocation</SectionTitle>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <PieChart>
-                        <Pie data={budgetData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
-                          label={({ cx, cy, midAngle, innerRadius, outerRadius, name, value }) => {
-                            const RADIAN = Math.PI / 180
-                            const radius = outerRadius + 25
-                            const x = cx + radius * Math.cos(-midAngle * RADIAN)
-                            const y = cy + radius * Math.sin(-midAngle * RADIAN)
-                            return <text x={x} y={y} fill="var(--text2)" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={11}>{`${name} ${value}%`}</text>
-                          }}>
-                          {budgetData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip formatter={(value) => `${value}%`} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </Card>
-                )}
-              </>
-            )}
-          </div>
+          <SEMExperimentLab
+            url={url}
+            seoReport={seo}
+            sessionId={sessionId}
+          />
         )}
 
         {tab === 'ai-traffic' && <AITraffic />}
