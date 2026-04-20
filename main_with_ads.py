@@ -2071,10 +2071,10 @@ async def single_page_audit(request: Request):
         try:
             api_key = os.environ.get("PAGESPEED_API_KEY", "")
             if api_key:
-                ps_resp = httpx.get(
-                    f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy=mobile&key={api_key}&category=performance",
-                    timeout=25
-                )
+                async with httpx.AsyncClient(timeout=60) as ps_client:
+                    ps_resp = await ps_client.get(
+                        f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy=mobile&key={api_key}&category=performance",
+                    )
                 ps_data = ps_resp.json()
                 perf_score = ps_data.get("lighthouseResult", {}).get("categories", {}).get("performance", {}).get("score", 0)
                 ps_score = int((perf_score or 0) * 100)
