@@ -189,7 +189,7 @@ export default function AITraffic() {
     return ref.indexOf(d) > -1;
   });
   if (isAI) {
-    fetch('http://localhost:8000/api/track', {
+    fetch('https://sem-ai-production.up.railway.app/api/track', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
@@ -458,7 +458,7 @@ export default function AITraffic() {
   ];
   var isAI = aiDomains.some(function(d) { return ref.indexOf(d) > -1; });
   if (isAI) {
-    fetch('http://YOUR_BACKEND_URL/api/track', {
+    fetch('https://sem-ai-production.up.railway.app/api/track', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ referrer: ref, page: window.location.pathname })
