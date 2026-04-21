@@ -2250,7 +2250,8 @@ async def ga4_callback(code: str, state: str):
         refresh_token = tokens.get("refresh_token", "")
 
         with get_db_connection() as conn:
-            conn.execute("""
+            cur = conn.cursor()
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS ga4_tokens (
                     session_id TEXT PRIMARY KEY,
                     property_id TEXT,
@@ -2259,9 +2260,13 @@ async def ga4_callback(code: str, state: str):
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            conn.execute("""
-                INSERT OR REPLACE INTO ga4_tokens (session_id, property_id, access_token, refresh_token)
-                VALUES (?, ?, ?, ?)
+            cur.execute("""
+                INSERT INTO ga4_tokens (session_id, property_id, access_token, refresh_token)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (session_id) DO UPDATE SET
+                    property_id = EXCLUDED.property_id,
+                    access_token = EXCLUDED.access_token,
+                    refresh_token = EXCLUDED.refresh_token
             """, (session_id, property_id, access_token, refresh_token))
             conn.commit()
 
@@ -2277,7 +2282,8 @@ async def ga4_status(session_id: str):
     """Check if GA4 is connected."""
     try:
         with get_db_connection() as conn:
-            conn.execute("""
+            cur = conn.cursor()
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS ga4_tokens (
                     session_id TEXT PRIMARY KEY,
                     property_id TEXT,
@@ -2286,10 +2292,11 @@ async def ga4_status(session_id: str):
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            row = conn.execute(
-                "SELECT property_id FROM ga4_tokens WHERE session_id = ?",
+            cur.execute(
+                "SELECT property_id FROM ga4_tokens WHERE session_id = %s",
                 (session_id,)
-            ).fetchone()
+            )
+            row = cur.fetchone()
         
         if row:
             return {"connected": True, "property_id": row[0]}
@@ -2303,10 +2310,12 @@ async def ga4_traffic(session_id: str, days: int = 30):
     """Fetch AI traffic data from GA4."""
     try:
         with get_db_connection() as conn:
-            row = conn.execute(
-                "SELECT property_id, access_token, refresh_token FROM ga4_tokens WHERE session_id = ?",
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT property_id, access_token, refresh_token FROM ga4_tokens WHERE session_id = %s",
                 (session_id,)
-            ).fetchone()
+            )
+            row = cur.fetchone()
         
         if not row:
             raise HTTPException(status_code=401, detail="GA4 not connected")
@@ -2365,8 +2374,9 @@ async def ga4_traffic(session_id: str, days: int = 30):
                 new_access = new_tokens.get("access_token", "")
                 
                 with get_db_connection() as conn:
-                    conn.execute(
-                        "UPDATE ga4_tokens SET access_token = ? WHERE session_id = ?",
+                    cur = conn.cursor()
+                    cur.execute(
+                        "UPDATE ga4_tokens SET access_token = %s WHERE session_id = %s",
                         (new_access, session_id)
                     )
                     conn.commit()
