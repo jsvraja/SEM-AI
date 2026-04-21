@@ -121,7 +121,7 @@ function GA4ConnectCard({ sessionId, onConnected }) {
   )
 }
 
-export default function AITraffic() {
+export default function AITraffic({ sessionId }) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(14)
