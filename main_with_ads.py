@@ -2193,3 +2193,254 @@ Return ONLY valid JSON:
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
+
+# ============================================================
+# GA4 CONNECT LAYER
+# ============================================================
+
+GA4_SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
+
+@app.get("/api/ga4/auth")
+async def ga4_auth(session_id: str, property_id: str):
+    """Start GA4 OAuth flow."""
+    try:
+        client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
+        redirect_uri = os.environ.get("GA4_REDIRECT_URI", "https://sem-ai-production.up.railway.app/api/ga4/callback")
+        
+        params = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "https://www.googleapis.com/auth/analytics.readonly",
+            "access_type": "offline",
+            "prompt": "consent",
+            "state": f"{session_id}|{property_id}"
+        }
+        auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + "&".join(f"{k}={v}" for k, v in params.items())
+        return {"auth_url": auth_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ga4/callback")
+async def ga4_callback(code: str, state: str):
+    """Handle GA4 OAuth callback."""
+    try:
+        session_id, property_id = state.split("|", 1)
+        client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
+        client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+        redirect_uri = os.environ.get("GA4_REDIRECT_URI", "https://sem-ai-production.up.railway.app/api/ga4/callback")
+
+        # Exchange code for tokens
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code"
+                }
+            )
+            tokens = token_resp.json()
+
+        # Save tokens to DB
+        access_token = tokens.get("access_token", "")
+        refresh_token = tokens.get("refresh_token", "")
+
+        with get_db() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS ga4_tokens (
+                    session_id TEXT PRIMARY KEY,
+                    property_id TEXT,
+                    access_token TEXT,
+                    refresh_token TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.execute("""
+                INSERT OR REPLACE INTO ga4_tokens (session_id, property_id, access_token, refresh_token)
+                VALUES (?, ?, ?, ?)
+            """, (session_id, property_id, access_token, refresh_token))
+            conn.commit()
+
+        frontend_url = os.environ.get("FRONTEND_URL", "https://heartfelt-reprieve-production-637b.up.railway.app")
+        return RedirectResponse(f"{frontend_url}?ga4_connected=true&session_id={session_id}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/ga4/status")
+async def ga4_status(session_id: str):
+    """Check if GA4 is connected."""
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS ga4_tokens (
+                    session_id TEXT PRIMARY KEY,
+                    property_id TEXT,
+                    access_token TEXT,
+                    refresh_token TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            row = conn.execute(
+                "SELECT property_id FROM ga4_tokens WHERE session_id = ?",
+                (session_id,)
+            ).fetchone()
+        
+        if row:
+            return {"connected": True, "property_id": row[0]}
+        return {"connected": False}
+    except Exception as e:
+        return {"connected": False}
+
+
+@app.get("/api/ga4/traffic")
+async def ga4_traffic(session_id: str, days: int = 30):
+    """Fetch AI traffic data from GA4."""
+    try:
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT property_id, access_token, refresh_token FROM ga4_tokens WHERE session_id = ?",
+                (session_id,)
+            ).fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=401, detail="GA4 not connected")
+        
+        property_id, access_token, refresh_token = row
+
+        # GA4 Data API request
+        api_url = f"https://analyticsdata.googleapis.com/v1beta/properties/{property_id}:runReport"
+        
+        payload = {
+            "dateRanges": [{"startDate": f"{days}daysAgo", "endDate": "today"}],
+            "dimensions": [
+                {"name": "sessionSource"},
+                {"name": "sessionMedium"},
+                {"name": "date"}
+            ],
+            "metrics": [
+                {"name": "sessions"},
+                {"name": "bounceRate"},
+                {"name": "averageSessionDuration"}
+            ],
+            "dimensionFilter": {
+                "orGroup": {
+                    "expressions": [
+                        {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "chatgpt"}}},
+                        {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "perplexity"}}},
+                        {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "claude"}}},
+                        {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "gemini"}}},
+                        {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "copilot"}}},
+                        {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "meta.ai"}}},
+                        {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "you.com"}}}
+                    ]
+                }
+            }
+        }
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                api_url,
+                json=payload,
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            
+            # Token expired — refresh
+            if resp.status_code == 401:
+                refresh_resp = await client.post(
+                    "https://oauth2.googleapis.com/token",
+                    data={
+                        "refresh_token": refresh_token,
+                        "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+                        "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+                        "grant_type": "refresh_token"
+                    }
+                )
+                new_tokens = refresh_resp.json()
+                new_access = new_tokens.get("access_token", "")
+                
+                with get_db() as conn:
+                    conn.execute(
+                        "UPDATE ga4_tokens SET access_token = ? WHERE session_id = ?",
+                        (new_access, session_id)
+                    )
+                    conn.commit()
+                
+                resp = await client.post(
+                    api_url,
+                    json=payload,
+                    headers={"Authorization": f"Bearer {new_access}"}
+                )
+
+        data = resp.json()
+        rows = data.get("rows", [])
+        
+        # Process rows
+        ai_sources = {}
+        trend_data = {}
+        
+        for row in rows:
+            source = row["dimensionValues"][0]["value"]
+            date = row["dimensionValues"][2]["value"]
+            sessions = int(row["metricValues"][0]["value"])
+            
+            # Group by AI platform
+            platform = "Other AI"
+            if "chatgpt" in source or "openai" in source: platform = "ChatGPT"
+            elif "perplexity" in source: platform = "Perplexity"
+            elif "claude" in source: platform = "Claude"
+            elif "gemini" in source: platform = "Gemini"
+            elif "copilot" in source: platform = "Copilot"
+            elif "meta" in source: platform = "Meta AI"
+            
+            ai_sources[platform] = ai_sources.get(platform, 0) + sessions
+            
+            # Trend by date
+            if date not in trend_data:
+                trend_data[date] = 0
+            trend_data[date] += sessions
+
+        total = sum(ai_sources.values())
+        
+        # AI Analysis via Gemini
+        ai_insight = ""
+        try:
+            gemini_key = os.environ.get("GEMINI_API_KEY", "")
+            if gemini_key and total > 0:
+                top_source = max(ai_sources, key=ai_sources.get) if ai_sources else "None"
+                prompt = f"""Analyze this AI traffic data and give 3 actionable insights:
+- Total AI visits: {total} in last {days} days
+- Top AI source: {top_source} ({ai_sources.get(top_source, 0)} visits)
+- All sources: {ai_sources}
+
+Return JSON: {{"insights": [{{"title": "...", "description": "...", "action": "..."}}]}}"""
+                
+                gem_resp = httpx.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    timeout=15
+                )
+                gem_data = gem_resp.json()
+                raw = gem_data["candidates"][0]["content"]["parts"][0]["text"]
+                raw = raw.replace("```json", "").replace("```", "").strip()
+                ai_insight = json.loads(raw).get("insights", [])
+        except:
+            ai_insight = []
+
+        return {
+            "total": total,
+            "by_platform": ai_sources,
+            "trend": [{"date": d, "sessions": s} for d, s in sorted(trend_data.items())],
+            "ai_insights": ai_insight,
+            "days": days
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
