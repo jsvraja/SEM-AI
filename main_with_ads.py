@@ -2249,7 +2249,7 @@ async def ga4_callback(code: str, state: str):
         access_token = tokens.get("access_token", "")
         refresh_token = tokens.get("refresh_token", "")
 
-        with get_db() as conn:
+        with get_db_connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS ga4_tokens (
                     session_id TEXT PRIMARY KEY,
@@ -2276,7 +2276,7 @@ async def ga4_callback(code: str, state: str):
 async def ga4_status(session_id: str):
     """Check if GA4 is connected."""
     try:
-        with get_db() as conn:
+        with get_db_connection() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS ga4_tokens (
                     session_id TEXT PRIMARY KEY,
@@ -2302,7 +2302,7 @@ async def ga4_status(session_id: str):
 async def ga4_traffic(session_id: str, days: int = 30):
     """Fetch AI traffic data from GA4."""
     try:
-        with get_db() as conn:
+        with get_db_connection() as conn:
             row = conn.execute(
                 "SELECT property_id, access_token, refresh_token FROM ga4_tokens WHERE session_id = ?",
                 (session_id,)
@@ -2364,7 +2364,7 @@ async def ga4_traffic(session_id: str, days: int = 30):
                 new_tokens = refresh_resp.json()
                 new_access = new_tokens.get("access_token", "")
                 
-                with get_db() as conn:
+                with get_db_connection() as conn:
                     conn.execute(
                         "UPDATE ga4_tokens SET access_token = ? WHERE session_id = ?",
                         (new_access, session_id)
