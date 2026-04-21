@@ -288,6 +288,7 @@ export default function AITraffic() {
         </Card>
       )}
 
+      <GA4ConnectCard sessionId={sessionId} onConnected={() => setDays(days)} />
       {/* Stats with data */}
       {!isEmpty && stats && (
         <>
