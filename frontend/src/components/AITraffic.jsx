@@ -240,6 +240,13 @@ export default function AITraffic({ sessionId }) {
     })),
     trend: (ga4Data.trend || []).map(t => ({ date: t.date, visits: t.sessions })),
     ai_insights: ga4Data.ai_insights || [],
+    top_pages: ga4Data.top_pages || [],
+    recent_visits: (ga4Data.recent_visits || []).map(r => ({
+      ...r,
+      time: r.date,
+      referrer: r.platform,
+    })),
+    keywords: ga4Data.keywords || [],
     source: 'ga4'
   } : null
 
@@ -513,10 +520,10 @@ export default function AITraffic({ sessionId }) {
                   }}>
                     <div style={{
                       width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
-                      background: v.platform_color,
+                      background: v.platform_color || ['#4f7dff','#22c55e','#f59e0b','#ef4444','#8b5cf6'][i % 5],
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', fontWeight: 500 }}>{v.platform_name}</div>
+                      <div style={{ fontSize: '12px', fontWeight: 500 }}>{v.platform_name || v.platform || v.referrer}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{v.page}</div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -526,7 +533,7 @@ export default function AITraffic({ sessionId }) {
                         </span>
                       )}
                       <div style={{ fontSize: '10px', color: 'var(--text3)' }}>
-                        {new Date(v.timestamp).toLocaleDateString()}
+                        {v.timestamp ? new Date(v.timestamp).toLocaleDateString() : v.date ? `${v.date.slice(0,4)}-${v.date.slice(4,6)}-${v.date.slice(6,8)}` : ''}
                       </div>
                     </div>
                   </div>
