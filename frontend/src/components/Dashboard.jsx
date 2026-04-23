@@ -1,15 +1,11 @@
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import AITraffic from './AITraffic'
-import SmartAdStudio from './SmartAdStudio'
-import SEMExperimentLab from './SEMExperimentLab'
 import AdCopy from './AdCopy'
 import SiteAudit from './SiteAudit'
 import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
 import ThemeToggle from './ThemeToggle'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, PieChart, Pie, Cell, Legend,
@@ -197,9 +193,9 @@ function AdVariant({ variant, url }) {
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'seo', label: 'SEO Report', icon: Search },
-  { id: 'ads', label: 'Ad Studio', icon: Megaphone },
+  { id: 'ads', label: 'Ad Copy', icon: Megaphone },
   { id: 'sem', label: 'SEM Plan', icon: TrendingUp },
-
+  { id: 'google-ads', label: 'Google Ads', icon: Zap },
   { id: 'site-audit', label: 'Site Audit', icon: Globe },
   { id: 'ai-traffic', label: 'AI Traffic', icon: Globe },
   { id: 'social', label: 'Social Media', icon: Share2 },
@@ -217,7 +213,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [scData, setScData] = useState(null)
   const [scLoading, setScLoading] = useState(false)
   const scSessionId = 'default'
-  const [cwvTab, setCwvTab] = useState('vitals')
 
   const [reportSent, setReportSent] = useState(false)
   const [reportEmail, setReportEmail] = useState('')
@@ -231,22 +226,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
   const [siteAuditResults, setSiteAuditResults] = useState(null)
   const { url, scraped_data: sc, seo_report: seo, ad_copy: ads, mock_campaign } = data
-
-  // Auto-load Core Web Vitals on mount
-  useEffect(() => {
-    if (url && !pageSpeed && !loadingSpeed) {
-      setLoadingSpeed(true)
-      fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      }).then(r => r.json()).then(d => { setPageSpeed(d); setLoadingSpeed(false) })
-        .catch(() => { setPageSpeed({ error: 'Network error' }); setLoadingSpeed(false) })
-    }
-    fetch('https://sem-ai-production.up.railway.app/api/search-console/status?session_id=default')
-      .then(r => r.json()).then(d => { if (d.connected) setScConnected(true) })
-      .catch(() => {})
-  }, [])
   const alerts = (() => {
     if (!seo) return []
     const a = []
@@ -296,7 +275,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         width: '220px', flexShrink: 0, background: 'var(--bg2)',
         borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', height: '100vh',
-        position: 'sticky', top: 0, overflow: 'hidden',
+        position: 'sticky', top: 0,
       }}>
         {/* Logo */}
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)' }}>
@@ -305,7 +284,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         </div>
 
         {/* Nav items */}
-        <nav style={{ flex: '1 1 0', padding: '8px 0', overflowY: 'auto', minHeight: 0, maxHeight: 'calc(100vh - 160px)' }}>
+        <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
           {TABS.map(t => {
             const Icon = t.icon
             const isActive = tab === t.id
@@ -330,53 +309,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           })}
         </nav>
 
-        {/* Export PDF */}
-        <div style={{ padding: '6px 12px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-          <button onClick={async () => {
-            const btn = document.getElementById('export-pdf-btn')
-            if(btn) { btn.textContent = '⏳...'; btn.disabled = true }
-            try {
-              // Capture current visible main content
-              const mainEl = document.querySelector('main')
-              if (!mainEl) { if(btn){btn.textContent='📄 Export PDF';btn.disabled=false}; return }
-              const canvas = await html2canvas(mainEl, {
-                scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
-                windowWidth: 1200,
-                width: mainEl.scrollWidth,
-                height: mainEl.scrollHeight,
-                scrollX: 0, scrollY: -mainEl.scrollTop,
-                onclone: (doc) => {
-                  const el = doc.querySelector('main')
-                  if(el) { el.style.height = 'auto'; el.style.overflow = 'visible'; el.style.maxHeight = 'none' }
-                  // Show all hidden content
-                  doc.querySelectorAll('[style*="display: none"]').forEach(el => {
-                    if(!el.closest('aside') && !el.closest('nav')) el.style.display = 'block'
-                  })
-                  const cssVars = {'--bg':'#ffffff','--bg2':'#f8f9fa','--bg3':'#f1f3f5','--text':'#111111','--text2':'#333333','--text3':'#666666','--border':'#cccccc','--accent':'#2563eb','--green':'#16a34a','--red':'#dc2626','--yellow':'#b45309','--green-bg':'#f0fdf4','--red-bg':'#fef2f2','--yellow-bg':'#fffbeb'}
-                  Object.entries(cssVars).forEach(([k,v]) => doc.documentElement.style.setProperty(k, v))
-                  doc.querySelectorAll('button,aside,nav').forEach(el => el.style.display='none')
-                }
-              })
-              const imgData = canvas.toDataURL('image/jpeg', 0.9)
-              const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'})
-              const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight()
-              const iw = pw, ih = (canvas.height * pw) / canvas.width
-              let left = ih, pos = 0
-              pdf.addImage(imgData,'JPEG',0,pos,iw,ih)
-              left -= ph
-              while(left > 0) { pos=left-ih; pdf.addPage(); pdf.addImage(imgData,'JPEG',0,pos,iw,ih); left-=ph }
-              pdf.save(`SEO-Report-${url.replace(/https?:\/\//,'').split('/')[0]}.pdf`)
-            } catch(e) { alert('PDF failed: '+e.message) }
-            if(btn) { btn.textContent='📄 Export PDF'; btn.disabled=false }
-          }} id="export-pdf-btn" style={{
-            width: '100%', fontSize: '12px', padding: '7px 12px', borderRadius: '8px',
-            background: 'var(--accent)', border: 'none', color: 'white',
-            cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: '5px', flexShrink: 0
-          }}>📄 Export PDF</button>
-        </div>
         {/* Bottom - Google status + theme */}
-        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
           {googleEmail ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '10px' }}>
               <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--green)', flexShrink: 0 }} />
@@ -386,10 +320,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             </div>
           ) : null}
           <ThemeToggle />
-
-
           <button onClick={onReset} style={{
-            width: '100%', padding: '6px 10px',
+            marginTop: '8px', width: '100%', padding: '6px 10px',
             border: '1px solid var(--border)', borderRadius: 'var(--radius)',
             background: 'transparent', color: 'var(--text3)',
             fontSize: '12px', cursor: 'pointer',
@@ -438,14 +370,12 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         {/* Page header */}
         <div style={{ marginBottom: '20px' }}>
-          <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>
-              {TABS.find(t => t.id === tab)?.label || 'Overview'}
-            </h1>
-            <p style={{ fontSize: '13px', color: 'var(--text3)' }}>
-              {domain} · Analysed today
-            </p>
-          </div>
+          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>
+            {TABS.find(t => t.id === tab)?.label || 'Overview'}
+          </h1>
+          <p style={{ fontSize: '13px', color: 'var(--text3)' }}>
+            {domain} · Analysed today
+          </p>
         </div>
 
         {tab === 'overview' && (
@@ -1051,7 +981,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         )}
 
         {/* ── SEO TAB ── */}
-        <div id="seo-report-content" style={{ display: tab === 'seo' ? 'flex' : 'none', flexDirection: 'column', gap: '1rem' }}>
+        {tab === 'seo' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* URL type banner */}
             <div style={{ padding: '10px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
               background: isWholeSite ? 'var(--accent-bg)' : 'var(--purple-bg)',
@@ -1257,10 +1188,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               </div>
             </Card>
 
-            {(seo?.fix_suggestions?.length > 0 || seo?.weaknesses?.length > 0) && (
-            <Card>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <SectionTitle icon={Zap}>AI Fix Suggestions</SectionTitle>
+              <Card>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <SectionTitle icon={Zap}>AI Fix Suggestions</SectionTitle>
                   <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '3px 8px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
                     🤖 Exact steps to fix each issue
                   </div>
@@ -1341,32 +1271,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     </div>
                   )
                 })()}
-            </Card>
+              </Card>
             )}
 
-            {/* Core Web Vitals + Search Console Tabs */}
+            {/* Core Web Vitals */}
             <Card>
-              {/* Tab Header */}
-              <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '16px', gap: '4px' }}>
-                {[
-                  { id: 'vitals', label: '⚡ Core Web Vitals', desc: 'Auto loaded' },
-                  { id: 'searchconsole', label: '🔍 Search Console', desc: scConnected ? '✅ Connected' : 'Connect Google' },
-                ].map(tab => (
-                  <button key={tab.id} onClick={() => setCwvTab(tab.id)} style={{
-                    padding: '8px 16px', border: 'none', borderBottom: cwvTab === tab.id ? '2px solid var(--accent)' : '2px solid transparent',
-                    background: 'transparent', color: cwvTab === tab.id ? 'var(--accent)' : 'var(--text3)',
-                    fontWeight: cwvTab === tab.id ? 700 : 500, fontSize: '13px', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px'
-                  }}>
-                    <span>{tab.label}</span>
-                    <span style={{ fontSize: '10px', color: tab.id === 'searchconsole' && scConnected ? 'var(--green)' : 'var(--text3)' }}>{tab.desc}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Core Web Vitals Tab */}
-              {cwvTab === 'vitals' && (
-              <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <SectionTitle icon={Zap}>Core Web Vitals</SectionTitle>
                 {!pageSpeed && !loadingSpeed && (
@@ -1484,109 +1393,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '8px 10px', background: 'var(--bg3)', borderRadius: '8px', textAlign: 'center' }}>
                     🟢 Good &nbsp;|&nbsp; 🟡 Needs Improvement &nbsp;|&nbsp; 🔴 Poor &nbsp;|&nbsp; Data from Google PageSpeed Insights
                   </div>
-                </div>
-              )}
-              </div>
-              )}
-
-              {/* Search Console Tab */}
-              {cwvTab === 'searchconsole' && (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <SectionTitle icon={Search}>Search Console Data</SectionTitle>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      {scConnected && <span style={{ fontSize: '11px', color: 'var(--green)', fontWeight: 600 }}>✅ Connected</span>}
-                      {!scConnected ? (
-                        <button onClick={async () => {
-                          try {
-                            const res = await fetch('https://sem-ai-production.up.railway.app/api/search-console/auth?session_id=default')
-                            const data = await res.json()
-                            if (data.auth_url) {
-                              const popup = window.open(data.auth_url, 'SC Auth', 'width=500,height=600')
-                              window.addEventListener('message', async (e) => {
-                                if (e.data?.type === 'SC_AUTH_SUCCESS') {
-                                  popup?.close()
-                                  setScConnected(true)
-                                  setScLoading(true)
-                                  const dr = await fetch('https://sem-ai-production.up.railway.app/api/search-console/data', {
-                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ url, session_id: 'default' })
-                                  })
-                                  setScData(await dr.json())
-                                  setScLoading(false)
-                                }
-                              }, { once: true })
-                            }
-                          } catch(e) { console.error(e) }
-                        }} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px', background: '#4285f4', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 600 }}>
-                          🔍 Connect Google Search Console
-                        </button>
-                      ) : (
-                        <button onClick={async () => {
-                          setScLoading(true)
-                          const res = await fetch('https://sem-ai-production.up.railway.app/api/search-console/data', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url, session_id: 'default' })
-                          })
-                          setScData(await res.json())
-                          setScLoading(false)
-                        }} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', cursor: 'pointer' }}>↺ Refresh</button>
-                      )}
-                    </div>
-                  </div>
-                  {!scConnected && (
-                    <div style={{ textAlign: 'center', padding: '24px', background: 'var(--bg3)', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>Connect Google Search Console</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text3)', lineHeight: 1.6 }}>
-                        Get real impressions, clicks, rankings and keyword data directly from Google.<br/>
-                        <span style={{ color: 'var(--accent)' }}>Your data stays private — read-only access only.</span>
-                      </div>
-                    </div>
-                  )}
-                  {scLoading && <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)' }}>⏳ Fetching Search Console data...</div>}
-                  {scData?.error && <div style={{ color: 'var(--red)', fontSize: '13px', padding: '10px', background: 'var(--red-bg)', borderRadius: '8px' }}>⚠ {scData.error}</div>}
-                  {scData?.connected && scData?.page_metrics && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px' }}>
-                        {[
-                          { label: 'Total Clicks', value: scData.page_metrics.clicks.toLocaleString(), color: 'var(--accent)', icon: '👆' },
-                          { label: 'Impressions', value: scData.page_metrics.impressions.toLocaleString(), color: 'var(--cyan)', icon: '👁' },
-                          { label: 'Avg CTR', value: scData.page_metrics.ctr + '%', color: scData.page_metrics.ctr >= 3 ? 'var(--green)' : 'var(--yellow)', icon: '📈' },
-                          { label: 'Avg Position', value: '#' + scData.page_metrics.position, color: scData.page_metrics.position <= 10 ? 'var(--green)' : 'var(--yellow)', icon: '🏆' },
-                        ].map(({ label, value, color, icon }) => (
-                          <div key={label} style={{ textAlign: 'center', padding: '12px 8px', background: 'var(--bg3)', borderRadius: '10px' }}>
-                            <div style={{ fontSize: '18px', marginBottom: '4px' }}>{icon}</div>
-                            <div style={{ fontSize: '20px', fontWeight: 800, color }}>{value}</div>
-                            <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'uppercase', marginTop: '2px' }}>{label}</div>
-                          </div>
-                        ))}
-                      </div>
-                      {scData.top_queries?.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: '8px', textTransform: 'uppercase' }}>🔑 Top Search Queries</div>
-                          <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                              <thead style={{ background: 'var(--bg3)' }}>
-                                <tr>{['Keyword','Clicks','Impressions','CTR','Position'].map(h => <th key={h} style={{ padding: '7px 10px', textAlign: h==='Keyword'?'left':'center', color: 'var(--text3)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>{h}</th>)}</tr>
-                              </thead>
-                              <tbody>
-                                {scData.top_queries.map((q, i) => (
-                                  <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i%2===0?'var(--bg)':'var(--bg3)' }}>
-                                    <td style={{ padding: '6px 10px', color: 'var(--accent)', fontWeight: 500 }}>{q.keyword}</td>
-                                    <td style={{ padding: '6px 10px', textAlign: 'center', fontWeight: 600 }}>{q.clicks}</td>
-                                    <td style={{ padding: '6px 10px', textAlign: 'center', color: 'var(--text3)' }}>{q.impressions}</td>
-                                    <td style={{ padding: '6px 10px', textAlign: 'center', color: q.ctr>=3?'var(--green)':'var(--yellow)' }}>{q.ctr}%</td>
-                                    <td style={{ padding: '6px 10px', textAlign: 'center', color: q.position<=10?'var(--green)':q.position<=20?'var(--yellow)':'var(--red)', fontWeight: 700 }}>#{Math.round(q.position)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
             </Card>
@@ -1861,35 +1667,179 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
               </div>
             </Card>
 
-
+            {/* Content Analysis */}
+            {seo.content_analysis && (
+              <Card>
+                <SectionTitle icon={BarChart3}>Content Analysis</SectionTitle>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                  <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Readability</div>
+                    <div style={{ fontSize: '13px' }}>{seo.content_analysis.readability}</div>
+                  </div>
+                  <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Keyword Density</div>
+                    <div style={{ fontSize: '13px' }}>{seo.content_analysis.keyword_density}</div>
+                  </div>
+                  <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>Content Gaps</div>
+                    {(seo.content_analysis.content_gaps || []).map((g, i) => (
+                      <div key={i} style={{ fontSize: '13px', color: 'var(--text2)' }}>• {g}</div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            )}
           </div>
+        )}
 
         {/* ── ADS TAB ── */}
         {tab === 'ads' && (
-          <SmartAdStudio
-            url={url}
-            seoReport={seo}
-            sessionId={sessionId}
-            googleEmail={googleEmail}
+          <AdCopy 
+            url={url} 
+            seoReport={seo} 
+            adCopy={ads} 
+            urlType={urlType}
+            savedRecommendations={recommendedPages.length > 0 ? {recommended_pages: recommendedPages} : null}
+            onRecommendations={(data) => setRecommendedPages(data.recommended_pages || [])}
           />
         )}
 
         
         {tab === 'sem' && (
-          <SEMExperimentLab
-            url={url}
-            seoReport={seo}
-            sessionId={sessionId}
-          />
-        )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ padding: '10px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px',
+              background: isWholeSite ? 'var(--accent-bg)' : 'var(--purple-bg)',
+              border: `1px solid ${isWholeSite ? 'var(--accent-border)' : 'rgba(83,74,183,0.2)'}`,
+            }}>
+              <span style={{ fontSize: '18px' }}>{isWholeSite ? '🌐' : '📄'}</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: isWholeSite ? 'var(--accent)' : 'var(--purple)' }}>
+                  {isWholeSite ? 'Site-Wide SEM Strategy' : 'Single Page SEM Strategy'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>
+                  {isWholeSite ? 'Campaign strategy based on full website analysis.' : `Optimised for: ${url}`}
+                </div>
+              </div>
+            </div>
 
-        {tab === 'site-audit' && (
-          <SiteAudit
-            autoUrl={url}
-            urlType={urlType}
-            savedResults={siteAuditResults}
-            onResults={(r) => setSiteAuditResults(r)}
-          />
+            {!seo?.sem_recommendations ? (
+              <div style={{ padding: '14px', background: 'var(--bg3)', borderRadius: '10px', textAlign: 'center', color: 'var(--text3)', fontSize: '13px' }}>
+                No SEM recommendations available. Try re-analysing the URL.
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  {[
+                    { label: 'Monthly Budget', value: `₹${(seo.sem_recommendations.monthly_budget_inr || 0).toLocaleString()}/mo`, icon: DollarSign, color: 'var(--green)' },
+                    { label: 'Est. Clicks/mo', value: seo.sem_recommendations.monthly_clicks_estimate || 'N/A', icon: TrendingUp, color: 'var(--cyan)' },
+                    { label: 'Avg CPC', value: `₹${seo.sem_recommendations.estimated_cpc_inr || 0}`, icon: Target, color: 'var(--accent)' },
+                  ].map(({ label, value, icon: Icon, color }) => (
+                    <Card key={label}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <Icon size={15} color={color} />
+                        <span style={{ fontSize: '11px', color: 'var(--text3)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+                      </div>
+                      <div style={{ fontSize: '22px', fontWeight: 600, color: color, letterSpacing: '-0.02em' }}>{value}</div>
+                    </Card>
+                  ))}
+                </div>
+
+                <Card>
+                  <SectionTitle icon={Target}>Bidding Strategy</SectionTitle>
+                  <p style={{ fontSize: '14px', color: 'var(--text2)', lineHeight: 1.7 }}>{seo.sem_recommendations.bidding_strategy || ''}</p>
+                </Card>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <Card>
+                    <SectionTitle icon={Globe}>Country-Wise Budget</SectionTitle>
+                    {(seo.sem_recommendations.country_budgets || []).length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(seo.sem_recommendations.country_budgets || []).map((cb, i) => {
+                          const cc = cb.competition === 'high' ? 'var(--red)' : cb.competition === 'medium' ? 'var(--yellow)' : 'var(--green)'
+                          const cbg = cb.competition === 'high' ? 'var(--red-bg)' : cb.competition === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)'
+                          const flag = {IN:'🇮🇳',US:'🇺🇸',GB:'🇬🇧',UK:'🇬🇧',AU:'🇦🇺',CA:'🇨🇦',SG:'🇸🇬',AE:'🇦🇪'}[cb.code] || '🌍'
+                          return (
+                            <div key={i} style={{ padding: '10px 12px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '16px' }}>{flag}</span>
+                                  <div>
+                                    <div style={{ fontSize: '12px', fontWeight: 600 }}>{cb.country}</div>
+                                    <div style={{ fontSize: '10px', color: 'var(--text3)' }}>{cb.notes}</div>
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: cbg, color: cc, fontWeight: 500 }}>{cb.competition}</span>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px' }}>
+                                {[
+                                  { label: 'Budget', val: '\u20b9' + (cb.budget_inr||0).toLocaleString(), color: 'var(--green)' },
+                                  { label: 'Share', val: cb.budget_pct + '%', color: 'var(--accent)' },
+                                  { label: 'Avg CPC', val: '\u20b9' + cb.avg_cpc_inr, color: 'var(--yellow)' },
+                                  { label: 'Clicks', val: cb.monthly_clicks, color: 'var(--cyan)' },
+                                ].map(({ label, val, color }) => (
+                                  <div key={label} style={{ textAlign: 'center', padding: '5px', background: 'var(--bg4)', borderRadius: '5px' }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 700, color }}>{val}</div>
+                                    <div style={{ fontSize: '9px', color: 'var(--text3)', textTransform: 'uppercase' }}>{label}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{ marginTop: '6px', height: '4px', background: 'var(--bg4)', borderRadius: '2px' }}>
+                                <div style={{ height: '100%', width: cb.budget_pct + '%', background: 'var(--accent)', borderRadius: '2px' }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                        <div style={{ padding: '8px 10px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: '8px', fontSize: '11px', color: 'var(--accent-text)', lineHeight: 1.5 }}>
+                          US/UK markets cost more per click but deliver higher-value leads. India offers volume at lower cost.
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {(seo.sem_recommendations.target_countries || []).map((c, i) => (
+                          <span key={i} className="badge badge-blue">{c}</span>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                  <Card>
+                    <SectionTitle icon={Users}>Audience Segments</SectionTitle>
+                    {(seo.sem_recommendations.audience_segments || []).map((seg, i) => (
+                      <div key={i} style={{ padding: '10px', background: 'var(--bg3)', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '6px' }}>
+                        <div style={{ fontWeight: 500, fontSize: '13px', marginBottom: '4px' }}>{seg.segment}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '6px' }}>Age: {seg.age_range}</div>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {(seg.interests || []).map((int, j) => (
+                            <span key={j} className="badge badge-gray">{int}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </Card>
+                </div>
+
+                {budgetData.length > 0 && (
+                  <Card>
+                    <SectionTitle icon={BarChart3}>Budget Allocation</SectionTitle>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={budgetData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                          label={({ cx, cy, midAngle, innerRadius, outerRadius, name, value }) => {
+                            const RADIAN = Math.PI / 180
+                            const radius = outerRadius + 25
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN)
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN)
+                            return <text x={x} y={y} fill="var(--text2)" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={11}>{`${name} ${value}%`}</text>
+                          }}>
+                          {budgetData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip formatter={(value) => `${value}%`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
         )}
 
         {tab === 'ai-traffic' && <AITraffic />}
@@ -1903,14 +1853,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
         )}
 
         {tab === 'competitor' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {url 
-              ? <Competitor url={url} seoReport={seo} />
-              : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>
-                  Run a URL analysis first to enable competitor analysis
-                </div>
-            }
-          </div>
+          url 
+            ? <Competitor url={url} seoReport={seo} />
+            : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>
+                Run a URL analysis first to enable competitor analysis
+              </div>
         )}
 
         {tab === 'google-ads' && (
