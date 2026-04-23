@@ -391,19 +391,19 @@ export default function AITraffic({ sessionId }) {
                 <div key={p.id} style={{ marginBottom: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.color }} />
-                      <span style={{ fontWeight: 500 }}>{p.name}</span>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.color || ['#4f7dff','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4'][i % 6] }} />
+                      <span style={{ fontWeight: 500 }}>{p.platform || p.name}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', color: 'var(--text2)' }}>
                       <span>{p.visits} visits</span>
-                      <span style={{ color: 'var(--green)' }}>{p.conversion_rate}% CVR</span>
+                      {p.conversion_rate !== undefined && <span style={{ color: 'var(--green)' }}>{p.conversion_rate}% CVR</span>}
                     </div>
                   </div>
                   <div style={{ height: '6px', background: 'var(--bg4)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', borderRadius: '3px',
                       width: `${displayData.total_visits > 0 ? (p.visits / displayData.total_visits * 100) : 0}%`,
-                      background: p.color, transition: 'width 0.5s',
+                      background: p.color || ['#4f7dff','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4'][i % 6], transition: 'width 0.5s',
                     }} />
                   </div>
                 </div>
@@ -419,13 +419,13 @@ export default function AITraffic({ sessionId }) {
                   <Pie
                     data={displayData.platforms}
                     dataKey="visits"
-                    nameKey="name"
+                    nameKey="platform"
                     cx="50%" cy="50%"
                     innerRadius={50} outerRadius={80}
                     paddingAngle={2}
                   >
                     {displayData.platforms.map((p, i) => (
-                      <Cell key={i} fill={p.color} />
+                      <Cell key={i} fill={p.color || ['#4f7dff','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4'][i % 6]} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px' }} />
