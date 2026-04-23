@@ -371,7 +371,7 @@ export default function AITraffic({ sessionId }) {
           📊 Showing real GA4 data · {displayData.total_visits} AI visits in last 30 days
         </div>
       )}
-      {!isEmpty && stats && (
+      {!isEmpty && displayData && (
         <>
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
