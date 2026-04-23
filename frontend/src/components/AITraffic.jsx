@@ -56,7 +56,7 @@ const CUSTOM_TOOLTIP = ({ active, payload, label }) => {
 }
 
 
-function GA4ConnectCard({ sessionId, onConnected }) {
+function GA4ConnectCard({ sessionId, onConnected, onGA4Data }) {
   const [propertyId, setPropertyId] = useState('')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState(null)
@@ -96,7 +96,7 @@ function GA4ConnectCard({ sessionId, onConnected }) {
       const res = await fetch(`${BASE}/api/ga4/traffic?session_id=${sid}&days=30`)
       const data = await res.json()
       setGa4Result(data)
-      if (data.total > 0) onConnected()
+      if (data.total > 0 && onGA4Data) onGA4Data(data)
     } catch(e) {
       setGa4Result({ error: 'Failed to fetch GA4 data' })
     }
@@ -167,6 +167,7 @@ export default function AITraffic({ sessionId }) {
   const [days, setDays] = useState(14)
   const [loadingDemo, setLoadingDemo] = useState(false)
   const [error, setError] = useState(null)
+  const [ga4Data, setGa4Data] = useState(null)
 
   useEffect(() => { fetchStats() }, [days])
 
@@ -215,7 +216,22 @@ export default function AITraffic({ sessionId }) {
     </Card>
   )
 
-  const isEmpty = !stats || stats.total_visits === 0
+  const isEmpty = !ga4Data && (!stats || stats.total_visits === 0)
+  
+  // Normalize GA4 data to match stats format
+  const normalizedGA4 = ga4Data ? {
+    total_visits: ga4Data.total,
+    platforms: Object.entries(ga4Data.by_platform || {}).map(([name, visits]) => ({
+      platform: name,
+      visits,
+      icon: name === 'ChatGPT' ? '🤖' : name === 'Perplexity' ? '🔍' : name === 'Claude' ? '💬' : name === 'Gemini' ? '✨' : '🌐'
+    })),
+    trend: (ga4Data.trend || []).map(t => ({ date: t.date, visits: t.sessions })),
+    ai_insights: ga4Data.ai_insights || [],
+    source: 'ga4'
+  } : null
+
+  const displayData = normalizedGA4 || stats
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -348,16 +364,21 @@ export default function AITraffic({ sessionId }) {
         </Card>
       )}
 
-      <GA4ConnectCard sessionId={sessionId} onConnected={() => setDays(days)} />
+      <GA4ConnectCard sessionId={sessionId} onConnected={() => setDays(days)} onGA4Data={setGa4Data} />
       {/* Stats with data */}
+      {displayData && displayData.source === 'ga4' && (
+        <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#4ade80', fontWeight: 500 }}>
+          📊 Showing real GA4 data · {displayData.total_visits} AI visits in last 30 days
+        </div>
+      )}
       {!isEmpty && stats && (
         <>
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-            <StatCard label="Total Visits" value={stats.total_visits.toLocaleString()} sub={`Last ${days} days`} color="var(--accent)" icon={Users} />
+            <StatCard label="Total Visits" value={displayData.total_visits.toLocaleString()} sub={`Last ${days} days`} color="var(--accent)" icon={Users} />
             <StatCard label="Conversions" value={stats.total_conversions.toLocaleString()} sub={`${stats.overall_conversion_rate}% rate`} color="var(--green)" icon={ShoppingCart} />
             <StatCard label="Revenue from AI" value={`$${stats.total_conversion_value.toFixed(2)}`} sub="Conversion value" color="var(--cyan)" icon={DollarSign} />
-            <StatCard label="AI Sources" value={stats.platforms.length} sub="Platforms sending traffic" color="var(--yellow)" icon={TrendingUp} />
+            <StatCard label="AI Sources" value={displayData.platforms.length} sub="Platforms sending traffic" color="var(--yellow)" icon={TrendingUp} />
           </div>
 
           {/* Platform breakdown + Pie */}
@@ -366,7 +387,7 @@ export default function AITraffic({ sessionId }) {
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '1rem' }}>
                 Platform Breakdown
               </div>
-              {stats.platforms.map((p, i) => (
+              {displayData.platforms.map((p, i) => (
                 <div key={p.id} style={{ marginBottom: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -381,7 +402,7 @@ export default function AITraffic({ sessionId }) {
                   <div style={{ height: '6px', background: 'var(--bg4)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', borderRadius: '3px',
-                      width: `${stats.total_visits > 0 ? (p.visits / stats.total_visits * 100) : 0}%`,
+                      width: `${displayData.total_visits > 0 ? (p.visits / displayData.total_visits * 100) : 0}%`,
                       background: p.color, transition: 'width 0.5s',
                     }} />
                   </div>
@@ -396,14 +417,14 @@ export default function AITraffic({ sessionId }) {
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
-                    data={stats.platforms}
+                    data={displayData.platforms}
                     dataKey="visits"
                     nameKey="name"
                     cx="50%" cy="50%"
                     innerRadius={50} outerRadius={80}
                     paddingAngle={2}
                   >
-                    {stats.platforms.map((p, i) => (
+                    {displayData.platforms.map((p, i) => (
                       <Cell key={i} fill={p.color} />
                     ))}
                   </Pie>
@@ -425,7 +446,7 @@ export default function AITraffic({ sessionId }) {
                 <YAxis tick={{ fill: 'var(--text3)', fontSize: 10 }} />
                 <Tooltip content={<CUSTOM_TOOLTIP />} />
                 <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', color: 'var(--text2)' }} />
-                {stats.platforms.slice(0, 5).map(p => (
+                {displayData.platforms.slice(0, 5).map(p => (
                   <Line
                     key={p.id}
                     type="monotone"
@@ -541,7 +562,7 @@ export default function AITraffic({ sessionId }) {
             <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px' }}>
               Total visits (impressions) per AI platform
             </div>
-            {(stats.platforms || []).map((p, i) => (
+            {(displayData.platforms || []).map((p, i) => (
               <div key={i} style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -553,7 +574,7 @@ export default function AITraffic({ sessionId }) {
                 <div style={{ height: '6px', background: 'var(--bg4)', borderRadius: '3px', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', borderRadius: '3px',
-                    width: `${stats.total_visits > 0 ? (p.visits / stats.total_visits * 100) : 0}%`,
+                    width: `${displayData.total_visits > 0 ? (p.visits / displayData.total_visits * 100) : 0}%`,
                     background: p.color, transition: 'width 0.5s',
                   }} />
                 </div>
