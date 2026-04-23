@@ -60,6 +60,8 @@ function GA4ConnectCard({ sessionId, onConnected }) {
   const [propertyId, setPropertyId] = useState('')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState(null)
+  const [ga4Result, setGa4Result] = useState(null)
+  const [ga4Loading, setGa4Loading] = useState(false)
 
   useEffect(() => {
     const sid = sessionId || localStorage.getItem('google_session_id')
@@ -85,16 +87,50 @@ function GA4ConnectCard({ sessionId, onConnected }) {
     setLoading(false)
   }
 
+  async function handleLoadGA4() {
+    const sid = sessionId || localStorage.getItem('google_session_id')
+    if (!sid) return
+    setGa4Loading(true)
+    setGa4Result(null)
+    try {
+      const res = await fetch(`${BASE}/api/ga4/traffic?session_id=${sid}&days=30`)
+      const data = await res.json()
+      setGa4Result(data)
+      if (data.total > 0) onConnected()
+    } catch(e) {
+      setGa4Result({ error: 'Failed to fetch GA4 data' })
+    }
+    setGa4Loading(false)
+  }
+
   if (status?.connected) return (
-    <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '20px' }}>📊</span>
-        <div>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#4ade80' }}>Google Analytics 4 Connected</div>
-          <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Property: {status.property_id}</div>
+    <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: ga4Result ? '12px' : '0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '16px' }}>📊</span>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#4ade80' }}>Google Analytics 4 Connected</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Property: {status.property_id}</div>
+          </div>
         </div>
+        <button onClick={handleLoadGA4} disabled={ga4Loading} style={{ fontSize: '11px', padding: '4px 12px', borderRadius: '6px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', cursor: 'pointer', fontWeight: 600 }}>
+          {ga4Loading ? 'Checking...' : 'Check GA4 for AI traffic'}
+        </button>
       </div>
-      <button onClick={onConnected} style={{ fontSize: '11px', padding: '4px 12px', borderRadius: '6px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', cursor: 'pointer', fontWeight: 600 }}>Load GA4 Data</button>
+      {ga4Result && (
+        <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: ga4Result.total > 0 ? 'rgba(34,197,94,0.08)' : 'rgba(251,174,75,0.1)', border: `1px solid ${ga4Result.total > 0 ? 'rgba(34,197,94,0.2)' : 'rgba(251,174,75,0.2)'}` }}>
+          {ga4Result.error ? (
+            <div style={{ fontSize: '12px', color: '#f87171' }}>⚠ {ga4Result.error}</div>
+          ) : ga4Result.total > 0 ? (
+            <div style={{ fontSize: '12px', color: '#4ade80', fontWeight: 600 }}>✓ Found {ga4Result.total} AI visits! Dashboard updated above.</div>
+          ) : (
+            <div>
+              <div style={{ fontSize: '12px', color: '#d97706', fontWeight: 600, marginBottom: '4px' }}>No AI referrer traffic found in GA4</div>
+              <div style={{ fontSize: '11px', color: 'var(--text3)' }}>GA4 shows 0 visits from ChatGPT, Perplexity, Claude or other AI platforms in the last 30 days. This means no one has visited your site from an AI tool yet — not a tracking issue.</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 
