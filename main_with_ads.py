@@ -2612,3 +2612,337 @@ async def ga4_debug_traffic(session_id: str):
         return resp.json()
     except Exception as e:
         return {"error": str(e)}
+
+# ============================================================
+# SOCIAL MEDIA INTELLIGENCE ENDPOINTS
+# ============================================================
+
+@app.post("/api/social-media/analyze")
+async def social_media_analyze(request: Request):
+    """Analyze website content for social media potential using Gemini."""
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        if not url:
+            raise HTTPException(status_code=400, detail="URL required")
+
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        if not gemini_key:
+            raise HTTPException(status_code=500, detail="Gemini API key not configured")
+
+        # Scrape page content
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html = resp.text
+
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        title = soup.find('title')
+        title_text = title.get_text().strip() if title else ''
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        meta_text = meta_desc.get('content', '') if meta_desc else ''
+        h1s = [h.get_text().strip() for h in soup.find_all('h1')]
+        h2s = [h.get_text().strip() for h in soup.find_all('h2')][:10]
+        paragraphs = [p.get_text().strip() for p in soup.find_all('p') if len(p.get_text().strip()) > 50][:10]
+        images_count = len(soup.find_all('img'))
+
+        prompt = f"""Analyze this website for social media potential and return ONLY valid JSON.
+
+Website: {url}
+Title: {title_text}
+Meta Description: {meta_text}
+H1 Tags: {', '.join(h1s[:3])}
+H2 Tags: {', '.join(h2s[:5])}
+Key Content: {' | '.join(paragraphs[:5])}
+Images: {images_count}
+
+Return ONLY this JSON structure (no markdown, no explanation):
+{{
+  "overall_score": 72,
+  "content_score": 80,
+  "shareability_score": 65,
+  "visual_score": 45,
+  "summary": "2-3 sentence assessment of social media potential",
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "gaps": ["gap 1", "gap 2", "gap 3"],
+  "platform_fit": {{
+    "linkedin": {{"score": 85, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "twitter": {{"score": 70, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "instagram": {{"score": 40, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "youtube": {{"score": 60, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "reddit": {{"score": 75, "why": "reason", "content_types": "types", "tip": "actionable tip"}}
+  }},
+  "content_ideas": [
+    {{"emoji": "💡", "title": "idea title", "platform": "LinkedIn", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "🧠", "title": "idea title", "platform": "Twitter/X", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "📊", "title": "idea title", "platform": "LinkedIn", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "🎯", "title": "idea title", "platform": "Reddit", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "🚀", "title": "idea title", "platform": "YouTube", "description": "detailed description", "hook": "opening hook"}}
+  ],
+  "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3", "#hashtag4", "#hashtag5", "#hashtag6", "#hashtag7", "#hashtag8"],
+  "content_mix": [
+    {{"type": "Educational", "percentage": 40, "example": "example post type"}},
+    {{"type": "Project Showcase", "percentage": 25, "example": "example post type"}},
+    {{"type": "Industry Insights", "percentage": 20, "example": "example post type"}},
+    {{"type": "Personal Brand", "percentage": 15, "example": "example post type"}}
+  ],
+  "posting_schedule": [
+    {{"platform": "LinkedIn", "icon": "💼", "best_time": "Tue-Thu, 8-10am IST", "frequency": "3x/week"}},
+    {{"platform": "Twitter/X", "icon": "𝕏", "best_time": "Mon-Fri, 12-2pm IST", "frequency": "Daily"}},
+    {{"platform": "Instagram", "icon": "📸", "best_time": "Wed & Fri, 6-8pm IST", "frequency": "2x/week"}},
+    {{"platform": "YouTube", "icon": "▶", "best_time": "Saturday, 10am IST", "frequency": "1x/week"}},
+    {{"platform": "Reddit", "icon": "🤖", "best_time": "Weekdays, 2-4pm IST", "frequency": "2x/week"}}
+  ],
+  "priority_actions": [
+    {{"action": "specific action", "reason": "why this matters", "effort": "low"}},
+    {{"action": "specific action", "reason": "why this matters", "effort": "medium"}},
+    {{"action": "specific action", "reason": "why this matters", "effort": "high"}}
+  ]
+}}"""
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            gem_resp = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                json={"contents": [{"parts": [{"text": prompt}]}]}
+            )
+        gem_data = gem_resp.json()
+        raw = gem_data["candidates"][0]["content"]["parts"][0]["text"]
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        result = json.loads(raw)
+        return result
+
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"JSON parse error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/social-media/generate-post")
+async def generate_social_post(request: Request):
+    """Generate a ready-to-post social media post."""
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        platform = body.get("platform", "linkedin")
+        post_type = body.get("post_type", "insight")
+
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+
+        # Scrape content
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html = resp.text
+
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        title = soup.find('title')
+        title_text = title.get_text().strip() if title else url
+        paragraphs = [p.get_text().strip() for p in soup.find_all('p') if len(p.get_text().strip()) > 50][:5]
+        content_summary = ' '.join(paragraphs[:3])[:500]
+
+        platform_rules = {
+            "linkedin": "Professional tone. 150-300 words. Start with a hook. Use line breaks. End with a question or CTA. No hashtags in body, add 3-5 at end.",
+            "twitter": "Max 280 chars. Punchy. Start with a strong statement. Add 2-3 relevant hashtags.",
+            "instagram": "Engaging, visual-first. 100-150 words. Use emojis. 10-15 hashtags at end.",
+            "reddit": "Conversational, informative. No self-promotion tone. Add value first. 200-300 words.",
+            "youtube": "Video description format. 150-200 words. Include timestamps placeholders. Add tags at end.",
+        }
+
+        post_type_rules = {
+            "thought_leadership": "Share a unique insight or perspective about the industry",
+            "case_study": "Present a problem-solution-result format",
+            "insight": "Share a surprising or valuable insight",
+            "tip": "Give one actionable tip",
+            "announcement": "Announce something new or upcoming",
+            "service": "Highlight a key service or capability",
+        }
+
+        prompt = f"""Write a {post_type} post for {platform} based on this website content.
+
+Website: {url}
+Title: {title_text}
+Content: {content_summary}
+
+Platform rules: {platform_rules.get(platform, '')}
+Post type: {post_type_rules.get(post_type, '')}
+
+Write ONLY the post content. No explanations, no labels, no markdown."""
+
+        async with httpx.AsyncClient(timeout=20) as client:
+            gem_resp = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                json={"contents": [{"parts": [{"text": prompt}]}]}
+            )
+        gem_data = gem_resp.json()
+        post_text = gem_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return {"post": post_text, "platform": platform, "type": post_type}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================
+# SOCIAL MEDIA INTELLIGENCE ENDPOINTS
+# ============================================================
+
+@app.post("/api/social-media/analyze")
+async def social_media_analyze(request: Request):
+    """Analyze website content for social media potential using Gemini."""
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        if not url:
+            raise HTTPException(status_code=400, detail="URL required")
+
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        if not gemini_key:
+            raise HTTPException(status_code=500, detail="Gemini API key not configured")
+
+        # Scrape page content
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html = resp.text
+
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        title = soup.find('title')
+        title_text = title.get_text().strip() if title else ''
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        meta_text = meta_desc.get('content', '') if meta_desc else ''
+        h1s = [h.get_text().strip() for h in soup.find_all('h1')]
+        h2s = [h.get_text().strip() for h in soup.find_all('h2')][:10]
+        paragraphs = [p.get_text().strip() for p in soup.find_all('p') if len(p.get_text().strip()) > 50][:10]
+        images_count = len(soup.find_all('img'))
+
+        prompt = f"""Analyze this website for social media potential and return ONLY valid JSON.
+
+Website: {url}
+Title: {title_text}
+Meta Description: {meta_text}
+H1 Tags: {', '.join(h1s[:3])}
+H2 Tags: {', '.join(h2s[:5])}
+Key Content: {' | '.join(paragraphs[:5])}
+Images: {images_count}
+
+Return ONLY this JSON structure (no markdown, no explanation):
+{{
+  "overall_score": 72,
+  "content_score": 80,
+  "shareability_score": 65,
+  "visual_score": 45,
+  "summary": "2-3 sentence assessment of social media potential",
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "gaps": ["gap 1", "gap 2", "gap 3"],
+  "platform_fit": {{
+    "linkedin": {{"score": 85, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "twitter": {{"score": 70, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "instagram": {{"score": 40, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "youtube": {{"score": 60, "why": "reason", "content_types": "types", "tip": "actionable tip"}},
+    "reddit": {{"score": 75, "why": "reason", "content_types": "types", "tip": "actionable tip"}}
+  }},
+  "content_ideas": [
+    {{"emoji": "💡", "title": "idea title", "platform": "LinkedIn", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "🧠", "title": "idea title", "platform": "Twitter/X", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "📊", "title": "idea title", "platform": "LinkedIn", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "🎯", "title": "idea title", "platform": "Reddit", "description": "detailed description", "hook": "opening hook"}},
+    {{"emoji": "🚀", "title": "idea title", "platform": "YouTube", "description": "detailed description", "hook": "opening hook"}}
+  ],
+  "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3", "#hashtag4", "#hashtag5", "#hashtag6", "#hashtag7", "#hashtag8"],
+  "content_mix": [
+    {{"type": "Educational", "percentage": 40, "example": "example post type"}},
+    {{"type": "Project Showcase", "percentage": 25, "example": "example post type"}},
+    {{"type": "Industry Insights", "percentage": 20, "example": "example post type"}},
+    {{"type": "Personal Brand", "percentage": 15, "example": "example post type"}}
+  ],
+  "posting_schedule": [
+    {{"platform": "LinkedIn", "icon": "💼", "best_time": "Tue-Thu, 8-10am IST", "frequency": "3x/week"}},
+    {{"platform": "Twitter/X", "icon": "𝕏", "best_time": "Mon-Fri, 12-2pm IST", "frequency": "Daily"}},
+    {{"platform": "Instagram", "icon": "📸", "best_time": "Wed & Fri, 6-8pm IST", "frequency": "2x/week"}},
+    {{"platform": "YouTube", "icon": "▶", "best_time": "Saturday, 10am IST", "frequency": "1x/week"}},
+    {{"platform": "Reddit", "icon": "🤖", "best_time": "Weekdays, 2-4pm IST", "frequency": "2x/week"}}
+  ],
+  "priority_actions": [
+    {{"action": "specific action", "reason": "why this matters", "effort": "low"}},
+    {{"action": "specific action", "reason": "why this matters", "effort": "medium"}},
+    {{"action": "specific action", "reason": "why this matters", "effort": "high"}}
+  ]
+}}"""
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            gem_resp = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                json={"contents": [{"parts": [{"text": prompt}]}]}
+            )
+        gem_data = gem_resp.json()
+        raw = gem_data["candidates"][0]["content"]["parts"][0]["text"]
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        result = json.loads(raw)
+        return result
+
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"JSON parse error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/social-media/generate-post")
+async def generate_social_post(request: Request):
+    """Generate a ready-to-post social media post."""
+    try:
+        body = await request.json()
+        url = body.get("url", "")
+        platform = body.get("platform", "linkedin")
+        post_type = body.get("post_type", "insight")
+
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+
+        # Scrape content
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html = resp.text
+
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, 'html.parser')
+        title = soup.find('title')
+        title_text = title.get_text().strip() if title else url
+        paragraphs = [p.get_text().strip() for p in soup.find_all('p') if len(p.get_text().strip()) > 50][:5]
+        content_summary = ' '.join(paragraphs[:3])[:500]
+
+        platform_rules = {
+            "linkedin": "Professional tone. 150-300 words. Start with a hook. Use line breaks. End with a question or CTA. No hashtags in body, add 3-5 at end.",
+            "twitter": "Max 280 chars. Punchy. Start with a strong statement. Add 2-3 relevant hashtags.",
+            "instagram": "Engaging, visual-first. 100-150 words. Use emojis. 10-15 hashtags at end.",
+            "reddit": "Conversational, informative. No self-promotion tone. Add value first. 200-300 words.",
+            "youtube": "Video description format. 150-200 words. Include timestamps placeholders. Add tags at end.",
+        }
+
+        post_type_rules = {
+            "thought_leadership": "Share a unique insight or perspective about the industry",
+            "case_study": "Present a problem-solution-result format",
+            "insight": "Share a surprising or valuable insight",
+            "tip": "Give one actionable tip",
+            "announcement": "Announce something new or upcoming",
+            "service": "Highlight a key service or capability",
+        }
+
+        prompt = f"""Write a {post_type} post for {platform} based on this website content.
+
+Website: {url}
+Title: {title_text}
+Content: {content_summary}
+
+Platform rules: {platform_rules.get(platform, '')}
+Post type: {post_type_rules.get(post_type, '')}
+
+Write ONLY the post content. No explanations, no labels, no markdown."""
+
+        async with httpx.AsyncClient(timeout=20) as client:
+            gem_resp = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                json={"contents": [{"parts": [{"text": prompt}]}]}
+            )
+        gem_data = gem_resp.json()
+        post_text = gem_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return {"post": post_text, "platform": platform, "type": post_type}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
