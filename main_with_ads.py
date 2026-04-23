@@ -2442,11 +2442,106 @@ Return JSON: {{"insights": [{{"title": "...", "description": "...", "action": ".
         except:
             ai_insight = []
 
+        # Fetch top pages from GA4
+        top_pages = []
+        recent_visits = []
+        keywords = []
+        try:
+            pages_payload = {
+                "dateRanges": [{"startDate": f"{days}daysAgo", "endDate": "today"}],
+                "dimensions": [{"name": "pagePath"}, {"name": "sessionSource"}],
+                "metrics": [{"name": "sessions"}],
+                "dimensionFilter": {
+                    "orGroup": {
+                        "expressions": [
+                            {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "chatgpt"}}},
+                            {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "perplexity"}}},
+                            {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "claude"}}},
+                            {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "gemini"}}},
+                            {"filter": {"fieldName": "sessionSource", "stringFilter": {"matchType": "CONTAINS", "value": "copilot"}}}
+                        ]
+                    }
+                },
+                "orderBys": [{"metric": {"metricName": "sessions"}, "desc": True}],
+                "limit": 10
+            }
+            async with httpx.AsyncClient() as pc:
+                pages_resp = await pc.post(
+                    api_url,
+                    json=pages_payload,
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+            pages_data = pages_resp.json()
+            page_map = {}
+            for row in pages_data.get("rows", []):
+                page = row["dimensionValues"][0]["value"]
+                source = row["dimensionValues"][1]["value"]
+                sessions = int(row["metricValues"][0]["value"])
+                if page not in page_map:
+                    page_map[page] = {"page": page, "visits": 0, "platforms": []}
+                page_map[page]["visits"] += sessions
+                platform = "ChatGPT" if "chatgpt" in source else "Perplexity" if "perplexity" in source else "Claude" if "claude" in source else "Gemini" if "gemini" in source else "Copilot" if "copilot" in source else source
+                if platform not in page_map[page]["platforms"]:
+                    page_map[page]["platforms"].append(platform)
+            top_pages = sorted(page_map.values(), key=lambda x: x["visits"], reverse=True)[:5]
+
+            # Recent visits - date + source + page
+            recent_payload = {
+                "dateRanges": [{"startDate": f"{min(days,14)}daysAgo", "endDate": "today"}],
+                "dimensions": [{"name": "date"}, {"name": "sessionSource"}, {"name": "pagePath"}],
+                "metrics": [{"name": "sessions"}],
+                "dimensionFilter": pages_payload["dimensionFilter"],
+                "orderBys": [{"dimension": {"dimensionName": "date"}, "desc": True}],
+                "limit": 10
+            }
+            async with httpx.AsyncClient() as rc:
+                recent_resp = await rc.post(
+                    api_url,
+                    json=recent_payload,
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+            recent_data = recent_resp.json()
+            for row in recent_data.get("rows", []):
+                date = row["dimensionValues"][0]["value"]
+                source = row["dimensionValues"][1]["value"]
+                page = row["dimensionValues"][2]["value"]
+                sessions = int(row["metricValues"][0]["value"])
+                platform = "ChatGPT" if "chatgpt" in source else "Perplexity" if "perplexity" in source else "Claude" if "claude" in source else "Gemini" if "gemini" in source else "Copilot" if "copilot" in source else source
+                recent_visits.append({"date": date, "platform": platform, "page": page, "visits": sessions})
+
+            # Keywords from UTM terms
+            kw_payload = {
+                "dateRanges": [{"startDate": f"{days}daysAgo", "endDate": "today"}],
+                "dimensions": [{"name": "sessionManualTerm"}, {"name": "sessionSource"}],
+                "metrics": [{"name": "sessions"}],
+                "dimensionFilter": pages_payload["dimensionFilter"],
+                "orderBys": [{"metric": {"metricName": "sessions"}, "desc": True}],
+                "limit": 10
+            }
+            async with httpx.AsyncClient() as kc:
+                kw_resp = await kc.post(
+                    api_url,
+                    json=kw_payload,
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+            kw_data = kw_resp.json()
+            for row in kw_data.get("rows", []):
+                term = row["dimensionValues"][0]["value"]
+                source = row["dimensionValues"][1]["value"]
+                sessions = int(row["metricValues"][0]["value"])
+                if term and term != "(not set)":
+                    keywords.append({"keyword": term, "source": source, "sessions": sessions})
+        except Exception as page_err:
+            print(f"[GA4 Pages Error] {page_err}")
+
         return {
             "total": total,
             "by_platform": ai_sources,
             "trend": [{"date": d, "sessions": s} for d, s in sorted(trend_data.items())],
             "ai_insights": ai_insight,
+            "top_pages": top_pages,
+            "recent_visits": recent_visits,
+            "keywords": keywords,
             "days": days
         }
 
