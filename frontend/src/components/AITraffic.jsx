@@ -56,7 +56,7 @@ const CUSTOM_TOOLTIP = ({ active, payload, label }) => {
 }
 
 
-function GA4ConnectCard({ sessionId, onConnected, onGA4Data }) {
+function GA4ConnectCard({ sessionId, onConnected, onGA4Data, days }) {
   const [propertyId, setPropertyId] = useState('')
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState(null)
@@ -93,7 +93,7 @@ function GA4ConnectCard({ sessionId, onConnected, onGA4Data }) {
     setGa4Loading(true)
     setGa4Result(null)
     try {
-      const res = await fetch(`${BASE}/api/ga4/traffic?session_id=${sid}&days=30`)
+      const res = await fetch(`${BASE}/api/ga4/traffic?session_id=${sid}&days=${days}`)
       const data = await res.json()
       setGa4Result(data)
       if (data.total > 0 && onGA4Data) onGA4Data(data)
@@ -364,11 +364,11 @@ export default function AITraffic({ sessionId }) {
         </Card>
       )}
 
-      <GA4ConnectCard sessionId={sessionId} onConnected={() => setDays(days)} onGA4Data={setGa4Data} />
+      <GA4ConnectCard sessionId={sessionId} onConnected={() => setDays(days)} onGA4Data={setGa4Data} days={days} />
       {/* Stats with data */}
       {displayData && displayData.source === 'ga4' && (
         <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#4ade80', fontWeight: 500 }}>
-          📊 Showing real GA4 data · {displayData.total_visits} AI visits in last 30 days
+          📊 Showing real GA4 data · {displayData.total_visits} AI visits in last {days} days
         </div>
       )}
       {!isEmpty && displayData && (
@@ -438,28 +438,23 @@ export default function AITraffic({ sessionId }) {
           {/* Daily trend */}
           <Card>
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '1rem' }}>
-              Daily Trend (Last 14 Days)
+              Daily Trend (Last {days} Days)
             </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={stats.daily_trend} margin={{ left: -20, right: 10 }}>
-                <XAxis dataKey="date" tick={{ fill: 'var(--text3)', fontSize: 10 }} tickFormatter={d => d.slice(5)} />
-                <YAxis tick={{ fill: 'var(--text3)', fontSize: 10 }} />
-                <Tooltip content={<CUSTOM_TOOLTIP />} />
-                <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', color: 'var(--text2)' }} />
-                {displayData.platforms.slice(0, 5).map(p => (
-                  <Line
-                    key={p.id}
-                    type="monotone"
-                    dataKey={p.id}
-                    name={p.name}
-                    stroke={p.color}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+            {(displayData.trend || displayData.daily_trend || []).length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={displayData.trend || displayData.daily_trend} margin={{ left: -20, right: 10 }}>
+                  <XAxis dataKey="date" tick={{ fill: 'var(--text3)', fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+                  <YAxis tick={{ fill: 'var(--text3)', fontSize: 10 }} />
+                  <Tooltip content={<CUSTOM_TOOLTIP />} />
+                  <Line type="monotone" dataKey="visits" name="AI Visits" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="sessions" name="Sessions" stroke="#22c55e" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text3)', fontSize: '13px' }}>
+                No trend data available for this period
+              </div>
+            )}
           </Card>
 
           {/* Top pages */}
@@ -468,7 +463,11 @@ export default function AITraffic({ sessionId }) {
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '1rem' }}>
                 Top Landing Pages
               </div>
-              {stats.top_pages.map((p, i) => (
+              {(displayData.top_pages || []).length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: '12px' }}>
+                  {displayData.source === 'ga4' ? 'Page-level data not available via GA4 API filter' : 'No landing page data yet'}
+                </div>
+              ) : (displayData.top_pages || []).map((p, i) => (
                 <div key={i} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   padding: '8px 0', borderBottom: '1px solid var(--border)',
@@ -494,7 +493,7 @@ export default function AITraffic({ sessionId }) {
                 Recent Visits
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {stats.recent_visits.slice(0, 8).map((v, i) => (
+                {(displayData.recent_visits || []).slice(0, 8).map((v, i) => (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', gap: '8px',
                     padding: '7px 10px', background: 'var(--bg3)',
@@ -562,12 +561,16 @@ export default function AITraffic({ sessionId }) {
             <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '12px' }}>
               Total visits (impressions) per AI platform
             </div>
-            {(displayData.platforms || []).map((p, i) => (
+            {(displayData.platforms || []).map((p, i) => {
+              const COLORS = ['#4f7dff','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4']
+              const color = p.color || COLORS[i % COLORS.length]
+              const name = p.platform || p.name || 'Unknown'
+              return (
               <div key={i} style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.color }} />
-                    <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
+                    <span style={{ fontWeight: 500 }}>{name}</span>
                   </div>
                   <span style={{ color: 'var(--text2)', fontWeight: 500 }}>{p.visits.toLocaleString()} impressions</span>
                 </div>
@@ -575,11 +578,12 @@ export default function AITraffic({ sessionId }) {
                   <div style={{
                     height: '100%', borderRadius: '3px',
                     width: `${displayData.total_visits > 0 ? (p.visits / displayData.total_visits * 100) : 0}%`,
-                    background: p.color, transition: 'width 0.5s',
+                    background: color, transition: 'width 0.5s',
                   }} />
                 </div>
               </div>
-            ))}
+              )
+            })}
           </Card>
 
           {/* Tracking snippet */}
