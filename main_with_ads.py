@@ -361,27 +361,37 @@ async def full_report(req: FullReportRequest):
     # Normalize sem_recommendations fields
     sem = seo_report.get('sem_recommendations', {})
     if sem:
-        # Normalize budget
-        if not sem.get('monthly_budget_inr'):
+        # Normalize budget — store min/max range, not single value
+        if not sem.get('monthly_budget_inr_min'):
             budget = sem.get('suggested_monthly_budget_usd', {})
             if isinstance(budget, dict):
+                sem['monthly_budget_inr_min'] = int(budget.get('min', 0) * 83)
+                sem['monthly_budget_inr_max'] = int(budget.get('max', 0) * 83)
                 sem['monthly_budget_inr'] = int((budget.get('min', 0) + budget.get('max', 0)) / 2 * 83)
             elif isinstance(budget, (int, float)):
                 sem['monthly_budget_inr'] = int(budget * 83)
-        # Normalize clicks
-        if not sem.get('monthly_clicks_estimate'):
+                sem['monthly_budget_inr_min'] = int(budget * 83 * 0.8)
+                sem['monthly_budget_inr_max'] = int(budget * 83 * 1.2)
+        # Normalize clicks — store min/max range
+        if not sem.get('monthly_clicks_min'):
             clicks = sem.get('estimated_monthly_clicks', {})
             if isinstance(clicks, dict):
+                sem['monthly_clicks_min'] = clicks.get('min', 0)
+                sem['monthly_clicks_max'] = clicks.get('max', 0)
                 sem['monthly_clicks_estimate'] = f"{clicks.get('min',0):,}–{clicks.get('max',0):,}"
             elif clicks:
                 sem['monthly_clicks_estimate'] = str(clicks)
-        # Normalize CPC
-        if not sem.get('estimated_cpc_inr'):
+        # Normalize CPC — store min/max range
+        if not sem.get('estimated_cpc_inr_min'):
             cpc = sem.get('estimated_cpc_usd', {})
             if isinstance(cpc, dict):
+                sem['estimated_cpc_inr_min'] = round(cpc.get('min', 0) * 83)
+                sem['estimated_cpc_inr_max'] = round(cpc.get('max', 0) * 83)
                 sem['estimated_cpc_inr'] = round((cpc.get('min', 0) + cpc.get('max', 0)) / 2 * 83)
             elif isinstance(cpc, (int, float)):
                 sem['estimated_cpc_inr'] = round(cpc * 83)
+                sem['estimated_cpc_inr_min'] = round(cpc * 83 * 0.8)
+                sem['estimated_cpc_inr_max'] = round(cpc * 83 * 1.2)
         
         # Generate country_budgets if not present
         if not sem.get('country_budgets'):

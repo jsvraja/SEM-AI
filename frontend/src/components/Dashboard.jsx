@@ -492,9 +492,17 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Budget Range</div>
                 {seo.sem_recommendations && (
                   <>
-                    <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                      ₹{(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()}
-                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
+                    <div style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
+                      {seo?.sem_recommendations?.monthly_budget_inr_min && seo?.sem_recommendations?.monthly_budget_inr_max ? (
+                        <>₹{(seo.sem_recommendations.monthly_budget_inr_min).toLocaleString()} – ₹{(seo.sem_recommendations.monthly_budget_inr_max).toLocaleString()}</>
+                      ) : (
+                        <>₹{(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()}</>
+                      )}
+                      <span style={{ fontSize: '13px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                      <span style={{ fontSize: '10px', background: 'rgba(251,174,75,0.15)', color: '#d97706', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>AI Estimated</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Based on keyword CPC + industry benchmarks</span>
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>{(seo?.sem_recommendations?.bidding_strategy || "").split('—')[0]}</div>
                     {seo.sem_recommendations.budget_calculation && (
