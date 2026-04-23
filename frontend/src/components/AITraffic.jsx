@@ -221,7 +221,7 @@ export default function AITraffic({ sessionId }) {
       {/* Empty state */}
       {isEmpty && (
         <Card>
-          <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+          <div style={{ textAlign: 'center', padding: '2rem 1rem 1rem' }}>
             <div style={{
               width: '60px', height: '60px', borderRadius: '16px',
               background: 'rgba(79,125,255,0.08)', border: '1px solid rgba(79,125,255,0.15)',
@@ -231,9 +231,29 @@ export default function AITraffic({ sessionId }) {
               <Zap size={28} color="var(--accent)" />
             </div>
             <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>No AI traffic yet</h3>
-            <p style={{ fontSize: '13px', color: 'var(--text2)', marginBottom: '1.5rem', lineHeight: 1.6, maxWidth: '420px', margin: '0 auto 1.5rem' }}>
-              Add the tracking snippet to your website to start capturing visitors from ChatGPT, Perplexity, Claude, and other AI platforms.
+            <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6, maxWidth: '420px', margin: '0 auto 1rem' }}>
+              Your site hasn't received visitors from ChatGPT, Perplexity, Claude or other AI platforms yet. This is common — AI visibility grows as your content gets cited.
             </p>
+          </div>
+
+          {/* AI Insights for empty state */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 0.5rem 1rem' }}>
+            <div style={{ background: 'rgba(251,174,75,0.1)', border: '1px solid rgba(251,174,75,0.2)', borderRadius: '10px', padding: '12px 14px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: '#d97706', marginBottom: '4px' }}>Tracking is active</div>
+              <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6 }}>GA4 is connected and monitoring. You'll see data here as soon as AI platforms start referring visitors to your site.</div>
+            </div>
+            <div style={{ background: 'var(--bg3)', borderRadius: '10px', padding: '12px 14px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>How to grow AI traffic</div>
+              <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6 }}>Publish authoritative long-form content. Add Schema Markup (missing on your site). Build backlinks from high-authority domains. Answer specific questions AI tools commonly reference.</div>
+            </div>
+            <div style={{ background: 'var(--bg3)', borderRadius: '10px', padding: '12px 14px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>What happens when AI traffic arrives</div>
+              <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6 }}>You'll see platform breakdown (ChatGPT, Perplexity, Claude), trend charts, top pages visited, and AI-generated insights on how to convert AI visitors.</div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--border)', padding: '1rem 0.5rem 0.5rem' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '8px' }}>Also add our custom tracking snippet to capture real-time AI visits:</p>
 
             {/* Tracking snippet */}
             <div style={{
