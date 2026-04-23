@@ -169,7 +169,19 @@ export default function AITraffic({ sessionId }) {
   const [error, setError] = useState(null)
   const [ga4Data, setGa4Data] = useState(null)
 
-  useEffect(() => { fetchStats() }, [days])
+  useEffect(() => { 
+    fetchStats()
+    // If GA4 connected, re-fetch GA4 data with new days
+    if (ga4Data) {
+      const sid = sessionId || localStorage.getItem('google_session_id')
+      if (sid) {
+        fetch(`${BASE}/api/ga4/traffic?session_id=${sid}&days=${days}`)
+          .then(r => r.json())
+          .then(d => { if (d.total !== undefined) setGa4Data(d) })
+          .catch(() => {})
+      }
+    }
+  }, [days])
 
   async function fetchStats() {
     setLoading(true)
