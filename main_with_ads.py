@@ -2706,6 +2706,13 @@ Return ONLY this JSON structure (no markdown, no explanation):
                 json={"contents": [{"parts": [{"text": prompt}]}]}
             )
         gem_data = gem_resp.json()
+        
+        if "error" in gem_data:
+            raise HTTPException(status_code=500, detail=f"Gemini error: {gem_data['error'].get('message', 'Unknown')}")
+        
+        if "candidates" not in gem_data or not gem_data["candidates"]:
+            raise HTTPException(status_code=500, detail=f"Gemini no candidates: {gem_data}")
+            
         raw = gem_data["candidates"][0]["content"]["parts"][0]["text"]
         raw = raw.replace("```json", "").replace("```", "").strip()
         result = json.loads(raw)
@@ -2713,6 +2720,8 @@ Return ONLY this JSON structure (no markdown, no explanation):
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail=f"JSON parse error: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2873,6 +2882,13 @@ Return ONLY this JSON structure (no markdown, no explanation):
                 json={"contents": [{"parts": [{"text": prompt}]}]}
             )
         gem_data = gem_resp.json()
+        
+        if "error" in gem_data:
+            raise HTTPException(status_code=500, detail=f"Gemini error: {gem_data['error'].get('message', 'Unknown')}")
+        
+        if "candidates" not in gem_data or not gem_data["candidates"]:
+            raise HTTPException(status_code=500, detail=f"Gemini no candidates: {gem_data}")
+            
         raw = gem_data["candidates"][0]["content"]["parts"][0]["text"]
         raw = raw.replace("```json", "").replace("```", "").strip()
         result = json.loads(raw)
@@ -2880,6 +2896,8 @@ Return ONLY this JSON structure (no markdown, no explanation):
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail=f"JSON parse error: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
