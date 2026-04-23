@@ -2457,7 +2457,7 @@ async def ga4_traffic(session_id: str, days: int = 30):
 Return JSON: {{"insights": [{{"title": "...", "description": "...", "action": "..."}}]}}"""
                 
                 gem_resp = httpx.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={gemini_key}",
                     json={"contents": [{"parts": [{"text": prompt}]}]},
                     timeout=15
                 )
@@ -2702,7 +2702,7 @@ Return ONLY this JSON structure (no markdown, no explanation):
 
         async with httpx.AsyncClient(timeout=30) as client:
             gem_resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={gemini_key}",
                 json={"contents": [{"parts": [{"text": prompt}]}]}
             )
         gem_data = gem_resp.json()
@@ -2779,7 +2779,7 @@ Write ONLY the post content. No explanations, no labels, no markdown."""
 
         async with httpx.AsyncClient(timeout=20) as client:
             gem_resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={gemini_key}",
                 json={"contents": [{"parts": [{"text": prompt}]}]}
             )
         gem_data = gem_resp.json()
@@ -2878,7 +2878,7 @@ Return ONLY this JSON structure (no markdown, no explanation):
 
         async with httpx.AsyncClient(timeout=30) as client:
             gem_resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={gemini_key}",
                 json={"contents": [{"parts": [{"text": prompt}]}]}
             )
         gem_data = gem_resp.json()
@@ -2955,7 +2955,7 @@ Write ONLY the post content. No explanations, no labels, no markdown."""
 
         async with httpx.AsyncClient(timeout=20) as client:
             gem_resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={gemini_key}",
                 json={"contents": [{"parts": [{"text": prompt}]}]}
             )
         gem_data = gem_resp.json()
