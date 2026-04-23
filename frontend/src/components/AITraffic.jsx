@@ -55,7 +55,77 @@ const CUSTOM_TOOLTIP = ({ active, payload, label }) => {
   )
 }
 
-export default function AITraffic() {
+
+function GA4ConnectCard({ sessionId, onConnected }) {
+  const [propertyId, setPropertyId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState(null)
+
+  useEffect(() => {
+    const sid = sessionId || localStorage.getItem('google_session_id')
+    if (!sid) return
+    fetch(`${BASE}/api/ga4/status?session_id=${sid}`)
+      .then(r => r.json())
+      .then(d => { if (d.connected) setStatus(d) })
+      .catch(() => {})
+  }, [sessionId])
+
+  async function handleConnect() {
+    if (!propertyId.trim()) return alert('GA4 Property ID enter pannunga')
+    const sid = sessionId || localStorage.getItem('google_session_id')
+    if (!sid) return alert('Please connect Google Ads first')
+    setLoading(true)
+    try {
+      const res = await fetch(`${BASE}/api/ga4/auth?session_id=${sid}&property_id=${propertyId}`)
+      const data = await res.json()
+      if (data.auth_url) window.location.href = data.auth_url
+    } catch(e) {
+      alert('Connection failed')
+    }
+    setLoading(false)
+  }
+
+  if (status?.connected) return (
+    <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontSize: '20px' }}>📊</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#4ade80' }}>Google Analytics 4 Connected</div>
+          <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Property: {status.property_id}</div>
+        </div>
+      </div>
+      <button onClick={onConnected} style={{ fontSize: '11px', padding: '4px 12px', borderRadius: '6px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80', cursor: 'pointer', fontWeight: 600 }}>Load GA4 Data</button>
+    </div>
+  )
+
+  return (
+    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+        <span style={{ fontSize: '20px' }}>📊</span>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Connect Google Analytics 4</div>
+          <div style={{ fontSize: '12px', color: 'var(--text3)' }}>Real AI traffic data from your GA4 property</div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          value={propertyId}
+          onChange={e => setPropertyId(e.target.value)}
+          placeholder="GA4 Property ID (e.g. 123456789)"
+          style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', fontSize: '13px', outline: 'none' }}
+        />
+        <button onClick={handleConnect} disabled={loading} style={{ padding: '8px 16px', borderRadius: '8px', background: 'var(--accent)', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          {loading ? 'Connecting...' : '🔗 Connect GA4'}
+        </button>
+      </div>
+      <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '8px' }}>
+        💡 GA4 Property ID: Google Analytics → Admin → Property Settings → Property ID
+      </div>
+    </div>
+  )
+}
+
+export default function AITraffic({ sessionId }) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(14)
@@ -222,6 +292,7 @@ export default function AITraffic() {
         </Card>
       )}
 
+      <GA4ConnectCard sessionId={sessionId} onConnected={() => setDays(days)} />
       {/* Stats with data */}
       {!isEmpty && stats && (
         <>
