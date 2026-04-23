@@ -390,8 +390,19 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '12px' }}>
-                  <ScoreRing score={seo.overall_seo_score} label="Overall SEO" />
+                  <ScoreRing 
+                    score={(() => {
+                      const seoScore = seo.overall_seo_score || 0
+                      const psScore = pageSpeed?.results?.mobile?.performance || pageSpeed?.results?.desktop?.performance || null
+                      if (psScore !== null) return Math.round((seoScore * 0.7) + (psScore * 0.3))
+                      return seoScore
+                    })()} 
+                    label="Overall SEO" 
+                  />
                   <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
+                  {pageSpeed?.results?.mobile?.performance && (
+                    <ScoreRing score={pageSpeed.results.mobile.performance} label="Page Speed" />
+                  )}
                 </div>
                 {/* SEO Breakdown */}
                 {(() => {
