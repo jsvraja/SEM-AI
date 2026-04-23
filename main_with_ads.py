@@ -2454,3 +2454,40 @@ Return JSON: {{"insights": [{{"title": "...", "description": "...", "action": ".
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ga4/debug-traffic")
+async def ga4_debug_traffic(session_id: str):
+    """Debug: fetch all traffic sources from GA4."""
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT property_id, access_token, refresh_token FROM ga4_tokens WHERE session_id = %s",
+                (session_id,)
+            )
+            row = cur.fetchone()
+        
+        if not row:
+            return {"error": "GA4 not connected"}
+        
+        property_id, access_token, refresh_token = row
+
+        api_url = f"https://analyticsdata.googleapis.com/v1beta/properties/{property_id}:runReport"
+        
+        payload = {
+            "dateRanges": [{"startDate": "30daysAgo", "endDate": "today"}],
+            "dimensions": [{"name": "sessionSource"}],
+            "metrics": [{"name": "sessions"}],
+            "limit": 20
+        }
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                api_url,
+                json=payload,
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+        
+        return resp.json()
+    except Exception as e:
+        return {"error": str(e)}
