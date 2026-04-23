@@ -382,10 +382,19 @@ async def full_report(req: FullReportRequest):
         # Normalize clicks — store min/max range
         if not sem.get('monthly_clicks_min'):
             clicks = sem.get('estimated_monthly_clicks', {})
-            if isinstance(clicks, dict):
+            budget_calc = sem.get('budget_calculation', {})
+            if isinstance(clicks, dict) and (clicks.get('min') or clicks.get('max')):
                 sem['monthly_clicks_min'] = clicks.get('min', 0)
                 sem['monthly_clicks_max'] = clicks.get('max', 0)
                 sem['monthly_clicks_estimate'] = f"{clicks.get('min',0):,}–{clicks.get('max',0):,}"
+            elif budget_calc.get('target_daily_clicks'):
+                # Calculate from daily clicks in budget_calculation
+                daily = budget_calc.get('target_daily_clicks', 0)
+                monthly_min = int(daily * 28 * 0.8)
+                monthly_max = int(daily * 31 * 1.2)
+                sem['monthly_clicks_min'] = monthly_min
+                sem['monthly_clicks_max'] = monthly_max
+                sem['monthly_clicks_estimate'] = f"{monthly_min:,}–{monthly_max:,}"
             elif clicks:
                 sem['monthly_clicks_estimate'] = str(clicks)
         # Normalize CPC — store min/max range
