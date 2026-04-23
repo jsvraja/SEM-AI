@@ -364,11 +364,18 @@ async def full_report(req: FullReportRequest):
         # Normalize budget — store min/max range, not single value
         if not sem.get('monthly_budget_inr_min'):
             budget = sem.get('suggested_monthly_budget_usd', {})
-            if isinstance(budget, dict):
+            budget_calc = sem.get('budget_calculation', {})
+            if isinstance(budget, dict) and (budget.get('min') or budget.get('max')):
                 sem['monthly_budget_inr_min'] = int(budget.get('min', 0) * 83)
                 sem['monthly_budget_inr_max'] = int(budget.get('max', 0) * 83)
                 sem['monthly_budget_inr'] = int((budget.get('min', 0) + budget.get('max', 0)) / 2 * 83)
-            elif isinstance(budget, (int, float)):
+            elif budget_calc.get('monthly_budget_inr') or budget_calc.get('final_monthly_inr'):
+                # Use budget_calculation as fallback
+                base = budget_calc.get('final_monthly_inr') or budget_calc.get('monthly_budget_inr') or 0
+                sem['monthly_budget_inr'] = base
+                sem['monthly_budget_inr_min'] = int(base * 0.8)
+                sem['monthly_budget_inr_max'] = int(base * 1.2)
+            elif isinstance(budget, (int, float)) and budget > 0:
                 sem['monthly_budget_inr'] = int(budget * 83)
                 sem['monthly_budget_inr_min'] = int(budget * 83 * 0.8)
                 sem['monthly_budget_inr_max'] = int(budget * 83 * 1.2)
