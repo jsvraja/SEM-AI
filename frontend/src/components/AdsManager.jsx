@@ -195,10 +195,11 @@ function CampaignMonitor({ sessionId }) {
       )}
 
       {/* SEMA Performance Alert */}
-      {campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
+      {!seenSEMAAlert && campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
         <SEMAPerformanceAlert 
           campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
           sessionId={sessionId}
+          onDismiss={() => setSeenSEMAAlert(true)}
         />
       )}
 
@@ -612,24 +613,14 @@ Respond ONLY with this JSON (no other text):
 
 
 // ─── SEMA Performance Alert Component ────────────────────────────────────────
-function SEMAPerformanceAlert({ campaigns, sessionId }) {
-  const alertKey = `sema_alert_${campaigns[0]?.resource_name}`
-  const [show, setShow] = useState(() => {
-    try { return !localStorage.getItem(alertKey) } catch { return true }
-  })
+function SEMAPerformanceAlert({ campaigns, sessionId, onDismiss }) {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState(null)
-  const [step, setStep] = useState('alert') // alert | analyzing | results | changes
+  const [step, setStep] = useState('alert')
   const [pendingChanges, setPendingChanges] = useState([])
   const [applying, setApplying] = useState(false)
-  const [applied, setApplied] = useState(false)
 
-  function dismiss() {
-    try { localStorage.setItem(alertKey, '1') } catch {}
-    setShow(false)
-  }
-
-  if (!show) return null
+  function dismiss() { onDismiss && onDismiss() }
 
   async function handleAnalyze() {
     setStep('analyzing')
@@ -1393,6 +1384,7 @@ function ReportPanel({ sessionId }) {
 
 
 export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages }) {
+  const [seenSEMAAlert, setSeenSEMAAlert] = useState(false)
   const [tab, setTab] = useState(sessionId ? 'overview' : 'connect')
 
   useEffect(() => {
