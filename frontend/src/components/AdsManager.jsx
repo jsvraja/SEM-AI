@@ -194,6 +194,14 @@ function CampaignMonitor({ sessionId }) {
         </div>
       )}
 
+      {/* SEMA Performance Alert */}
+      {campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
+        <SEMAPerformanceAlert 
+          campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
+          sessionId={sessionId}
+        />
+      )}
+
       {campaigns.map(c => {
         const monitor = c.budget_monitoring
         const spendPct = monitor
@@ -601,6 +609,181 @@ Respond ONLY with this JSON (no other text):
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+
+
+// ─── SEMA Performance Alert Component ────────────────────────────────────────
+function SEMAPerformanceAlert({ campaigns, sessionId }) {
+  const [show, setShow] = useState(true)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysis, setAnalysis] = useState(null)
+  const [step, setStep] = useState('alert') // alert | analyzing | results | changes
+  const [pendingChanges, setPendingChanges] = useState([])
+  const [applying, setApplying] = useState(false)
+  const [applied, setApplied] = useState(false)
+
+  if (!show) return null
+
+  async function handleAnalyze() {
+    setStep('analyzing')
+    setAnalyzing(true)
+    try {
+      const res = await fetch(`${BASE}/api/agent/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          message: `My campaign "${campaigns[0]?.campaign_name}" has been running for several days but shows 0 clicks and 0 impressions. Please analyze why and give me specific fixes. Return analysis as JSON with: {"diagnosis": "reason", "issues": ["issue1","issue2"], "fixes": [{"change": "what to change", "reason": "why", "type": "bid|keyword|budget|targeting"}]}`,
+        })
+      })
+      const data = await res.json()
+      // Parse AI response
+      let parsed = null
+      try {
+        const raw = data.response || data.message || ''
+        const jsonMatch = raw.match(/\{[\s\S]*\}/)
+        if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
+      } catch(e) {}
+      
+      if (parsed) {
+        setAnalysis(parsed)
+        setPendingChanges(parsed.fixes || [])
+        setStep('results')
+      } else {
+        setAnalysis({ diagnosis: data.response || 'Analysis complete', issues: [], fixes: [] })
+        setStep('results')
+      }
+    } catch(e) {
+      setAnalysis({ diagnosis: 'Failed to analyze. Please try again.', issues: [], fixes: [] })
+      setStep('results')
+    }
+    setAnalyzing(false)
+  }
+
+  async function applyChanges() {
+    setApplying(true)
+    try {
+      const res = await fetch(`${BASE}/api/ads/apply-sema-fixes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          campaign_resource: campaigns[0]?.resource_name,
+          fixes: pendingChanges,
+        })
+      })
+      const data = await res.json()
+      setApplied(true)
+      setStep('done')
+    } catch(e) {
+      console.error(e)
+    }
+    setApplying(false)
+  }
+
+  return (
+    <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(79,125,255,0.08))', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '14px', padding: '1.25rem', marginBottom: '12px', position: 'relative' }}>
+      <button onClick={() => setShow(false)} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '16px' }}>×</button>
+      
+      {step === 'alert' && (
+        <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+          {/* SEMA Avatar */}
+          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}>
+            🤖
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#a78bfa' }}>SEMA</span>
+              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '10px', background: 'rgba(124,58,237,0.15)', color: '#a78bfa' }}>AI Agent</span>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 12px' }}>
+              👋 Hey! I noticed your campaign <strong style={{ color: 'var(--text)' }}>"{campaigns[0]?.campaign_name}"</strong> has been running for a few days but has <strong style={{ color: '#f87171' }}>0 clicks and 0 impressions</strong>. 
+              Something might be blocking it. Want me to analyze why and fix it?
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={handleAnalyze} style={{ padding: '8px 18px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', border: 'none', color: 'white', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                Yes, analyze it! 🔍
+              </button>
+              <button onClick={() => setShow(false)} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
+                Not now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 'analyzing' && (
+        <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>🤖</div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#a78bfa', marginBottom: '4px' }}>SEMA is analyzing your campaign...</div>
+            <div style={{ fontSize: '12px', color: 'var(--text3)' }}>Checking bid settings, keywords, targeting, and ad quality...</div>
+            <div style={{ marginTop: '8px', height: '4px', background: 'var(--bg3)', borderRadius: '2px', overflow: 'hidden', width: '200px' }}>
+              <div style={{ height: '100%', background: 'linear-gradient(90deg, #7c3aed, #4f7dff)', borderRadius: '2px', animation: 'pulse 1.5s ease-in-out infinite', width: '60%' }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 'results' && analysis && (
+        <div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '14px' }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🤖</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#a78bfa', marginBottom: '6px' }}>SEMA's Analysis</div>
+              <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6, background: 'var(--bg3)', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px' }}>
+                {analysis.diagnosis}
+              </div>
+              {(analysis.issues || []).length > 0 && (
+                <div style={{ marginBottom: '10px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#f87171', marginBottom: '6px' }}>⚠️ Issues Found:</div>
+                  {analysis.issues.map((issue, i) => (
+                    <div key={i} style={{ fontSize: '12px', color: 'var(--text2)', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>→ {issue}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {pendingChanges.length > 0 && (
+            <div style={{ background: 'var(--bg3)', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>🔧 Recommended Changes:</div>
+              {pendingChanges.map((fix, i) => (
+                <div key={i} style={{ display: 'flex', gap: '8px', padding: '8px', background: 'var(--bg2)', borderRadius: '8px', marginBottom: '6px' }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(124,58,237,0.2)', color: '#a78bfa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>{i+1}</div>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>{fix.change}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{fix.reason}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {pendingChanges.length > 0 && (
+              <button onClick={applyChanges} disabled={applying} style={{ padding: '8px 18px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', border: 'none', color: 'white', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                {applying ? 'Applying...' : '✅ Apply Changes to Google Ads'}
+              </button>
+            )}
+            <button onClick={() => setShow(false)} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 'done' && (
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🤖</div>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80', marginBottom: '4px' }}>✅ Changes Applied!</div>
+            <div style={{ fontSize: '12px', color: 'var(--text2)' }}>I've updated your campaign in Google Ads. Check back in a few hours to see performance improvements.</div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── SEMA Consult Component ───────────────────────────────────────────────────
 
