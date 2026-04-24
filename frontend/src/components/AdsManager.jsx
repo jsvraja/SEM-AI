@@ -85,6 +85,7 @@ function CampaignMonitor({ sessionId }) {
   const [actionLoading, setActionLoading] = useState({})
   const [lastRefresh, setLastRefresh] = useState(null)
   const [error, setError] = useState(null)
+  const [seenSEMAAlert, setSeenSEMAAlert] = useState(false)
 
   useEffect(() => { 
     if (sessionId) fetchCampaigns() 
