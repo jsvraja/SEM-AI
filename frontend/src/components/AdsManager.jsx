@@ -613,13 +613,21 @@ Respond ONLY with this JSON (no other text):
 
 // ─── SEMA Performance Alert Component ────────────────────────────────────────
 function SEMAPerformanceAlert({ campaigns, sessionId }) {
-  const [show, setShow] = useState(true)
+  const alertKey = `sema_alert_${campaigns[0]?.resource_name}`
+  const [show, setShow] = useState(() => {
+    try { return !localStorage.getItem(alertKey) } catch { return true }
+  })
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState(null)
   const [step, setStep] = useState('alert') // alert | analyzing | results | changes
   const [pendingChanges, setPendingChanges] = useState([])
   const [applying, setApplying] = useState(false)
   const [applied, setApplied] = useState(false)
+
+  function dismiss() {
+    try { localStorage.setItem(alertKey, '1') } catch {}
+    setShow(false)
+  }
 
   if (!show) return null
 
@@ -682,7 +690,7 @@ function SEMAPerformanceAlert({ campaigns, sessionId }) {
 
   return (
     <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(79,125,255,0.08))', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '14px', padding: '1.25rem', marginBottom: '12px', position: 'relative' }}>
-      <button onClick={() => setShow(false)} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '16px' }}>×</button>
+      <button onClick={dismiss} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '16px' }}>×</button>
       
       {step === 'alert' && (
         <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
