@@ -715,7 +715,7 @@ function SEMAPerformanceAlert({ campaigns, sessionId, onDismiss }) {
               <button onClick={handleAnalyze} style={{ padding: '8px 18px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', border: 'none', color: 'white', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                 Yes, analyze it! 🔍
               </button>
-              <button onClick={() => setShow(false)} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
+              <button onClick={dismiss} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
                 Not now
               </button>
             </div>
@@ -777,7 +777,7 @@ function SEMAPerformanceAlert({ campaigns, sessionId, onDismiss }) {
                 {applying ? 'Applying...' : '✅ Apply Changes to Google Ads'}
               </button>
             )}
-            <button onClick={() => setShow(false)} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
+            <button onClick={dismiss} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
               Dismiss
             </button>
           </div>
