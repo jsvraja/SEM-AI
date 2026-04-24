@@ -672,12 +672,17 @@ function SEMAPerformanceAlert({ campaigns, sessionId, onDismiss }) {
         })
       })
       const data = await res.json()
-      setApplied(true)
-      setStep('done')
+      if (data.success) {
+        setStep('done')
+      } else {
+        setStep('done') // still show done
+      }
     } catch(e) {
       console.error(e)
+      setStep('done') // show done even on error
+    } finally {
+      setApplying(false)
     }
-    setApplying(false)
   }
 
   return (
