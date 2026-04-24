@@ -120,7 +120,7 @@ _sessions = load_sessions()
 print(f"Loaded {len(_sessions)} saved session(s)")
 
 # Hard-coded fallback customer ID from env
-DEFAULT_CUSTOMER_ID = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+DEFAULT_CUSTOMER_ID = os.environ.get("GOOGLE_ADS_CLIENT_CUSTOMER_ID", "").replace("-", "") or os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
 
 # ─── Models ───────────────────────────────────────────────────────────────────
 
