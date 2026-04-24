@@ -85,7 +85,14 @@ function CampaignMonitor({ sessionId }) {
   const [actionLoading, setActionLoading] = useState({})
   const [lastRefresh, setLastRefresh] = useState(null)
   const [error, setError] = useState(null)
-  const [seenSEMAAlert, setSeenSEMAAlert] = useState(false)
+  const [seenSEMAAlert, setSeenSEMAAlert] = useState(() => {
+    try { return sessionStorage.getItem('sema_alert_seen') === '1' } catch { return false }
+  })
+  
+  function markSEMASeen() {
+    try { sessionStorage.setItem('sema_alert_seen', '1') } catch {}
+    setSeenSEMAAlert(true)
+  }
 
   useEffect(() => { 
     if (sessionId) fetchCampaigns() 
@@ -200,7 +207,7 @@ function CampaignMonitor({ sessionId }) {
         <SEMAPerformanceAlert 
           campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
           sessionId={sessionId}
-          onDismiss={() => setSeenSEMAAlert(true)}
+          onDismiss={() => markSEMASeen()}
         />
       )}
 
