@@ -203,11 +203,11 @@ function CampaignMonitor({ sessionId }) {
       )}
 
       {/* SEMA Performance Alert */}
-      {!seenSEMAAlert && campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
+      {!seenSEMAAlert && sessionStorage.getItem('sema_alert_seen') !== '1' && campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
         <SEMAPerformanceAlert 
           campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
           sessionId={sessionId}
-          onDismiss={() => markSEMASeen()}
+          onDismiss={() => { sessionStorage.setItem('sema_alert_seen', '1'); markSEMASeen(); }}
         />
       )}
 
