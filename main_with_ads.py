@@ -1331,18 +1331,25 @@ async def analyze_competitors(request: Request):
     keywords = body.get("keywords", [])
     domain = url.replace("https://", "").replace("http://", "").split("/")[0]
     comp_str = ", ".join(competitors)
-    kw_str = ", ".join(keywords)
-    prompt = (
-        f"SEO analyst: analyse {url} vs {comp_str} (score:{seo_score}, keywords:{kw_str}). "
-        f'Respond ONLY valid JSON: {{"my_site":{{"domain":"{domain}","score":{seo_score},'
-        '"strengths":["strength1"],"weaknesses":["weakness1"]}}'
-        ',"competitors":[{"domain":"competitor.com","estimated_score":70,'
-        '"estimated_traffic":"10k/month","top_keywords":["kw1"],'
-        '"strengths":["s1"],"weaknesses":["w1"],'
-        '"ad_strategy":"description","social_presence":"description"}],'
-        '"opportunities":["opportunity1"],"threats":["threat1"],'
-        '"action_plan":["action1"]}}'
-    )
+    kw_str = ", ".join(keywords[:10])
+
+    prompt = f"""You are an expert SEO and competitive intelligence analyst. Analyze {url} (SEO score: {seo_score}) against these competitors: {comp_str}.
+My site keywords: {kw_str}
+
+Return ONLY valid JSON (no markdown, no explanation):
+{{
+  "my_site": {{"domain": "{domain}", "score": {seo_score}, "strengths": ["s1","s2","s3"], "weaknesses": ["w1","w2","w3"]}},
+  "competitors": [{{"domain": "comp.com", "estimated_score": 75, "estimated_traffic": "50k/month", "top_keywords": ["kw1","kw2"], "strengths": ["s1","s2"], "weaknesses": ["w1","w2"], "ad_strategy": "their ads approach", "social_presence": "their social activity", "social_platforms": {{"linkedin": 85, "twitter": 70, "instagram": 40, "youtube": 60}}, "content_topics": ["topic1","topic2"], "ad_keywords": ["kw1","kw2"], "estimated_ad_spend": "50k-100k/month"}}],
+  "keyword_overlap": {{"shared_keywords": ["kw1","kw2"], "competitor_only": ["kw3","kw4"], "my_unique": ["kw5","kw6"], "opportunity_keywords": ["opp1","opp2"]}},
+  "content_gaps": [{{"topic": "topic", "competitor_covering": "comp.com", "opportunity": "how to use this", "priority": "high"}}],
+  "ad_intelligence": {{"competitors_running_ads": ["comp1.com"], "common_ad_keywords": ["kw1","kw2"], "estimated_competition_level": "high", "my_ad_opportunity": "specific opportunity", "recommended_ad_keywords": ["kw1","kw2"]}},
+  "social_comparison": {{"leader": "comp.com", "my_score": 45, "platforms": [{{"platform": "LinkedIn", "my_score": 50, "best_competitor": 90, "gap": 40, "action": "specific action"}}, {{"platform": "Twitter/X", "my_score": 30, "best_competitor": 75, "gap": 45, "action": "specific action"}}, {{"platform": "YouTube", "my_score": 20, "best_competitor": 80, "gap": 60, "action": "specific action"}}]}},
+  "winning_strategy": {{"summary": "2-3 sentence strategy", "quick_wins": [{{"action": "action", "impact": "result", "timeline": "1-2 weeks", "effort": "low"}}], "long_term": [{{"action": "action", "impact": "result", "timeline": "3-6 months", "effort": "high"}}], "differentiator": "unique angle"}},
+  "opportunities": ["opp1","opp2","opp3"],
+  "threats": ["threat1","threat2","threat3"],
+  "action_plan": ["action1","action2","action3","action4","action5"]
+}}"""
+
     try:
         import re as _re, json as _json
         raw = await call_gemini(prompt)
@@ -1350,7 +1357,6 @@ async def analyze_competitors(request: Request):
         return _json.loads(clean)
     except Exception as e:
         return {"error": str(e)}
-
 
 
 @app.post("/api/pagespeed")
