@@ -219,6 +219,16 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [reportEmail, setReportEmail] = useState('')
   const [showEmailInput, setShowEmailInput] = useState(false)
   const [loadingSpeed, setLoadingSpeed] = useState(false)
+
+  // Auto-fetch PageSpeed on load
+  if (url && !pageSpeed && !loadingSpeed) {
+    setLoadingSpeed(true)
+    fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    }).then(r => r.json()).then(d => { setPageSpeed(d); setLoadingSpeed(false) }).catch(() => setLoadingSpeed(false))
+  }
   const [showGoogleScore, setShowGoogleScore] = useState(false)
 
 
@@ -391,15 +401,20 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '12px' }}>
-                  <ScoreRing 
-                    score={(() => {
-                      const seoScore = seo.overall_seo_score || 0
-                      const psScore = pageSpeed?.results?.mobile?.performance || pageSpeed?.results?.desktop?.performance || null
-                      if (psScore !== null) return Math.round((seoScore * 0.7) + (psScore * 0.3))
-                      return seoScore
-                    })()} 
-                    label="Overall SEO" 
-                  />
+                  <div style={{ textAlign: 'center' }}>
+                    <ScoreRing 
+                      score={(() => {
+                        const seoScore = seo.overall_seo_score || 0
+                        const psScore = pageSpeed?.results?.mobile?.performance || pageSpeed?.results?.desktop?.performance || null
+                        if (psScore !== null) return Math.round((seoScore * 0.7) + (psScore * 0.3))
+                        return seoScore
+                      })()} 
+                      label="Overall SEO" 
+                    />
+                    <div style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '4px', maxWidth: '80px' }}>
+                      {pageSpeed ? 'SEO 70% + Speed 30%' : 'Title, Meta, H1, Content, Schema'}
+                    </div>
+                  </div>
                   <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
                   {pageSpeed?.results?.mobile?.performance && (
                     <ScoreRing score={pageSpeed.results.mobile.performance} label="Page Speed" />
