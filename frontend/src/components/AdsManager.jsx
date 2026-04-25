@@ -557,9 +557,9 @@ Respond ONLY with this JSON (no other text):
           </div>
           <div style={{ gridColumn: '1 / -1', height: '1px', background: 'var(--border)' }} />
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Daily Budget (USD)</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Daily Budget (₹ INR)</label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>$</span>
+              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>₹</span>
               <input value={dailyBudget} onChange={e => setDailyBudget(e.target.value)} type="number" min="1"
                 style={{ width: '100%', padding: '8px 10px 8px 22px', background: 'var(--bg3)', border: `1px solid ${parseFloat(dailyBudget) < 1 ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`, borderRadius: '7px', color: 'var(--text)', fontSize: '13px', outline: 'none' }}
                 onFocus={e => e.target.style.borderColor = 'var(--accent)'}
@@ -567,13 +567,13 @@ Respond ONLY with this JSON (no other text):
               />
             </div>
             {parseFloat(dailyBudget) < 1 && (
-              <p style={{ fontSize: '11px', color: '#f87171', marginTop: '3px' }}>Minimum $1.00/day required</p>
+              <p style={{ fontSize: '11px', color: '#f87171', marginTop: '3px' }}>Minimum ₹1/day required</p>
             )}
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly Budget (USD)</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly Budget (₹ INR)</label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>$</span>
+              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>₹</span>
               <input value={monthlyBudget} onChange={e => setMonthlyBudget(e.target.value)} type="number" min="1"
                 style={{ width: '100%', padding: '8px 10px 8px 22px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '7px', color: 'var(--text)', fontSize: '13px', outline: 'none' }}
                 onFocus={e => e.target.style.borderColor = 'var(--accent)'}
