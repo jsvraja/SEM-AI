@@ -203,7 +203,20 @@ function CampaignMonitor({ sessionId, semaSeen, onSemaSeen }) {
       )}
 
       {/* SEMA Performance Alert */}
-      {!semaSeen && campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
+      {!semaSeen && campaigns.some(c => {
+        if ((c.clicks || 0) !== 0 || (c.impressions || 0) !== 0) return false
+        if (c.status !== 'ENABLED') return false
+        // Check if campaign is at least 2 days old using name timestamp
+        const nameMatch = c.campaign_name?.match(/(\d{8})/)
+        if (nameMatch) {
+          const dateStr = nameMatch[1]
+          const year = dateStr.slice(0,4), month = dateStr.slice(4,6), day = dateStr.slice(6,8)
+          const created = new Date(`${year}-${month}-${day}`)
+          const daysDiff = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24)
+          return daysDiff >= 2
+        }
+        return true
+      }) && (
         <SEMAPerformanceAlert
           campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
           sessionId={sessionId}
