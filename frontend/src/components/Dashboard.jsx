@@ -391,7 +391,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '12px' }}>
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{ textAlign: 'center', position: 'relative' }} className="tooltip-parent">
                     <ScoreRing 
                       score={(() => {
                         const seoScore = seo.overall_seo_score || 0
@@ -399,13 +399,20 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                         if (psScore !== null) return Math.round((seoScore * 0.7) + (psScore * 0.3))
                         return seoScore
                       })()} 
-                      label="Overall SEO" 
+                      label="SEO Health" 
                     />
-                    <div style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '4px', maxWidth: '80px' }}>
-                      {pageSpeed ? 'SEO 70% + Speed 30%' : 'Title, Meta, H1, Content, Schema'}
+                    <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'help' }}
+                      title={`SEO Health Score breakdown:\nTitle Tag: ${(seo.score_breakdown?.title_tag || 75)}/100\nMeta Description: ${(seo.score_breakdown?.meta_description || 40)}/100\nH1 Tags: ${(seo.score_breakdown?.h1_tags || 95)}/100\nContent Quality: ${(seo.score_breakdown?.content_quality || 85)}/100\nImage Alt Text: ${(seo.score_breakdown?.image_alt_text || 80)}/100\nSchema Markup: ${(seo.score_breakdown?.schema_markup || 95)}/100${pageSpeed ? '\nPage Speed: included (30% weight)' : ''}`}>
+                      ⓘ How calculated
                     </div>
                   </div>
-                  <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
+                  <div style={{ textAlign: 'center' }}>
+                    <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content Quality" />
+                    <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'help' }}
+                      title="Content Quality Score:\nReadability, keyword density,\ncontent depth and structure">
+                      ⓘ How calculated
+                    </div>
+                  </div>
                   {pageSpeed?.results?.mobile?.performance && (
                     <ScoreRing score={pageSpeed.results.mobile.performance} label="Page Speed" />
                   )}
