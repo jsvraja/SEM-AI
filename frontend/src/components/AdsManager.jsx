@@ -79,7 +79,7 @@ function ConnectPanel() {
 }
 
 // ─── Live Campaigns ───────────────────────────────────────────────────────────
-function CampaignMonitor({ sessionId }) {
+function CampaignMonitor({ sessionId, semaSeen, onSemaSeen }) {
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
@@ -203,18 +203,13 @@ function CampaignMonitor({ sessionId }) {
       )}
 
       {/* SEMA Performance Alert */}
-      {(() => {
-        const seen = sessionStorage.getItem('sema_alert_seen') === '1'
-        const hasZeroCampaigns = campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')
-        if (seen || !hasZeroCampaigns) return null
-        return (
-          <SEMAPerformanceAlert
-            campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
-            sessionId={sessionId}
-            onDismiss={() => { sessionStorage.setItem('sema_alert_seen', '1'); setSeenSEMAAlert(true); }}
-          />
-        )
-      })()}
+      {!semaSeen && campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
+        <SEMAPerformanceAlert
+          campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
+          sessionId={sessionId}
+          onDismiss={() => onSemaSeen && onSemaSeen()}
+        />
+      )}
 
       {campaigns.map(c => {
         const monitor = c.budget_monitoring
@@ -1401,7 +1396,7 @@ function ReportPanel({ sessionId }) {
 }
 
 
-export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages }) {
+export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages, semaSeen, onSemaSeen }) {
   const [seenSEMAAlert, setSeenSEMAAlert] = useState(false)
   const [tab, setTab] = useState(sessionId ? 'overview' : 'connect')
 
@@ -1446,7 +1441,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
       </div>
 
       {tab === 'connect' && <ConnectPanel />}
-      {tab === 'overview' && sessionId && <CampaignMonitor sessionId={sessionId} />}
+      {tab === 'overview' && sessionId && <CampaignMonitor sessionId={sessionId} semaSeen={semaSeen} onSemaSeen={onSemaSeen} />}
       {tab === 'publish' && sessionId && (
         <PublishPanel sessionId={sessionId} adCopy={adCopy} seoReport={seoReport} url={url} recommendedPages={recommendedPages || []} />
       )}

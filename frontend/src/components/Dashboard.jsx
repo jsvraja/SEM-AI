@@ -203,6 +203,7 @@ const TABS = [
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
+  const [semaSeen, setSemaSeen] = useState(false)
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
@@ -1887,6 +1888,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         {tab === 'google-ads' && (
           <AdsManager
+            semaSeen={semaSeen}
+            onSemaSeen={() => setSemaSeen(true)}
             sessionId={sessionId}
             adCopy={ads}
             seoReport={seo}
