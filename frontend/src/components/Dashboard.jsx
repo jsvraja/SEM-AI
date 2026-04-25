@@ -202,6 +202,126 @@ const TABS = [
   { id: 'competitor', label: 'Competitors', icon: Target },
 ]
 
+
+function SeoTooltip({ breakdown, pageSpeed }) {
+  const [open, setOpen] = React.useState(false)
+  const items = [
+    { label: 'Title Tag', score: breakdown?.title_tag || 75 },
+    { label: 'Meta Description', score: breakdown?.meta_description || 40 },
+    { label: 'H1 Tags', score: breakdown?.h1_tags || 95 },
+    { label: 'Content Quality', score: breakdown?.content_quality || 85 },
+    { label: 'Image Alt Text', score: breakdown?.image_alt_text || 80 },
+    { label: 'Schema Markup', score: breakdown?.schema_markup || 95 },
+  ]
+  if (pageSpeed?.results?.mobile?.performance) {
+    items.push({ label: 'Page Speed (30% weight)', score: pageSpeed.results.mobile.performance })
+  }
+  return (
+    <div style={{ position: 'relative' }}>
+      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
+        ⓘ How calculated
+      </div>
+      {open && (
+        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '200px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>SEO Health Breakdown</div>
+          {items.map(({ label, score }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+              <span>{label}</span>
+              <span style={{ fontWeight: 600, color: score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)' }}>{score}/100</span>
+            </div>
+          ))}
+          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ContentTooltip() {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <div style={{ position: 'relative' }}>
+      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
+        ⓘ How calculated
+      </div>
+      {open && (
+        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Content Quality Score</div>
+          {[
+            'Readability & clarity',
+            'Keyword density',
+            'Content depth & length',
+            'Structure & headings',
+          ].map(item => (
+            <div key={item} style={{ fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>→ {item}</div>
+          ))}
+          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+function SeoTooltip({ breakdown, pageSpeed }) {
+  const [open, setOpen] = React.useState(false)
+  const items = [
+    { label: 'Title Tag', score: breakdown?.title_tag || 75 },
+    { label: 'Meta Description', score: breakdown?.meta_description || 40 },
+    { label: 'H1 Tags', score: breakdown?.h1_tags || 95 },
+    { label: 'Content Quality', score: breakdown?.content_quality || 85 },
+    { label: 'Image Alt Text', score: breakdown?.image_alt_text || 80 },
+    { label: 'Schema Markup', score: breakdown?.schema_markup || 95 },
+  ]
+  if (pageSpeed?.results?.mobile?.performance) {
+    items.push({ label: 'Page Speed (30% weight)', score: pageSpeed.results.mobile.performance })
+  }
+  return (
+    <div style={{ position: 'relative' }}>
+      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
+        ⓘ How calculated
+      </div>
+      {open && (
+        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '200px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>SEO Health Breakdown</div>
+          {items.map(({ label, score }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+              <span>{label}</span>
+              <span style={{ fontWeight: 600, color: score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)' }}>{score}/100</span>
+            </div>
+          ))}
+          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ContentTooltip() {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <div style={{ position: 'relative' }}>
+      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
+        ⓘ How calculated
+      </div>
+      {open && (
+        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Content Quality Score</div>
+          {[
+            'Readability & clarity',
+            'Keyword density',
+            'Content depth & length',
+            'Structure & headings',
+          ].map(item => (
+            <div key={item} style={{ fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>→ {item}</div>
+          ))}
+          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [semaSeen, setSemaSeen] = useState(false)
   const [tab, setTab] = useState('overview')
@@ -391,7 +511,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '12px' }}>
-                  <div style={{ textAlign: 'center', position: 'relative' }} className="tooltip-parent">
+                  <div style={{ textAlign: 'center', position: 'relative' }}>
                     <ScoreRing 
                       score={(() => {
                         const seoScore = seo.overall_seo_score || 0
@@ -401,17 +521,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       })()} 
                       label="SEO Health" 
                     />
-                    <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'help' }}
-                      title={`SEO Health Score breakdown:\nTitle Tag: ${(seo.score_breakdown?.title_tag || 75)}/100\nMeta Description: ${(seo.score_breakdown?.meta_description || 40)}/100\nH1 Tags: ${(seo.score_breakdown?.h1_tags || 95)}/100\nContent Quality: ${(seo.score_breakdown?.content_quality || 85)}/100\nImage Alt Text: ${(seo.score_breakdown?.image_alt_text || 80)}/100\nSchema Markup: ${(seo.score_breakdown?.schema_markup || 95)}/100${pageSpeed ? '\nPage Speed: included (30% weight)' : ''}`}>
-                      ⓘ How calculated
-                    </div>
+                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} />
                   </div>
-                  <div style={{ textAlign: 'center' }}>
+                  <div style={{ textAlign: 'center', position: 'relative' }}>
                     <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content Quality" />
-                    <div style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'help' }}
-                      title="Content Quality Score:\nReadability, keyword density,\ncontent depth and structure">
-                      ⓘ How calculated
-                    </div>
+                    <ContentTooltip />
                   </div>
                   {pageSpeed?.results?.mobile?.performance && (
                     <ScoreRing score={pageSpeed.results.mobile.performance} label="Page Speed" />
