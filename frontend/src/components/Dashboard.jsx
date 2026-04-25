@@ -203,13 +203,23 @@ const TABS = [
 ]
 
 
-function SeoTooltip({ breakdown, pageSpeed }) {
+function SeoTooltip({ breakdown, pageSpeed, contentScore }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
   const items = [
     { label: 'Title Tag', score: breakdown?.title_tag || 75 },
     { label: 'Meta Description', score: breakdown?.meta_description || 40 },
     { label: 'H1 Tags', score: breakdown?.h1_tags || 95 },
-    { label: 'Content Quality', score: breakdown?.content_quality || 85 },
+    { label: 'Content Quality', score: contentScore || breakdown?.content_quality || 58 },
     { label: 'Image Alt Text', score: breakdown?.image_alt_text || 80 },
     { label: 'Schema Markup', score: breakdown?.schema_markup || 95 },
   ]
@@ -217,20 +227,19 @@ function SeoTooltip({ breakdown, pageSpeed }) {
     items.push({ label: 'Page Speed (30% weight)', score: pageSpeed.results.mobile.performance })
   }
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
         ⓘ How calculated
       </div>
       {open && (
-        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '200px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+        <div style={{ position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '210px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>SEO Health Breakdown</div>
           {items.map(({ label, score }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text2)', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
               <span>{label}</span>
               <span style={{ fontWeight: 600, color: score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)' }}>{score}/100</span>
             </div>
           ))}
-          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
         </div>
       )}
     </div>
@@ -239,18 +248,27 @@ function SeoTooltip({ breakdown, pageSpeed }) {
 
 function ContentTooltip() {
   const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
         ⓘ How calculated
       </div>
       {open && (
-        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+        <div style={{ position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Content Quality Score</div>
           {['Readability & clarity', 'Keyword density', 'Content depth & length', 'Structure & headings'].map(item => (
             <div key={item} style={{ fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>→ {item}</div>
           ))}
-          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
         </div>
       )}
     </div>
@@ -455,7 +473,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       })()} 
                       label="SEO Health" 
                     />
-                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} />
+                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} contentScore={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || Math.round((seo.overall_seo_score || 0) * 0.8)} />
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content Quality" />
