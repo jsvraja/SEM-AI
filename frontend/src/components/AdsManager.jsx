@@ -203,13 +203,18 @@ function CampaignMonitor({ sessionId }) {
       )}
 
       {/* SEMA Performance Alert */}
-      {!seenSEMAAlert && sessionStorage.getItem('sema_alert_seen') !== '1' && campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED') && (
-        <SEMAPerformanceAlert 
-          campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
-          sessionId={sessionId}
-          onDismiss={() => { sessionStorage.setItem('sema_alert_seen', '1'); markSEMASeen(); }}
-        />
-      )}
+      {(() => {
+        const seen = sessionStorage.getItem('sema_alert_seen') === '1'
+        const hasZeroCampaigns = campaigns.some(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')
+        if (seen || !hasZeroCampaigns) return null
+        return (
+          <SEMAPerformanceAlert
+            campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
+            sessionId={sessionId}
+            onDismiss={() => { sessionStorage.setItem('sema_alert_seen', '1'); setSeenSEMAAlert(true); }}
+          />
+        )
+      })()}
 
       {campaigns.map(c => {
         const monitor = c.budget_monitoring
