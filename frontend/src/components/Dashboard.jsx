@@ -202,71 +202,7 @@ const TABS = [
   { id: 'competitor', label: 'Competitors', icon: Target },
 ]
 
-
-function SeoTooltip({ breakdown, pageSpeed }) {
-  const [open, setOpen] = React.useState(false)
-  const items = [
-    { label: 'Title Tag', score: breakdown?.title_tag || 75 },
-    { label: 'Meta Description', score: breakdown?.meta_description || 40 },
-    { label: 'H1 Tags', score: breakdown?.h1_tags || 95 },
-    { label: 'Content Quality', score: breakdown?.content_quality || 85 },
-    { label: 'Image Alt Text', score: breakdown?.image_alt_text || 80 },
-    { label: 'Schema Markup', score: breakdown?.schema_markup || 95 },
-  ]
-  if (pageSpeed?.results?.mobile?.performance) {
-    items.push({ label: 'Page Speed (30% weight)', score: pageSpeed.results.mobile.performance })
-  }
-  return (
-    <div style={{ position: 'relative' }}>
-      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
-        ⓘ How calculated
-      </div>
-      {open && (
-        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '200px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>SEO Health Breakdown</div>
-          {items.map(({ label, score }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
-              <span>{label}</span>
-              <span style={{ fontWeight: 600, color: score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)' }}>{score}/100</span>
-            </div>
-          ))}
-          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ContentTooltip() {
-  const [open, setOpen] = React.useState(false)
-  return (
-    <div style={{ position: 'relative' }}>
-      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
-        ⓘ How calculated
-      </div>
-      {open && (
-        <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Content Quality Score</div>
-          {[
-            'Readability & clarity',
-            'Keyword density',
-            'Content depth & length',
-            'Structure & headings',
-          ].map(item => (
-            <div key={item} style={{ fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>→ {item}</div>
-          ))}
-          <div onClick={() => setOpen(false)} style={{ fontSize: '10px', color: 'var(--text3)', marginTop: '6px', cursor: 'pointer', textAlign: 'right' }}>✕ Close</div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-
-
-
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
-  const [semaSeen, setSemaSeen] = useState(false)
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
@@ -454,25 +390,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '12px' }}>
-                  <div style={{ textAlign: 'center', position: 'relative' }}>
-                    <ScoreRing 
-                      score={(() => {
-                        const seoScore = seo.overall_seo_score || 0
-                        const psScore = pageSpeed?.results?.mobile?.performance || pageSpeed?.results?.desktop?.performance || null
-                        if (psScore !== null) return Math.round((seoScore * 0.7) + (psScore * 0.3))
-                        return seoScore
-                      })()} 
-                      label="SEO Health" 
-                    />
-                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} />
-                  </div>
-                  <div style={{ textAlign: 'center', position: 'relative' }}>
-                    <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content Quality" />
-                    <ContentTooltip />
-                  </div>
-                  {pageSpeed?.results?.mobile?.performance && (
-                    <ScoreRing score={pageSpeed.results.mobile.performance} label="Page Speed" />
-                  )}
+                  <ScoreRing score={seo.overall_seo_score} label="Overall SEO" />
+                  <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
                 </div>
                 {/* SEO Breakdown */}
                 {(() => {
@@ -562,17 +481,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Budget Range</div>
                 {seo.sem_recommendations && (
                   <>
-                    <div style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                      {seo?.sem_recommendations?.monthly_budget_inr_min && seo?.sem_recommendations?.monthly_budget_inr_max ? (
-                        <>₹{(seo.sem_recommendations.monthly_budget_inr_min).toLocaleString()} – ₹{(seo.sem_recommendations.monthly_budget_inr_max).toLocaleString()}</>
-                      ) : (
-                        <>₹{(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()}</>
-                      )}
-                      <span style={{ fontSize: '13px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '10px', background: 'rgba(251,174,75,0.15)', color: '#d97706', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>AI Estimated</span>
-                      <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Based on keyword CPC + industry benchmarks</span>
+                    <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
+                      ₹{(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()}
+                      <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>{(seo?.sem_recommendations?.bidding_strategy || "").split('—')[0]}</div>
                     {seo.sem_recommendations.budget_calculation && (
@@ -1931,13 +1842,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           </div>
         )}
 
-        {tab === 'site-audit' && (
-          url
-            ? <SiteAudit url={url} sessionId={sessionId} autoUrl={url} />
-            : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>Run an analysis first to see Site Audit</div>
-        )}
-
-        {tab === 'ai-traffic' && <AITraffic sessionId={sessionId} />}
+        {tab === 'ai-traffic' && <AITraffic />}
 
         {tab === 'social' && (
           url
@@ -1957,8 +1862,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
 
         {tab === 'google-ads' && (
           <AdsManager
-            semaSeen={semaSeen}
-            onSemaSeen={() => setSemaSeen(true)}
             sessionId={sessionId}
             adCopy={ads}
             seoReport={seo}
