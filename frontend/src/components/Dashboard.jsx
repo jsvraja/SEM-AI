@@ -687,9 +687,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       },
                       {
                         label: 'Schema Markup',
-                        value: hasSchema ? '✓ Present' : '✗ Missing',
+                        value: hasSchema ? `✓ ${(sc?.schema_types || []).length > 0 ? (sc.schema_types).join(', ') : 'Present'}` : '✗ Missing',
                         status: hasSchema ? 'good' : 'bad',
-                        tip: hasSchema ? 'Structured data found — helps rich snippets' : 'Add Product/Organization schema for rich results',
+                        tip: hasSchema 
+                          ? `Found ${sc?.schema_count || 1} schema(s): ${(sc?.schema_types || []).join(', ') || 'Structured data'}. This helps Google show rich snippets.`
+                          : 'Add JSON-LD schema markup. Recommended: Organization, WebSite, BreadcrumbList',
                         bar: null,
                       },
                     ]
@@ -1184,6 +1186,88 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 })()}
               </Card>
             </div>
+
+            {/* Schema Intelligence */}
+            <Card>
+              <SectionTitle icon={Globe}>Schema Markup Intelligence</SectionTitle>
+              {(() => {
+                const schemaTypes = sc?.schema_types || []
+                const hasSchema = sc?.has_schema_markup || false
+                
+                // All possible schema types with descriptions
+                const allSchemas = [
+                  { type: 'Organization', desc: 'Business identity, logo, contact', recommended: true },
+                  { type: 'WebSite', desc: 'Site name, search box', recommended: true },
+                  { type: 'Person', desc: 'Personal brand, author info', recommended: true },
+                  { type: 'BreadcrumbList', desc: 'Navigation path', recommended: true },
+                  { type: 'Article', desc: 'Blog posts, news articles', recommended: false },
+                  { type: 'Product', desc: 'E-commerce products', recommended: false },
+                  { type: 'FAQPage', desc: 'FAQ sections — great for rich results', recommended: false },
+                  { type: 'HowTo', desc: 'Step-by-step guides', recommended: false },
+                  { type: 'Review', desc: 'Customer reviews', recommended: false },
+                  { type: 'LocalBusiness', desc: 'Local business info', recommended: false },
+                  { type: 'SoftwareApplication', desc: 'Software/App listings', recommended: false },
+                  { type: 'VideoObject', desc: 'Video content', recommended: false },
+                ]
+
+                const present = allSchemas.filter(s => schemaTypes.includes(s.type))
+                const missing = allSchemas.filter(s => !schemaTypes.includes(s.type))
+                const recommended = missing.filter(s => s.recommended)
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Current schemas */}
+                    {schemaTypes.length > 0 ? (
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--green)', marginBottom: '8px' }}>✅ Detected on your site ({schemaTypes.length})</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {schemaTypes.map(t => (
+                            <span key={t} style={{ fontSize: '11px', padding: '3px 10px', background: 'rgba(34,197,94,0.1)', color: 'var(--green)', borderRadius: '20px', border: '1px solid rgba(34,197,94,0.2)', fontWeight: 500 }}>{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '10px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', fontSize: '12px', color: 'var(--red)' }}>
+                        ✗ No schema markup detected on this page
+                      </div>
+                    )}
+
+                    {/* Recommended missing */}
+                    {recommended.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--yellow)', marginBottom: '8px' }}>⭐ Recommended for your site</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {recommended.map(s => (
+                            <div key={s.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'rgba(251,174,75,0.08)', borderRadius: '7px', border: '1px solid rgba(251,174,75,0.15)' }}>
+                              <div>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{s.type}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text3)', marginLeft: '8px' }}>{s.desc}</span>
+                              </div>
+                              <span style={{ fontSize: '10px', color: '#d97706', fontWeight: 600 }}>Missing</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* All other schemas */}
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '8px' }}>All schema types</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                        {allSchemas.map(s => {
+                          const isPresent = schemaTypes.includes(s.type)
+                          return (
+                            <span key={s.type} title={s.desc} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: isPresent ? 'rgba(34,197,94,0.1)' : 'var(--bg3)', color: isPresent ? 'var(--green)' : 'var(--text3)', cursor: 'help' }}>
+                              {isPresent ? '✓ ' : ''}{s.type}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+            </Card>
 
             {/* Meta info */}
             <Card>

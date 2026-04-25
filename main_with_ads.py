@@ -189,6 +189,24 @@ async def scrape_website(url: str) -> dict:
     images_without_alt = [img.get("src", "") for img in images if not img.get("alt")]
     schema_tags = soup.find_all("script", attrs={"type": "application/ld+json"})
     
+    # Extract schema types
+    import json as _json
+    schema_types = []
+    schema_data = []
+    for tag in schema_tags:
+        try:
+            data = _json.loads(tag.string or '{}')
+            if isinstance(data, list):
+                for item in data:
+                    t = item.get('@type', '')
+                    if t: schema_types.append(t)
+                    schema_data.append(item)
+            else:
+                t = data.get('@type', '')
+                if t: schema_types.append(t)
+                schema_data.append(data)
+        except: pass
+    
     # Get full text before removing tags for word count
     full_text_raw = re.sub(r'\s+', ' ', soup.get_text(separator=" ", strip=True))
     word_count = len(full_text_raw.split())
@@ -250,6 +268,8 @@ async def scrape_website(url: str) -> dict:
         "images_without_alt_count": len(images_without_alt),
         "alt_text_coverage": alt_coverage,
         "has_schema_markup": len(schema_tags) > 0,
+        "schema_types": schema_types,
+        "schema_count": len(schema_tags),
         "body_text_sample": body_text,
         "full_text": body_text,
         "html_size_kb": round(len(html) / 1024, 1),
