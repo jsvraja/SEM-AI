@@ -275,7 +275,27 @@ function ContentTooltip() {
   )
 }
 
-// Shared content quality score calculator — used everywhere for consistency
+// Shared score calculators — used everywhere for consistency
+function calcTitleScore(sc) {
+  const title = sc?.title || ''
+  const len = title.length
+  if (len === 0) return 0
+  if (len >= 30 && len <= 60) return 95
+  if (len >= 20 && len <= 70) return 75
+  if (len > 70) return 55
+  return 40
+}
+
+function calcMetaScore(sc) {
+  const meta = sc?.meta_description || ''
+  const len = meta.length
+  if (len === 0) return 0
+  if (len >= 120 && len <= 160) return 95
+  if (len >= 100 && len <= 180) return 70
+  if (len > 180) return 45
+  return 35
+}
+
 function calcContentScore(seo, sc) {
   if (seo?.content_analysis?.quality_score) return seo.content_analysis.quality_score
   const wordCount = sc?.word_count || seo?.content_analysis?.word_count || 0
@@ -519,19 +539,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const totalImgs = sc?.images_count || 0
                   const wordCount = seo.content_analysis?.word_count || 0
 
-                  const titleScore = (() => {
-                    if (!title) return 0
-                    if (title.length >= 30 && title.length <= 60) return 95
-                    if (title.length >= 20 && title.length <= 70) return 75
-                    return 50
-                  })()
-
-                  const metaScore = (() => {
-                    if (!meta) return 0
-                    if (meta.length >= 120 && meta.length <= 160) return 95
-                    if (meta.length >= 80 && meta.length <= 180) return 70
-                    return 40
-                  })()
+                  const titleScore = calcTitleScore(sc)
+                  const metaScore = calcMetaScore(sc)
 
                   const h1Score = (() => {
                     if (!h1s.length) return 0
@@ -549,8 +558,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const contentScore = calcContentScore(seo, sc)
 
                   const seoItems = [
-                    { label: 'Title Tag', score: breakdown.title_optimisation ?? titleScore, tip: `Title: "\${title.slice(0,40)}..." (\${title.length} chars). Ideal: 30-60 chars` },
-                    { label: 'Meta Description', score: breakdown.meta_descriptions ?? metaScore, tip: `Meta: \${meta.length} chars. Ideal: 120-160 chars\${!meta ? ' — MISSING' : ''}` },
+                    { label: 'Title Tag', score: calcTitleScore(sc), tip: `Title: "\${title.slice(0,40)}..." (\${title.length} chars). Ideal: 30-60 chars` },
+                    { label: 'Meta Description', score: calcMetaScore(sc), tip: `Meta: \${meta.length} chars. Ideal: 120-160 chars\${!meta ? ' — MISSING' : ''}` },
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? h1Score, tip: `Found \${h1s.length} H1 tag\${h1s.length !== 1 ? 's' : ''}. Ideal: exactly 1 H1\${!h1s.length ? ' — MISSING' : ''}` },
                     { label: 'Content Quality', score: contentScore, tip: `Word count: \${wordCount}. Ideal: 800+ words for good SEO` },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? imgScore, tip: `\${imgMissing} of \${totalImgs} images missing alt text` },
@@ -1129,8 +1138,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const hasSchema = sc?.has_schema_markup || false
                   const breakdown = seo?.score_breakdown || {}
 
-                  const titleScore = breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0)
-                  const metaScore = breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0)
+                  const titleScore = calcTitleScore(sc)
+                  const metaScore = calcMetaScore(sc)
                   const h1Score = breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0)
                   const contentScore = calcContentScore(seo, sc)
                   const imgScore = breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100))
@@ -1172,8 +1181,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const breakdown = seo?.score_breakdown || {}
 
                   const items = [
-                    { label: 'Title Tag', score: breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0), detail: title ? title.length + ' chars' : 'Missing' },
-                    { label: 'Meta Description', score: breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0), detail: meta ? meta.length + ' chars' : 'Missing' },
+                    { label: 'Title Tag', score: calcTitleScore(sc), detail: title ? title.length + ' chars' : 'Missing' },
+                    { label: 'Meta Description', score: calcMetaScore(sc), detail: meta ? meta.length + ' chars' : 'Missing' },
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0), detail: h1s.length + ' H1 tag(s)' },
                     { label: 'Content Quality', score: calcContentScore(seo, sc), detail: wordCount + ' words' },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100)), detail: imgMissing + '/' + totalImgs + ' missing' },
