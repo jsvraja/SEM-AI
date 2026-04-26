@@ -5,7 +5,7 @@ import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
 import ThemeToggle from './ThemeToggle'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, PieChart, Pie, Cell, Legend,
@@ -202,127 +202,6 @@ const TABS = [
   { id: 'competitor', label: 'Competitors', icon: Target },
 ]
 
-
-function SeoTooltip({ breakdown, pageSpeed, contentScore, sc }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    if (open) document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
-
-  const items = [
-    { label: 'Title Tag', score: calcTitleScore(sc) },
-    { label: 'Meta Description', score: calcMetaScore(sc) },
-    { label: 'H1 Tags', score: breakdown?.h1_tags || 95 },
-    { label: 'Content Quality', score: contentScore || breakdown?.content_quality || 58 },
-    { label: 'Image Alt Text', score: breakdown?.image_alt_text || 80 },
-    { label: 'Schema Markup', score: breakdown?.schema_markup || 95 },
-  ]
-  if (pageSpeed?.results?.mobile?.performance) {
-    items.push({ label: 'Page Speed (30% weight)', score: pageSpeed.results.mobile.performance })
-  }
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
-        ⓘ How calculated
-      </div>
-      {open && (
-        <div style={{ position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '210px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>SEO Health Breakdown</div>
-          {items.map(({ label, score }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text2)', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
-              <span>{label}</span>
-              <span style={{ fontWeight: 600, color: score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)' }}>{score}/100</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ContentTooltip() {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    if (open) document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <div onClick={() => setOpen(!open)} style={{ fontSize: '10px', color: 'var(--accent)', marginTop: '4px', cursor: 'pointer', userSelect: 'none' }}>
-        ⓘ How calculated
-      </div>
-      {open && (
-        <div style={{ position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', zIndex: 100, width: '180px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Content Quality Score</div>
-          {['Readability & clarity', 'Keyword density', 'Content depth & length', 'Structure & headings'].map(item => (
-            <div key={item} style={{ fontSize: '11px', color: 'var(--text2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>→ {item}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Shared score calculators — used everywhere for consistency
-function calcTitleScore(sc) {
-  const title = sc?.title || ''
-  const len = title.length
-  if (len === 0) return 0
-  if (len >= 30 && len <= 60) return 95
-  if (len >= 20 && len <= 70) return 75
-  if (len > 70) return 55
-  return 40
-}
-
-function calcMetaScore(sc) {
-  const meta = sc?.meta_description || ''
-  const len = meta.length
-  if (len === 0) return 0
-  if (len >= 120 && len <= 160) return 95
-  if (len >= 100 && len <= 180) return 70
-  if (len > 180) return 45
-  return 35
-}
-
-function calcContentScore(seo, sc) {
-  if (seo?.content_analysis?.quality_score) return seo.content_analysis.quality_score
-  const wordCount = sc?.word_count || seo?.content_analysis?.word_count || 0
-  const readability = seo?.content_analysis?.readability || ''
-  let score = 0
-  // Word count (40 points)
-  if (wordCount >= 1500) score += 40
-  else if (wordCount >= 800) score += 30
-  else if (wordCount >= 400) score += 20
-  else if (wordCount > 0) score += 10
-  // Readability (30 points)
-  if (readability.includes('Good') || readability.includes('Easy')) score += 30
-  else if (readability.includes('Fair') || readability.includes('Moderate')) score += 20
-  else if (readability.includes('Difficult')) score += 10
-  else score += 15
-  // Keyword density (15 points)
-  const kd = parseFloat(seo?.content_analysis?.keyword_density || '0')
-  if (kd >= 1 && kd <= 3) score += 15
-  else if (kd > 0) score += 8
-  // Content gaps penalty (15 points)
-  const gaps = (seo?.content_analysis?.content_gaps || []).length
-  if (gaps === 0) score += 15
-  else if (gaps <= 2) score += 10
-  else score += 5
-  return Math.min(score, 100)
-}
-
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
@@ -511,22 +390,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '12px' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <ScoreRing 
-                      score={(() => {
-                        const seoScore = seo.overall_seo_score || 0
-                        const psScore = pageSpeed?.results?.mobile?.performance || pageSpeed?.results?.desktop?.performance || null
-                        if (psScore !== null) return Math.round((seoScore * 0.7) + (psScore * 0.3))
-                        return seoScore
-                      })()} 
-                      label="SEO Health" 
-                    />
-                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} contentScore={calcContentScore(seo, sc)} sc={sc} />
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <ScoreRing score={calcContentScore(seo, sc)} label="Content Quality" />
-                    <ContentTooltip />
-                  </div>
+                  <ScoreRing score={seo.overall_seo_score} label="Overall SEO" />
+                  <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
                 </div>
                 {/* SEO Breakdown */}
                 {(() => {
@@ -539,8 +404,19 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const totalImgs = sc?.images_count || 0
                   const wordCount = seo.content_analysis?.word_count || 0
 
-                  const titleScore = calcTitleScore(sc)
-                  const metaScore = calcMetaScore(sc)
+                  const titleScore = (() => {
+                    if (!title) return 0
+                    if (title.length >= 30 && title.length <= 60) return 95
+                    if (title.length >= 20 && title.length <= 70) return 75
+                    return 50
+                  })()
+
+                  const metaScore = (() => {
+                    if (!meta) return 0
+                    if (meta.length >= 120 && meta.length <= 160) return 95
+                    if (meta.length >= 80 && meta.length <= 180) return 70
+                    return 40
+                  })()
 
                   const h1Score = (() => {
                     if (!h1s.length) return 0
@@ -555,11 +431,18 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     return Math.round(ratio * 100)
                   })()
 
-                  const contentScore = calcContentScore(seo, sc)
+                  const contentScore = (() => {
+                    if (breakdown.content_quality) return breakdown.content_quality
+                    if (seo.content_analysis?.quality_score) return seo.content_analysis.quality_score
+                    if (wordCount >= 800) return 85
+                    if (wordCount >= 400) return 65
+                    if (wordCount >= 100) return 45
+                    return 20
+                  })()
 
                   const seoItems = [
-                    { label: 'Title Tag', score: calcTitleScore(sc), tip: `Title: "\${title.slice(0,40)}..." (\${title.length} chars). Ideal: 30-60 chars` },
-                    { label: 'Meta Description', score: calcMetaScore(sc), tip: `Meta: \${meta.length} chars. Ideal: 120-160 chars\${!meta ? ' — MISSING' : ''}` },
+                    { label: 'Title Tag', score: breakdown.title_optimisation ?? titleScore, tip: `Title: "\${title.slice(0,40)}..." (\${title.length} chars). Ideal: 30-60 chars` },
+                    { label: 'Meta Description', score: breakdown.meta_descriptions ?? metaScore, tip: `Meta: \${meta.length} chars. Ideal: 120-160 chars\${!meta ? ' — MISSING' : ''}` },
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? h1Score, tip: `Found \${h1s.length} H1 tag\${h1s.length !== 1 ? 's' : ''}. Ideal: exactly 1 H1\${!h1s.length ? ' — MISSING' : ''}` },
                     { label: 'Content Quality', score: contentScore, tip: `Word count: \${wordCount}. Ideal: 800+ words for good SEO` },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? imgScore, tip: `\${imgMissing} of \${totalImgs} images missing alt text` },
@@ -717,11 +600,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       },
                       {
                         label: 'Schema Markup',
-                        value: hasSchema ? `✓ ${(sc?.schema_types || []).length > 0 ? (sc.schema_types).join(', ') : 'Present'}` : '✗ Missing',
+                        value: hasSchema ? '✓ Present' : '✗ Missing',
                         status: hasSchema ? 'good' : 'bad',
-                        tip: hasSchema 
-                          ? `Found ${sc?.schema_count || 1} schema(s): ${(sc?.schema_types || []).join(', ') || 'Structured data'}. This helps Google show rich snippets.`
-                          : 'Add JSON-LD schema markup. Recommended: Organization, WebSite, BreadcrumbList',
+                        tip: hasSchema ? 'Structured data found — helps rich snippets' : 'Add Product/Organization schema for rich results',
                         bar: null,
                       },
                     ]
@@ -1138,10 +1019,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const hasSchema = sc?.has_schema_markup || false
                   const breakdown = seo?.score_breakdown || {}
 
-                  const titleScore = calcTitleScore(sc)
-                  const metaScore = calcMetaScore(sc)
+                  const titleScore = breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0)
+                  const metaScore = breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0)
                   const h1Score = breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0)
-                  const contentScore = calcContentScore(seo, sc)
+                  const contentScore = breakdown.content_quality ?? seo?.content_analysis?.quality_score ?? (wordCount >= 800 ? 85 : wordCount >= 400 ? 60 : wordCount > 0 ? 40 : 10)
                   const imgScore = breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100))
                   const schemaScore = hasSchema ? 95 : 0
 
@@ -1181,10 +1062,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const breakdown = seo?.score_breakdown || {}
 
                   const items = [
-                    { label: 'Title Tag', score: calcTitleScore(sc), detail: title ? title.length + ' chars' : 'Missing' },
-                    { label: 'Meta Description', score: calcMetaScore(sc), detail: meta ? meta.length + ' chars' : 'Missing' },
+                    { label: 'Title Tag', score: breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0), detail: title ? title.length + ' chars' : 'Missing' },
+                    { label: 'Meta Description', score: breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0), detail: meta ? meta.length + ' chars' : 'Missing' },
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0), detail: h1s.length + ' H1 tag(s)' },
-                    { label: 'Content Quality', score: calcContentScore(seo, sc), detail: wordCount + ' words' },
+                    { label: 'Content Quality', score: breakdown.content_quality ?? seo?.content_analysis?.quality_score ?? (wordCount >= 800 ? 85 : wordCount > 0 ? 40 : 10), detail: wordCount + ' words' },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100)), detail: imgMissing + '/' + totalImgs + ' missing' },
                     { label: 'Schema Markup', score: hasSchema ? 95 : 0, detail: hasSchema ? 'Present ✓' : 'Missing ✗' },
                   ]
@@ -1216,98 +1097,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 })()}
               </Card>
             </div>
-
-            {/* Schema Intelligence */}
-            <Card>
-              <SectionTitle icon={Globe}>Schema Markup Intelligence</SectionTitle>
-              {(() => {
-                const schemaTypes = sc?.schema_types || []
-                const hasSchema = sc?.has_schema_markup || false
-                
-                // All possible schema types with descriptions
-                const allSchemas = [
-                  { type: 'Organization', desc: 'Business identity, logo, contact', recommended: true },
-                  { type: 'WebSite', desc: 'Site name, search box', recommended: true },
-                  { type: 'Person', desc: 'Personal brand, author info', recommended: true },
-                  { type: 'BreadcrumbList', desc: 'Navigation path', recommended: true },
-                  { type: 'Article', desc: 'Blog posts, news articles', recommended: false },
-                  { type: 'Blog', desc: 'Blog section', recommended: false },
-                  { type: 'Product', desc: 'E-commerce products', recommended: false },
-                  { type: 'FAQPage', desc: 'FAQ sections — great for rich results', recommended: false },
-                  { type: 'HowTo', desc: 'Step-by-step guides', recommended: false },
-                  { type: 'Review', desc: 'Customer reviews', recommended: false },
-                  { type: 'LocalBusiness', desc: 'Local business info', recommended: false },
-                  { type: 'SoftwareApplication', desc: 'Software/App listings', recommended: false },
-                  { type: 'VideoObject', desc: 'Video content', recommended: false },
-                  { type: 'ProfilePage', desc: 'Personal profile page', recommended: false },
-                  { type: 'CreativeWork', desc: 'Creative works, projects', recommended: false },
-                  { type: 'ResearchProject', desc: 'Research projects', recommended: false },
-                ]
-                
-                // Add any detected schema types not in allSchemas list dynamically
-                const dynamicSchemas = schemaTypes
-                  .filter(t => !allSchemas.find(s => s.type === t))
-                  .map(t => ({ type: t, desc: 'Detected on your site', recommended: false }))
-                const combinedSchemas = [...allSchemas, ...dynamicSchemas]
-
-                const present = combinedSchemas.filter(s => schemaTypes.includes(s.type))
-                const missing = combinedSchemas.filter(s => !schemaTypes.includes(s.type))
-                const recommended = missing.filter(s => s.recommended)
-
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Current schemas */}
-                    {schemaTypes.length > 0 ? (
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--green)', marginBottom: '8px' }}>✅ Detected on your site ({schemaTypes.length})</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {schemaTypes.map(t => (
-                            <span key={t} style={{ fontSize: '11px', padding: '3px 10px', background: 'rgba(34,197,94,0.1)', color: 'var(--green)', borderRadius: '20px', border: '1px solid rgba(34,197,94,0.2)', fontWeight: 500 }}>{t}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ padding: '10px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', fontSize: '12px', color: 'var(--red)' }}>
-                        ✗ No schema markup detected on this page
-                      </div>
-                    )}
-
-                    {/* Recommended missing */}
-                    {recommended.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--yellow)', marginBottom: '8px' }}>⭐ Recommended for your site</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {recommended.map(s => (
-                            <div key={s.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'rgba(251,174,75,0.08)', borderRadius: '7px', border: '1px solid rgba(251,174,75,0.15)' }}>
-                              <div>
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{s.type}</span>
-                                <span style={{ fontSize: '11px', color: 'var(--text3)', marginLeft: '8px' }}>{s.desc}</span>
-                              </div>
-                              <span style={{ fontSize: '10px', color: '#d97706', fontWeight: 600 }}>Missing</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* All other schemas */}
-                    <div>
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '8px' }}>All schema types</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                        {combinedSchemas.map(s => {
-                          const isPresent = schemaTypes.includes(s.type)
-                          return (
-                            <span key={s.type} title={s.desc} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: isPresent ? 'rgba(34,197,94,0.1)' : 'var(--bg3)', color: isPresent ? 'var(--green)' : 'var(--text3)', cursor: 'help' }}>
-                              {isPresent ? '✓ ' : ''}{s.type}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })()}
-            </Card>
 
             {/* Meta info */}
             <Card>
