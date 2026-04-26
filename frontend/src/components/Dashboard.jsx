@@ -1201,6 +1201,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   { type: 'Person', desc: 'Personal brand, author info', recommended: true },
                   { type: 'BreadcrumbList', desc: 'Navigation path', recommended: true },
                   { type: 'Article', desc: 'Blog posts, news articles', recommended: false },
+                  { type: 'Blog', desc: 'Blog section', recommended: false },
                   { type: 'Product', desc: 'E-commerce products', recommended: false },
                   { type: 'FAQPage', desc: 'FAQ sections — great for rich results', recommended: false },
                   { type: 'HowTo', desc: 'Step-by-step guides', recommended: false },
@@ -1208,10 +1209,19 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   { type: 'LocalBusiness', desc: 'Local business info', recommended: false },
                   { type: 'SoftwareApplication', desc: 'Software/App listings', recommended: false },
                   { type: 'VideoObject', desc: 'Video content', recommended: false },
+                  { type: 'ProfilePage', desc: 'Personal profile page', recommended: false },
+                  { type: 'CreativeWork', desc: 'Creative works, projects', recommended: false },
+                  { type: 'ResearchProject', desc: 'Research projects', recommended: false },
                 ]
+                
+                // Add any detected schema types not in allSchemas list dynamically
+                const dynamicSchemas = schemaTypes
+                  .filter(t => !allSchemas.find(s => s.type === t))
+                  .map(t => ({ type: t, desc: 'Detected on your site', recommended: false }))
+                const combinedSchemas = [...allSchemas, ...dynamicSchemas]
 
-                const present = allSchemas.filter(s => schemaTypes.includes(s.type))
-                const missing = allSchemas.filter(s => !schemaTypes.includes(s.type))
+                const present = combinedSchemas.filter(s => schemaTypes.includes(s.type))
+                const missing = combinedSchemas.filter(s => !schemaTypes.includes(s.type))
                 const recommended = missing.filter(s => s.recommended)
 
                 return (
@@ -1254,7 +1264,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '8px' }}>All schema types</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                        {allSchemas.map(s => {
+                        {combinedSchemas.map(s => {
                           const isPresent = schemaTypes.includes(s.type)
                           return (
                             <span key={s.type} title={s.desc} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: isPresent ? 'rgba(34,197,94,0.1)' : 'var(--bg3)', color: isPresent ? 'var(--green)' : 'var(--text3)', cursor: 'help' }}>
