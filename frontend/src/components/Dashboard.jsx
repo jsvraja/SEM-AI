@@ -446,7 +446,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? h1Score, tip: `Found \${h1s.length} H1 tag\${h1s.length !== 1 ? 's' : ''}. Ideal: exactly 1 H1\${!h1s.length ? ' — MISSING' : ''}` },
                     { label: 'Content Quality', score: contentScore, tip: `Word count: \${wordCount}. Ideal: 800+ words for good SEO` },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? imgScore, tip: `\${imgMissing} of \${totalImgs} images missing alt text` },
-                    { label: 'Schema Markup', score: sc?.has_schema_markup ? 95 : 0, tip: sc?.has_schema_markup ? 'Schema markup detected ✓' : 'No schema markup found — add Product/Organization schema' },
+                    { label: 'Schema Markup', score: seo?.score_breakdown?.schema_markup ?? (sc?.has_schema_markup ? 95 : 0), tip: sc?.has_schema_markup ? 'Schema markup detected ✓' : 'No schema markup found — add Product/Organization schema' },
                   ]
                   return (
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
@@ -1067,7 +1067,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0), detail: h1s.length + ' H1 tag(s)' },
                     { label: 'Content Quality', score: breakdown.content_quality ?? seo?.content_analysis?.quality_score ?? (wordCount >= 800 ? 85 : wordCount > 0 ? 40 : 10), detail: wordCount + ' words' },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100)), detail: imgMissing + '/' + totalImgs + ' missing' },
-                    { label: 'Schema Markup', score: hasSchema ? 95 : 0, detail: hasSchema ? 'Present ✓' : 'Missing ✗' },
+                    { label: 'Schema Markup', score: seo?.score_breakdown?.schema_markup ?? (hasSchema ? 95 : 0), detail: hasSchema ? 'Present ✓' : 'Missing ✗' },
                   ]
 
                   return (
