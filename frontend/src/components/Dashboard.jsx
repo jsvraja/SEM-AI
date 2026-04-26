@@ -404,19 +404,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const totalImgs = sc?.images_count || 0
                   const wordCount = seo.content_analysis?.word_count || 0
 
-                  const titleScore = (() => {
-                    if (!title) return 0
-                    if (title.length >= 30 && title.length <= 60) return 95
-                    if (title.length >= 20 && title.length <= 70) return 75
-                    return 50
-                  })()
+                  const titleScore = calcTitleScore(sc, breakdown)
 
-                  const metaScore = (() => {
-                    if (!meta) return 0
-                    if (meta.length >= 120 && meta.length <= 160) return 95
-                    if (meta.length >= 80 && meta.length <= 180) return 70
-                    return 40
-                  })()
+                  const metaScore = calcMetaScore(sc, breakdown)
 
                   const h1Score = (() => {
                     if (!h1s.length) return 0
