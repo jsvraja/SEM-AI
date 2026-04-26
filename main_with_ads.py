@@ -195,16 +195,24 @@ async def scrape_website(url: str) -> dict:
     schema_data = []
     for tag in schema_tags:
         try:
-            data = _json.loads(tag.string or '{}')
-            if isinstance(data, list):
-                for item in data:
-                    t = item.get('@type', '')
-                    if t: schema_types.append(t)
-                    schema_data.append(item)
-            else:
-                t = data.get('@type', '')
-                if t: schema_types.append(t)
-                schema_data.append(data)
+            raw = tag.string or tag.get_text() or '{}'
+            data = _json.loads(raw)
+            
+            def extract_types(obj):
+                if isinstance(obj, list):
+                    for item in obj:
+                        extract_types(item)
+                elif isinstance(obj, dict):
+                    t = obj.get('@type', '')
+                    if t and t not in schema_types:
+                        schema_types.append(t)
+                    # Handle @graph
+                    graph = obj.get('@graph', [])
+                    if graph:
+                        extract_types(graph)
+            
+            extract_types(data)
+            schema_data.append(data)
         except: pass
     
     # Get full text before removing tags for word count
