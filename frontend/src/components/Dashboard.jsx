@@ -546,14 +546,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     return Math.round(ratio * 100)
                   })()
 
-                  const contentScore = (() => {
-                    if (breakdown.content_quality) return breakdown.content_quality
-                    if (seo.content_analysis?.quality_score) return seo.content_analysis.quality_score
-                    if (wordCount >= 800) return 85
-                    if (wordCount >= 400) return 65
-                    if (wordCount >= 100) return 45
-                    return 20
-                  })()
+                  const contentScore = calcContentScore(seo, sc)
 
                   const seoItems = [
                     { label: 'Title Tag', score: breakdown.title_optimisation ?? titleScore, tip: `Title: "\${title.slice(0,40)}..." (\${title.length} chars). Ideal: 30-60 chars` },
