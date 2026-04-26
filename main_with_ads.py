@@ -727,6 +727,16 @@ Return this EXACT JSON (no extra text):
   "keyword_suggestions": [
     {{"keyword": "example keyword", "difficulty": "low", "priority": "primary", "monthly_searches": "1K-10K", "intent": "commercial"}}
   ],
+  "page_analysis": {{
+    "title_score": 85,
+    "title_issues": "specific title issue or good",
+    "meta_score": 70,
+    "meta_issues": "specific meta issue or good",
+    "content_score": 75,
+    "content_issues": "specific content issue or good",
+    "technical_score": 80,
+    "technical_issues": "specific technical issue or good"
+  }},
   "content_analysis": {{
     "word_count": {s.get('word_count', 0)},
     "readability": "Good",
