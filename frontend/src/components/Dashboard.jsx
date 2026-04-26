@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 
 function ScoreRing({ score, label, size = 80 }) {
-  const color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)'
+  const color = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)'
   const r = (size / 2) - 8
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - score / 100)
