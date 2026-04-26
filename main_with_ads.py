@@ -507,6 +507,37 @@ async def full_report(req: FullReportRequest):
             'meta_issues': page_analysis.get('meta_issues', ''),
             'content_issues': page_analysis.get('content_issues', ''),
         }
+        
+        # Recalculate overall_seo_score as weighted average of breakdown scores
+        sb = seo_report['score_breakdown']
+        title_s = sb.get('title_tag', 0)
+        meta_s = sb.get('meta_description', 0)
+        content_s = sb.get('content_quality', 0)
+        technical_s = sb.get('technical', 0)
+        
+        # Get h1, image, schema scores from scraped data
+        scraped_h1 = 1 if scraped.get('h1_tags') else 0
+        h1_s = 95 if scraped_h1 == 1 else 0
+        
+        img_missing = scraped.get('images_without_alt_count', 0)
+        img_total = scraped.get('images_count', 0)
+        img_s = 80 if img_total == 0 else round((1 - img_missing/img_total) * 100)
+        
+        schema_s = 95 if scraped.get('has_schema_markup') else 0
+        
+        # Weighted average
+        overall = round(
+            title_s * 0.15 +
+            meta_s * 0.15 +
+            h1_s * 0.15 +
+            content_s * 0.25 +
+            img_s * 0.15 +
+            schema_s * 0.15
+        )
+        seo_report['overall_seo_score'] = overall
+        seo_report['score_breakdown']['h1_tags'] = h1_s
+        seo_report['score_breakdown']['image_alt_text'] = img_s
+        seo_report['score_breakdown']['schema_markup'] = schema_s
 
     return {
         "url": url,
