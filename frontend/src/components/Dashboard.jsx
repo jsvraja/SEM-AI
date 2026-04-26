@@ -276,7 +276,7 @@ function ContentTooltip() {
 }
 
 // Shared score calculators — used everywhere for consistency
-function seo?.score_breakdown?.title_tag || calcTitleScore(sc) {
+function calcTitleScore(sc) {
   const title = sc?.title || ''
   const len = title.length
   if (len === 0) return 0
@@ -286,7 +286,7 @@ function seo?.score_breakdown?.title_tag || calcTitleScore(sc) {
   return 40
 }
 
-function seo?.score_breakdown?.meta_description || calcMetaScore(sc) {
+function calcMetaScore(sc) {
   const meta = sc?.meta_description || ''
   const len = meta.length
   if (len === 0) return 0
@@ -296,7 +296,7 @@ function seo?.score_breakdown?.meta_description || calcMetaScore(sc) {
   return 35
 }
 
-function seo?.score_breakdown?.content_quality || calcContentScore(seo, sc) {
+function calcContentScore(seo, sc) {
   if (seo?.content_analysis?.quality_score) return seo.content_analysis.quality_score
   const wordCount = sc?.word_count || seo?.content_analysis?.word_count || 0
   const readability = seo?.content_analysis?.readability || ''
