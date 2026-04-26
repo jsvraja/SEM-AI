@@ -1922,7 +1922,13 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
           </div>
         )}
 
-        {tab === 'ai-traffic' && <AITraffic />}
+        {tab === 'site-audit' && (
+          url
+            ? <SiteAudit url={url} sessionId={sessionId} autoUrl={url} />
+            : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>Run an analysis first to see Site Audit</div>
+        )}
+
+        {tab === 'ai-traffic' && <AITraffic sessionId={sessionId} />}
 
         {tab === 'social' && (
           url
