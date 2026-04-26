@@ -275,6 +275,34 @@ function ContentTooltip() {
   )
 }
 
+// Shared content quality score calculator — used everywhere for consistency
+function calcContentScore(seo, sc) {
+  if (seo?.content_analysis?.quality_score) return seo.content_analysis.quality_score
+  const wordCount = sc?.word_count || seo?.content_analysis?.word_count || 0
+  const readability = seo?.content_analysis?.readability || ''
+  let score = 0
+  // Word count (40 points)
+  if (wordCount >= 1500) score += 40
+  else if (wordCount >= 800) score += 30
+  else if (wordCount >= 400) score += 20
+  else if (wordCount > 0) score += 10
+  // Readability (30 points)
+  if (readability.includes('Good') || readability.includes('Easy')) score += 30
+  else if (readability.includes('Fair') || readability.includes('Moderate')) score += 20
+  else if (readability.includes('Difficult')) score += 10
+  else score += 15
+  // Keyword density (15 points)
+  const kd = parseFloat(seo?.content_analysis?.keyword_density || '0')
+  if (kd >= 1 && kd <= 3) score += 15
+  else if (kd > 0) score += 8
+  // Content gaps penalty (15 points)
+  const gaps = (seo?.content_analysis?.content_gaps || []).length
+  if (gaps === 0) score += 15
+  else if (gaps <= 2) score += 10
+  else score += 5
+  return Math.min(score, 100)
+}
+
 export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
@@ -473,10 +501,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       })()} 
                       label="SEO Health" 
                     />
-                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} contentScore={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || Math.round((seo.overall_seo_score || 0) * 0.8)} />
+                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} contentScore={calcContentScore(seo, sc)} />
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content Quality" />
+                    <ScoreRing score={calcContentScore(seo, sc)} label="Content Quality" />
                     <ContentTooltip />
                   </div>
                 </div>
@@ -1111,7 +1139,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const titleScore = breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0)
                   const metaScore = breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0)
                   const h1Score = breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0)
-                  const contentScore = seo?.content_analysis?.quality_score || breakdown.content_quality || (wordCount >= 800 ? 85 : wordCount >= 400 ? 60 : wordCount > 0 ? 40 : 10)
+                  const contentScore = calcContentScore(seo, sc)
                   const imgScore = breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100))
                   const schemaScore = hasSchema ? 95 : 0
 
@@ -1154,7 +1182,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     { label: 'Title Tag', score: breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0), detail: title ? title.length + ' chars' : 'Missing' },
                     { label: 'Meta Description', score: breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0), detail: meta ? meta.length + ' chars' : 'Missing' },
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0), detail: h1s.length + ' H1 tag(s)' },
-                    { label: 'Content Quality', score: seo?.content_analysis?.quality_score || breakdown.content_quality || (wordCount >= 800 ? 85 : wordCount > 0 ? 40 : 10), detail: wordCount + ' words' },
+                    { label: 'Content Quality', score: calcContentScore(seo, sc), detail: wordCount + ' words' },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100)), detail: imgMissing + '/' + totalImgs + ' missing' },
                     { label: 'Schema Markup', score: hasSchema ? 95 : 0, detail: hasSchema ? 'Present ✓' : 'Missing ✗' },
                   ]
