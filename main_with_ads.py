@@ -503,6 +503,8 @@ async def full_report(req: FullReportRequest):
             "nofollow_count": scraped.get("nofollow_count", 0),
             "empty_anchors": scraped.get("empty_anchors", 0),
             "has_schema_markup": scraped["has_schema_markup"],
+            "schema_types": scraped.get("schema_types", []),
+            "schema_count": scraped.get("schema_count", 0),
             "html_size_kb": scraped["html_size_kb"],
             "word_count": scraped.get("word_count", 0),
             "reading_level": scraped.get("reading_level", "N/A"),
