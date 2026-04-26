@@ -391,7 +391,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                 </div>
                 <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '12px' }}>
                   <ScoreRing score={seo.overall_seo_score} label="Overall SEO" />
-                  <ScoreRing score={seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
+                  <ScoreRing score={seo?.score_breakdown?.content_quality || seo.content_analysis?.quality_score || seo.content_analysis?.readability_score || (seo.overall_seo_score ? Math.round(seo.overall_seo_score * 0.8) : 0)} label="Content" />
                 </div>
                 {/* SEO Breakdown */}
                 {(() => {
