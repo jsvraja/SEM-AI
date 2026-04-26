@@ -203,7 +203,7 @@ const TABS = [
 ]
 
 
-function SeoTooltip({ breakdown, pageSpeed, contentScore }) {
+function SeoTooltip({ breakdown, pageSpeed, contentScore, sc }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -216,8 +216,8 @@ function SeoTooltip({ breakdown, pageSpeed, contentScore }) {
   }, [open])
 
   const items = [
-    { label: 'Title Tag', score: breakdown?.title_tag || 75 },
-    { label: 'Meta Description', score: breakdown?.meta_description || 40 },
+    { label: 'Title Tag', score: calcTitleScore(sc) },
+    { label: 'Meta Description', score: calcMetaScore(sc) },
     { label: 'H1 Tags', score: breakdown?.h1_tags || 95 },
     { label: 'Content Quality', score: contentScore || breakdown?.content_quality || 58 },
     { label: 'Image Alt Text', score: breakdown?.image_alt_text || 80 },
@@ -521,7 +521,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       })()} 
                       label="SEO Health" 
                     />
-                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} contentScore={calcContentScore(seo, sc)} />
+                    <SeoTooltip breakdown={seo.score_breakdown} pageSpeed={pageSpeed} contentScore={calcContentScore(seo, sc)} sc={sc} />
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <ScoreRing score={calcContentScore(seo, sc)} label="Content Quality" />
