@@ -495,6 +495,19 @@ async def full_report(req: FullReportRequest):
         
         seo_report['sem_recommendations'] = sem
     
+    # Build score_breakdown from AI page_analysis
+    page_analysis = seo_report.get('page_analysis', {})
+    if page_analysis:
+        seo_report['score_breakdown'] = {
+            'title_tag': page_analysis.get('title_score', 0),
+            'meta_description': page_analysis.get('meta_score', 0),
+            'content_quality': page_analysis.get('content_score', 0) or seo_report.get('content_analysis', {}).get('content_score', 0),
+            'technical': page_analysis.get('technical_score', 0),
+            'title_issues': page_analysis.get('title_issues', ''),
+            'meta_issues': page_analysis.get('meta_issues', ''),
+            'content_issues': page_analysis.get('content_issues', ''),
+        }
+
     return {
         "url": url,
         "scraped_data": {
