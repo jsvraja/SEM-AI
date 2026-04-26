@@ -1111,7 +1111,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const titleScore = breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0)
                   const metaScore = breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0)
                   const h1Score = breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0)
-                  const contentScore = breakdown.content_quality ?? seo?.content_analysis?.quality_score ?? (wordCount >= 800 ? 85 : wordCount >= 400 ? 60 : wordCount > 0 ? 40 : 10)
+                  const contentScore = seo?.content_analysis?.quality_score || breakdown.content_quality || (wordCount >= 800 ? 85 : wordCount >= 400 ? 60 : wordCount > 0 ? 40 : 10)
                   const imgScore = breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100))
                   const schemaScore = hasSchema ? 95 : 0
 
@@ -1154,7 +1154,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                     { label: 'Title Tag', score: breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0), detail: title ? title.length + ' chars' : 'Missing' },
                     { label: 'Meta Description', score: breakdown.meta_descriptions ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0), detail: meta ? meta.length + ' chars' : 'Missing' },
                     { label: 'H1 Tags', score: breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0), detail: h1s.length + ' H1 tag(s)' },
-                    { label: 'Content Quality', score: breakdown.content_quality ?? seo?.content_analysis?.quality_score ?? (wordCount >= 800 ? 85 : wordCount > 0 ? 40 : 10), detail: wordCount + ' words' },
+                    { label: 'Content Quality', score: seo?.content_analysis?.quality_score || breakdown.content_quality || (wordCount >= 800 ? 85 : wordCount > 0 ? 40 : 10), detail: wordCount + ' words' },
                     { label: 'Image Alt Text', score: breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100)), detail: imgMissing + '/' + totalImgs + ' missing' },
                     { label: 'Schema Markup', score: hasSchema ? 95 : 0, detail: hasSchema ? 'Present ✓' : 'Missing ✗' },
                   ]
