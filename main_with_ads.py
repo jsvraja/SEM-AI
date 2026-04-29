@@ -760,14 +760,30 @@ Return this EXACT JSON (no extra text):
   ],
   "page_analysis": {{
     "title_score": 85,
-    "title_issues": "specific title issue or good",
+    "title_issues": "specific issue or 'Title is well optimized'",
     "meta_score": 70,
-    "meta_issues": "specific meta issue or good",
+    "meta_issues": "specific issue or 'Meta is well optimized'",
     "content_score": 75,
-    "content_issues": "specific content issue or good",
+    "content_issues": "specific issue or 'Content is well structured'",
     "technical_score": 80,
-    "technical_issues": "specific technical issue or good"
+    "technical_issues": "specific issue or 'Technical SEO is good'"
   }},
+  
+TITLE SCORING RULES (use these exact scores):
+- 30-60 chars + keyword present = 90-95
+- 30-60 chars, no keyword = 75-85  
+- 61-70 chars = 55-65 (too long, will be truncated)
+- >70 chars = 40-50 (too long)
+- <20 chars = 30-40 (too short)
+- Missing = 0
+
+META DESCRIPTION SCORING RULES:
+- 120-160 chars + keyword + CTA = 90-95
+- 120-160 chars, no keyword = 75-85
+- 161-200 chars = 55-65 (too long)
+- >200 chars = 40-50 (too long, truncated)
+- <80 chars = 45-55 (too short)
+- Missing = 0
   "content_analysis": {{
     "word_count": {s.get('word_count', 0)},
     "readability": "Good",
