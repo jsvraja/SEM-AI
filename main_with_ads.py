@@ -437,6 +437,15 @@ async def full_report(req: FullReportRequest):
                 sem['estimated_cpc_inr_min'] = round(cpc * 83 * 0.8)
                 sem['estimated_cpc_inr_max'] = round(cpc * 83 * 1.2)
         
+        # Fallback: get CPC from budget_calculation
+        if not sem.get('estimated_cpc_inr') or sem.get('estimated_cpc_inr') == 0:
+            bc = sem.get('budget_calculation', {})
+            cpc_from_bc = bc.get('avg_cpc_inr', 0) or bc.get('estimated_cpc_inr', 0)
+            if cpc_from_bc:
+                sem['estimated_cpc_inr'] = cpc_from_bc
+                sem['estimated_cpc_inr_min'] = round(cpc_from_bc * 0.8)
+                sem['estimated_cpc_inr_max'] = round(cpc_from_bc * 1.2)
+        
         # Generate country_budgets if not present
         if not sem.get('country_budgets'):
             countries = sem.get('target_countries', ['IN', 'US'])
