@@ -1150,15 +1150,43 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                       <div>
                         <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--yellow)', marginBottom: '8px' }}>⭐ Recommended for your site</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {recommended.map(s => (
-                            <div key={s.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'rgba(251,174,75,0.08)', borderRadius: '7px', border: '1px solid rgba(251,174,75,0.15)' }}>
-                              <div>
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{s.type}</span>
-                                <span style={{ fontSize: '11px', color: 'var(--text3)', marginLeft: '8px' }}>{s.desc}</span>
+                          {recommended.map(s => {
+                            const generateSchema = (type) => {
+                              const domain = sc?.url || url || ''
+                              const title = sc?.title || ''
+                              const schemas = {
+                                Organization: `<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "Organization",\n  "name": "${title.split('|')[0].trim()}",\n  "url": "${domain}",\n  "logo": "${domain}/logo.png",\n  "sameAs": []\n}\n</script>`,
+                                BreadcrumbList: `<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "BreadcrumbList",\n  "itemListElement": [\n    {\n      "@type": "ListItem",\n      "position": 1,\n      "name": "Home",\n      "item": "${domain}"\n    }\n  ]\n}\n</script>`,
+                                LocalBusiness: `<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "LocalBusiness",\n  "name": "${title.split('|')[0].trim()}",\n  "url": "${domain}",\n  "telephone": "+91-XXXXXXXXXX",\n  "address": {\n    "@type": "PostalAddress",\n    "addressCountry": "IN"\n  }\n}\n</script>`,
+                                FAQPage: `<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [\n    {\n      "@type": "Question",\n      "name": "Your FAQ question here?",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "Your answer here."\n      }\n    }\n  ]\n}\n</script>`,
+                              }
+                              return schemas[type] || `<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "@type": "${type}",\n  "name": "${title.split('|')[0].trim()}",\n  "url": "${domain}"\n}\n</script>`
+                            }
+
+                            return (
+                              <div key={s.type} style={{ background: 'rgba(251,174,75,0.08)', borderRadius: '7px', border: '1px solid rgba(251,174,75,0.15)', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px' }}>
+                                  <div>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>{s.type}</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text3)', marginLeft: '8px' }}>{s.desc}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '10px', color: '#d97706', fontWeight: 600 }}>Missing</span>
+                                    <button
+                                      onClick={() => {
+                                        const code = generateSchema(s.type)
+                                        navigator.clipboard.writeText(code)
+                                        alert(`${s.type} schema copied! Paste inside <head> tag.`)
+                                      }}
+                                      style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '5px', background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa', cursor: 'pointer', fontWeight: 600 }}
+                                    >
+                                      ⚡ Generate & Copy
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
-                              <span style={{ fontSize: '10px', color: '#d97706', fontWeight: 600 }}>Missing</span>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}
