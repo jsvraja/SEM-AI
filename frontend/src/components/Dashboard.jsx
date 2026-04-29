@@ -414,7 +414,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
                   const metaScore = breakdown?.meta_description || (() => {
                     if (!meta) return 0
                     if (meta.length >= 120 && meta.length <= 160) return 95
-                    if (meta.length >= 80 && meta.length <= 180) return 70
+                    if (meta.length >= 120 && meta.length <= 180) return 70
+                    if (meta.length > 180) return 45
+                    if (meta.length >= 80 && meta.length < 120) return 55
                     return 40
                   })()
 
