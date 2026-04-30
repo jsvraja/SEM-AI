@@ -3203,8 +3203,32 @@ Return ONLY this JSON:
                         results.append({**adj, "status": "applied", "message": "Campaign paused"})
                     
                     else:
-                        # Adjust bid via campaign budget
-                        results.append({**adj, "status": "noted", "message": f"Bid {action} by {pct}% noted — manual update recommended"})
+                        # Adjust bid via ad group CPC
+                        resource_name = adj.get("resource_name", "")
+                        pct = adj.get("adjustment_pct", 0)
+                        
+                        # Get current avg CPC from campaign data
+                        current_cpc = 0
+                        for c in perf_summary:
+                            if c["resource_name"] == resource_name:
+                                current_cpc = c["avg_cpc_inr"]
+                                break
+                        
+                        if current_cpc == 0:
+                            current_cpc = 30  # default ₹30
+                        
+                        # Calculate new CPC
+                        multiplier = 1 + (pct / 100) if action == "increase" else 1 - (pct / 100)
+                        new_cpc_inr = max(1, round(current_cpc * multiplier, 2))
+                        new_cpc_micros = int(new_cpc_inr * 1000000)
+                        
+                        from ads_manager import update_campaign_bid
+                        bid_result = update_campaign_bid(cid, refresh_token, resource_name, new_cpc_micros)
+                        
+                        if bid_result.get("success"):
+                            results.append({**adj, "status": "applied", "message": f"Bid {action}d to ₹{new_cpc_inr}"})
+                        else:
+                            results.append({**adj, "status": "error", "message": bid_result.get("error", "Failed")})
                         
                 except Exception as e:
                     results.append({**adj, "status": "error", "message": str(e)})

@@ -298,20 +298,49 @@ def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
 # ─── Auto-bid Optimization ────────────────────────────────────────────────────
 
 def update_campaign_bid(customer_id: str, refresh_token: str, campaign_resource_name: str, new_cpc_micros: int) -> dict:
-    """Update campaign target CPC bid."""
+    """Update ad group CPC bids for a campaign."""
     try:
         cid = campaign_resource_name.split("/")[1]
         headers = get_headers(refresh_token)
-        url = f"{GOOGLE_ADS_BASE}/customers/{cid}/campaigns:mutate"
-        body = {"operations": [{"update": {
-            "resourceName": campaign_resource_name,
-            "manualCpc": {"enhancedCpcEnabled": True},
-        }, "updateMask": "manual_cpc.enhanced_cpc_enabled"}]}
-        resp = httpx.post(url, headers=headers, json=body, timeout=30)
+        
+        # First get ad groups for this campaign
+        query = f"""
+            SELECT ad_group.resource_name, ad_group.cpc_bid_micros
+            FROM ad_group
+            WHERE campaign.resource_name = '{campaign_resource_name}'
+            AND ad_group.status = 'ENABLED'
+        """
+        search_url = f"{GOOGLE_ADS_BASE}/customers/{cid}/googleAds:search"
+        search_resp = httpx.post(search_url, headers=headers, json={"query": query}, timeout=30)
+        search_data = search_resp.json()
+        
+        if search_resp.status_code != 200 or not search_data.get("results"):
+            return {"success": False, "error": "No ad groups found for campaign"}
+        
+        # Update each ad group's CPC
+        operations = []
+        for result in search_data["results"]:
+            ag_resource = result["adGroup"]["resourceName"]
+            operations.append({
+                "update": {
+                    "resourceName": ag_resource,
+                    "cpcBidMicros": str(new_cpc_micros),
+                },
+                "updateMask": "cpc_bid_micros"
+            })
+        
+        mutate_url = f"{GOOGLE_ADS_BASE}/customers/{cid}/adGroups:mutate"
+        body = {"operations": operations}
+        resp = httpx.post(mutate_url, headers=headers, json=body, timeout=30)
         data = resp.json()
+        
         if resp.status_code != 200:
             return {"success": False, "error": str(data)}
-        return {"success": True, "message": f"Bid updated to ${new_cpc_micros/1000000:.2f}"}
+        
+        return {
+            "success": True, 
+            "message": f"Bid updated to ₹{new_cpc_micros/1000000:.2f} for {len(operations)} ad group(s)"
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 
