@@ -3740,6 +3740,162 @@ Return ONLY this JSON:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/sema/auto-budget-scale")
+async def sema_auto_budget_scale(request: Request):
+    """SEMA 2.0 — Auto-scale budget based on ROAS and performance targets."""
+    try:
+        body = await request.json()
+        session_id = body.get("session_id", "")
+        customer_id = body.get("customer_id", DEFAULT_CUSTOMER_ID)
+        auto_apply = body.get("auto_apply", False)
+        target_roas = body.get("target_roas", 3.0)  # 3x return default
+
+        session = _sessions.get(session_id, {})
+        if not session:
+            raise HTTPException(status_code=401, detail="Session not found")
+
+        refresh_token = session.get("refresh_token", "")
+        from ads_manager import get_headers
+        headers = get_headers(refresh_token)
+        cid = customer_id.replace("-", "")
+
+        # Fetch campaign budgets + performance
+        query = """
+            SELECT
+              campaign.resource_name,
+              campaign.name,
+              campaign.campaign_budget,
+              campaign_budget.amount_micros,
+              campaign_budget.resource_name,
+              metrics.clicks,
+              metrics.impressions,
+              metrics.ctr,
+              metrics.cost_micros,
+              metrics.conversions,
+              metrics.conversions_value
+            FROM campaign
+            WHERE segments.date DURING LAST_30_DAYS
+              AND campaign.status = 'ENABLED'
+        """
+        search_url = f"https://googleads.googleapis.com/v23/customers/{cid}/googleAds:search"
+        resp = httpx.post(search_url, headers=headers, json={"query": query}, timeout=30)
+
+        campaigns_data = []
+        if resp.status_code == 200:
+            for r in resp.json().get("results", []):
+                m = r.get("metrics", {})
+                c = r.get("campaign", {})
+                cb = r.get("campaignBudget", {})
+                spend = int(m.get("costMicros", 0)) / 1000000
+                conv_value = float(m.get("conversionsValue", 0))
+                roas = round(conv_value / spend, 2) if spend > 0 else 0
+                
+                campaigns_data.append({
+                    "name": c.get("name", ""),
+                    "resource_name": c.get("resourceName", ""),
+                    "budget_resource": cb.get("resourceName", ""),
+                    "current_budget_inr": round(int(cb.get("amountMicros", 0)) / 1000000, 2),
+                    "clicks": int(m.get("clicks", 0)),
+                    "impressions": int(m.get("impressions", 0)),
+                    "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                    "spend_inr": round(spend, 2),
+                    "conversions": float(m.get("conversions", 0)),
+                    "roas": roas,
+                })
+
+        # AI analyze and suggest budget scaling
+        prompt = f"""You are SEMA, a Google Ads budget optimization AI. Analyze campaign performance and suggest budget scaling.
+
+Target ROAS: {target_roas}x
+Campaign Data (Last 30 Days):
+{json.dumps(campaigns_data, indent=2)}
+
+Budget Scaling Rules:
+- ROAS > target AND CTR > 3%: Scale UP budget by 20-30% (high performer)
+- ROAS > target AND CTR 1-3%: Scale UP by 10-15% (good performer)  
+- ROAS < target AND spend > ₹1000: Scale DOWN by 20% (poor ROAS)
+- 0 conversions AND spend > ₹500: Scale DOWN by 30% (no ROI)
+- New campaign (<7 days data): Keep same, monitor
+- Budget < ₹100/day: Suggest minimum ₹200/day for proper testing
+
+Return ONLY this JSON:
+{{
+  "scaling_recommendations": [
+    {{
+      "campaign_name": "name",
+      "resource_name": "campaign resource",
+      "budget_resource": "budget resource",
+      "current_budget_inr": 0,
+      "recommended_budget_inr": 0,
+      "change_pct": 20,
+      "direction": "increase|decrease|keep",
+      "reason": "specific reason",
+      "roas": 0.0,
+      "priority": "high|medium|low"
+    }}
+  ],
+  "total_current_budget": 0,
+  "total_recommended_budget": 0,
+  "summary": "overall budget strategy"
+}}"""
+
+        ai_response = await call_gemini(prompt)
+        try:
+            ai_data = parse_ai_json(ai_response)
+        except:
+            ai_data = {"scaling_recommendations": [], "summary": "Analysis complete"}
+
+        recommendations = ai_data.get("scaling_recommendations", [])
+        results = []
+
+        if auto_apply and recommendations:
+            for rec in recommendations:
+                if rec.get("direction") == "keep":
+                    results.append({**rec, "status": "skipped", "message": "No change needed"})
+                    continue
+                
+                try:
+                    budget_resource = rec.get("budget_resource", "")
+                    new_budget_inr = rec.get("recommended_budget_inr", 0)
+                    
+                    if not budget_resource or new_budget_inr <= 0:
+                        results.append({**rec, "status": "skipped", "message": "Missing budget resource"})
+                        continue
+
+                    new_budget_micros = int(new_budget_inr * 1000000)
+                    budget_cid = budget_resource.split("/")[1] if "/" in budget_resource else cid
+                    
+                    mutate_url = f"https://googleads.googleapis.com/v23/customers/{budget_cid}/campaignBudgets:mutate"
+                    mutate_body = {"operations": [{"update": {
+                        "resourceName": budget_resource,
+                        "amountMicros": str(new_budget_micros),
+                    }, "updateMask": "amount_micros"}]}
+                    
+                    r = httpx.post(mutate_url, headers=headers, json=mutate_body, timeout=15)
+                    
+                    if r.status_code == 200:
+                        results.append({**rec, "status": "applied", "message": f"Budget updated to ₹{new_budget_inr}/day"})
+                    else:
+                        results.append({**rec, "status": "error", "message": str(r.json())})
+                        
+                except Exception as e:
+                    results.append({**rec, "status": "error", "message": str(e)})
+        else:
+            results = [{**rec, "status": "suggested"} for rec in recommendations]
+
+        return {
+            "success": True,
+            "auto_applied": auto_apply,
+            "campaigns_analyzed": len(campaigns_data),
+            "recommendations": results,
+            "total_current_budget": ai_data.get("total_current_budget", 0),
+            "total_recommended_budget": ai_data.get("total_recommended_budget", 0),
+            "summary": ai_data.get("summary", "")
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/ads/apply-sema-fixes")
 async def apply_sema_fixes(request: Request):
     """Apply SEMA recommended fixes to Google Ads campaign."""

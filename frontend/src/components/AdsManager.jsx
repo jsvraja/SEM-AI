@@ -1212,6 +1212,10 @@ function OptimizePanel({ sessionId }) {
   const [adRefreshResult, setAdRefreshResult] = useState(null)
   const [adRefreshLoading, setAdRefreshLoading] = useState(false)
   const [adRefreshAutoApply, setAdRefreshAutoApply] = useState(false)
+  const [budgetScaleResult, setBudgetScaleResult] = useState(null)
+  const [budgetScaleLoading, setBudgetScaleLoading] = useState(false)
+  const [budgetScaleAutoApply, setBudgetScaleAutoApply] = useState(false)
+  const [targetRoas, setTargetRoas] = useState(3)
 
   async function runAutoBidAdjust() {
     setAutoBidLoading(true)
@@ -1250,6 +1254,28 @@ function OptimizePanel({ sessionId }) {
       setWeeklyReportResult({ success: false, error: e.message })
     } finally {
       setWeeklyReportLoading(false)
+    }
+  }
+
+  async function runBudgetScale() {
+    setBudgetScaleLoading(true)
+    setBudgetScaleResult(null)
+    try {
+      const res = await fetch(`${BASE}/api/sema/auto-budget-scale`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          auto_apply: budgetScaleAutoApply,
+          target_roas: parseFloat(targetRoas),
+        }),
+      })
+      const data = await res.json()
+      setBudgetScaleResult(data)
+    } catch(e) {
+      setBudgetScaleResult({ success: false, error: e.message })
+    } finally {
+      setBudgetScaleLoading(false)
     }
   }
 
@@ -1498,6 +1524,74 @@ function OptimizePanel({ sessionId }) {
                   <div key={j} style={{ fontSize: '11px', color: 'var(--text2)', padding: '4px 8px', background: 'var(--bg2)', borderRadius: '4px', marginBottom: '3px' }}>{d}</div>
                 ))}
                 <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '6px' }}>💡 {ad.improvement_reason}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SEMA 2.0 Budget Auto-Scaling */}
+      <div style={{ padding: '14px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#34d399' }}>💰 SEMA 2.0 — Budget Auto-Scaling</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI scales budgets based on ROAS performance</div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
+            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
+              <input type="checkbox" checked={budgetScaleAutoApply} onChange={e => setBudgetScaleAutoApply(e.target.checked)}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
+              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: budgetScaleAutoApply ? '#10b981' : 'var(--bg4)', transition: 'background 0.2s' }} />
+              <div style={{ position: 'absolute', top: '2px', left: budgetScaleAutoApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+            </div>
+          </label>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text2)' }}>Target ROAS:</span>
+          <input type="number" min="1" max="10" step="0.5" value={targetRoas} onChange={e => setTargetRoas(e.target.value)}
+            style={{ width: '70px', padding: '5px 8px', borderRadius: '6px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '12px', outline: 'none' }} />
+          <span style={{ fontSize: '12px', color: 'var(--text3)' }}>x return on ad spend</span>
+        </div>
+        <button onClick={runBudgetScale} disabled={budgetScaleLoading} style={{
+          width: '100%', padding: '10px', borderRadius: '8px',
+          background: budgetScaleLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #10b981, #059669)',
+          border: 'none', color: budgetScaleLoading ? 'var(--text3)' : 'white',
+          fontSize: '13px', fontWeight: 600, cursor: budgetScaleLoading ? 'not-allowed' : 'pointer',
+        }}>
+          {budgetScaleLoading ? '🔄 Analyzing...' : budgetScaleAutoApply ? '💰 Analyze & Scale Budgets' : '🔍 Suggest Budget Changes'}
+        </button>
+
+        {budgetScaleResult && (
+          <div style={{ marginTop: '10px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>{budgetScaleResult.summary}</div>
+            {budgetScaleResult.total_current_budget > 0 && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: '7px', padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>₹{budgetScaleResult.total_current_budget}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text3)' }}>Current budget</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: '16px' }}>→</div>
+                <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: '7px', padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#34d399' }}>₹{budgetScaleResult.total_recommended_budget}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text3)' }}>Recommended</div>
+                </div>
+              </div>
+            )}
+            {(budgetScaleResult.recommendations || []).map((rec, i) => (
+              <div key={i} style={{ padding: '8px 10px', background: 'var(--bg3)', borderRadius: '7px', marginBottom: '5px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600 }}>{rec.campaign_name}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 600,
+                    color: rec.direction === 'increase' ? '#34d399' : rec.direction === 'decrease' ? '#f87171' : 'var(--text3)',
+                  }}>
+                    {rec.direction === 'increase' ? '📈' : rec.direction === 'decrease' ? '📉' : '➡️'} ₹{rec.current_budget_inr} → ₹{rec.recommended_budget_inr}
+                  </span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>{rec.reason}</div>
+                <div style={{ fontSize: '10px', color: rec.status === 'applied' ? '#34d399' : 'var(--text3)' }}>
+                  {rec.status === 'applied' ? '✅ Applied' : rec.status === 'suggested' ? '💡 Suggested' : rec.status}
+                </div>
               </div>
             ))}
           </div>
