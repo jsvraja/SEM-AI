@@ -3970,7 +3970,7 @@ async def detect_business(req: DetectBusinessRequest):
         # Strip tags
         import re
         clean = re.sub(r'<[^>]+>', ' ', html)
-        clean = re.sub(r'\s+', ' ', clean).strip()[:3000]
+        clean = re.sub(r'\s+', ' ', clean).strip()[:800]
 
         prompt = f"""Analyse this website content and return ONLY a JSON object with no extra text:
 {{
