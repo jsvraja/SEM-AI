@@ -79,20 +79,12 @@ function ConnectPanel() {
 }
 
 // ─── Live Campaigns ───────────────────────────────────────────────────────────
-function CampaignMonitor({ sessionId, semaSeen, onSemaSeen }) {
+function CampaignMonitor({ sessionId }) {
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
   const [lastRefresh, setLastRefresh] = useState(null)
   const [error, setError] = useState(null)
-  const [seenSEMAAlert, setSeenSEMAAlert] = useState(() => {
-    try { return sessionStorage.getItem('sema_alert_seen') === '1' } catch { return false }
-  })
-  
-  function markSEMASeen() {
-    try { sessionStorage.setItem('sema_alert_seen', '1') } catch {}
-    setSeenSEMAAlert(true)
-  }
 
   useEffect(() => { 
     if (sessionId) fetchCampaigns() 
@@ -200,28 +192,6 @@ function CampaignMonitor({ sessionId, semaSeen, onSemaSeen }) {
           <p style={{ fontSize: '14px', color: 'var(--text2)', marginBottom: '6px' }}>No campaigns running</p>
           <p style={{ fontSize: '12px', color: 'var(--text3)' }}>Use the Publish tab to create your first campaign from AI-generated ad copy</p>
         </div>
-      )}
-
-      {/* SEMA Performance Alert */}
-      {!semaSeen && campaigns.some(c => {
-        if ((c.clicks || 0) !== 0 || (c.impressions || 0) !== 0) return false
-        if (c.status !== 'ENABLED') return false
-        // Check if campaign is at least 2 days old using name timestamp
-        const nameMatch = c.campaign_name?.match(/(\d{8})/)
-        if (nameMatch) {
-          const dateStr = nameMatch[1]
-          const year = dateStr.slice(0,4), month = dateStr.slice(4,6), day = dateStr.slice(6,8)
-          const created = new Date(`${year}-${month}-${day}`)
-          const daysDiff = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24)
-          return daysDiff >= 2
-        }
-        return true
-      }) && (
-        <SEMAPerformanceAlert
-          campaigns={campaigns.filter(c => (c.clicks || 0) === 0 && (c.impressions || 0) === 0 && c.status === 'ENABLED')}
-          sessionId={sessionId}
-          onDismiss={() => onSemaSeen && onSemaSeen()}
-        />
       )}
 
       {campaigns.map(c => {
@@ -570,9 +540,9 @@ Respond ONLY with this JSON (no other text):
           </div>
           <div style={{ gridColumn: '1 / -1', height: '1px', background: 'var(--border)' }} />
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Daily Budget (₹ INR)</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Daily Budget (USD)</label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>₹</span>
+              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>$</span>
               <input value={dailyBudget} onChange={e => setDailyBudget(e.target.value)} type="number" min="1"
                 style={{ width: '100%', padding: '8px 10px 8px 22px', background: 'var(--bg3)', border: `1px solid ${parseFloat(dailyBudget) < 1 ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`, borderRadius: '7px', color: 'var(--text)', fontSize: '13px', outline: 'none' }}
                 onFocus={e => e.target.style.borderColor = 'var(--accent)'}
@@ -580,13 +550,13 @@ Respond ONLY with this JSON (no other text):
               />
             </div>
             {parseFloat(dailyBudget) < 1 && (
-              <p style={{ fontSize: '11px', color: '#f87171', marginTop: '3px' }}>Minimum ₹1/day required</p>
+              <p style={{ fontSize: '11px', color: '#f87171', marginTop: '3px' }}>Minimum $1.00/day required</p>
             )}
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly Budget (₹ INR)</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly Budget (USD)</label>
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>₹</span>
+              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>$</span>
               <input value={monthlyBudget} onChange={e => setMonthlyBudget(e.target.value)} type="number" min="1"
                 style={{ width: '100%', padding: '8px 10px 8px 22px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: '7px', color: 'var(--text)', fontSize: '13px', outline: 'none' }}
                 onFocus={e => e.target.style.borderColor = 'var(--accent)'}
@@ -631,184 +601,6 @@ Respond ONLY with this JSON (no other text):
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-
-
-// ─── SEMA Performance Alert Component ────────────────────────────────────────
-function SEMAPerformanceAlert({ campaigns, sessionId, onDismiss }) {
-  const [analyzing, setAnalyzing] = useState(false)
-  const [analysis, setAnalysis] = useState(null)
-  const [step, setStep] = useState('alert')
-  const [pendingChanges, setPendingChanges] = useState([])
-  const [applying, setApplying] = useState(false)
-
-  function dismiss() { onDismiss && onDismiss() }
-
-  async function handleAnalyze() {
-    setStep('analyzing')
-    setAnalyzing(true)
-    try {
-      const res = await fetch(`${BASE}/api/agent/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          message: `My campaign "${campaigns[0]?.campaign_name}" has been running for several days but shows 0 clicks and 0 impressions. Please analyze why and give me specific fixes. Return analysis as JSON with: {"diagnosis": "reason", "issues": ["issue1","issue2"], "fixes": [{"change": "what to change", "reason": "why", "type": "bid|keyword|budget|targeting"}]}`,
-        })
-      })
-      const data = await res.json()
-      // Parse AI response
-      let parsed = null
-      try {
-        const raw = data.response || data.message || ''
-        const jsonMatch = raw.match(/\{[\s\S]*\}/)
-        if (jsonMatch) parsed = JSON.parse(jsonMatch[0])
-      } catch(e) {}
-      
-      if (parsed) {
-        setAnalysis(parsed)
-        setPendingChanges(parsed.fixes || [])
-        setStep('results')
-      } else {
-        setAnalysis({ diagnosis: data.response || 'Analysis complete', issues: [], fixes: [] })
-        setStep('results')
-      }
-    } catch(e) {
-      setAnalysis({ diagnosis: 'Failed to analyze. Please try again.', issues: [], fixes: [] })
-      setStep('results')
-    }
-    setAnalyzing(false)
-  }
-
-  async function applyChanges() {
-    setApplying(true)
-    try {
-      const res = await fetch(`${BASE}/api/ads/apply-sema-fixes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          campaign_resource: campaigns[0]?.resource_name,
-          fixes: pendingChanges,
-        })
-      })
-      const data = await res.json()
-      if (data.success) {
-        setStep('done')
-      } else {
-        setStep('done') // still show done
-      }
-    } catch(e) {
-      console.error(e)
-      setStep('done') // show done even on error
-    } finally {
-      setApplying(false)
-    }
-  }
-
-  return (
-    <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(79,125,255,0.08))', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '14px', padding: '1.25rem', marginBottom: '12px', position: 'relative' }}>
-      <button onClick={dismiss} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '16px' }}>×</button>
-      
-      {step === 'alert' && (
-        <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-          {/* SEMA Avatar */}
-          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}>
-            🤖
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: '#a78bfa' }}>SEMA</span>
-              <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '10px', background: 'rgba(124,58,237,0.15)', color: '#a78bfa' }}>AI Agent</span>
-            </div>
-            <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 12px' }}>
-              👋 Hey! I noticed your campaign <strong style={{ color: 'var(--text)' }}>"{campaigns[0]?.campaign_name}"</strong> has been running for a few days but has <strong style={{ color: '#f87171' }}>0 clicks and 0 impressions</strong>. 
-              Something might be blocking it. Want me to analyze why and fix it?
-            </p>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={handleAnalyze} style={{ padding: '8px 18px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', border: 'none', color: 'white', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                Yes, analyze it! 🔍
-              </button>
-              <button onClick={dismiss} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
-                Not now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {step === 'analyzing' && (
-        <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>🤖</div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#a78bfa', marginBottom: '4px' }}>SEMA is analyzing your campaign...</div>
-            <div style={{ fontSize: '12px', color: 'var(--text3)' }}>Checking bid settings, keywords, targeting, and ad quality...</div>
-            <div style={{ marginTop: '8px', height: '4px', background: 'var(--bg3)', borderRadius: '2px', overflow: 'hidden', width: '200px' }}>
-              <div style={{ height: '100%', background: 'linear-gradient(90deg, #7c3aed, #4f7dff)', borderRadius: '2px', animation: 'pulse 1.5s ease-in-out infinite', width: '60%' }} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {step === 'results' && analysis && (
-        <div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '14px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🤖</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#a78bfa', marginBottom: '6px' }}>SEMA's Analysis</div>
-              <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6, background: 'var(--bg3)', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px' }}>
-                {analysis.diagnosis}
-              </div>
-              {(analysis.issues || []).length > 0 && (
-                <div style={{ marginBottom: '10px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#f87171', marginBottom: '6px' }}>⚠️ Issues Found:</div>
-                  {analysis.issues.map((issue, i) => (
-                    <div key={i} style={{ fontSize: '12px', color: 'var(--text2)', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>→ {issue}</div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {pendingChanges.length > 0 && (
-            <div style={{ background: 'var(--bg3)', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>🔧 Recommended Changes:</div>
-              {pendingChanges.map((fix, i) => (
-                <div key={i} style={{ display: 'flex', gap: '8px', padding: '8px', background: 'var(--bg2)', borderRadius: '8px', marginBottom: '6px' }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(124,58,237,0.2)', color: '#a78bfa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>{i+1}</div>
-                  <div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>{fix.change}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{fix.reason}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {pendingChanges.length > 0 && (
-              <button onClick={applyChanges} disabled={applying} style={{ padding: '8px 18px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', border: 'none', color: 'white', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                {applying ? 'Applying...' : '✅ Apply Changes to Google Ads'}
-              </button>
-            )}
-            <button onClick={dismiss} style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: '13px', cursor: 'pointer' }}>
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 'done' && (
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f7dff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>🤖</div>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80', marginBottom: '4px' }}>✅ Changes Applied!</div>
-            <div style={{ fontSize: '12px', color: 'var(--text2)' }}>I've updated your campaign in Google Ads. Check back in a few hours to see performance improvements.</div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── SEMA Consult Component ───────────────────────────────────────────────────
 
@@ -1200,124 +992,6 @@ function OptimizePanel({ sessionId }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [applying, setApplying] = useState({})
-  const [autoApply, setAutoApply] = useState(false)
-  const [autoBidResult, setAutoBidResult] = useState(null)
-  const [autoBidLoading, setAutoBidLoading] = useState(false)
-  const [autoNegKwResult, setAutoNegKwResult] = useState(null)
-  const [autoNegKwLoading, setAutoNegKwLoading] = useState(false)
-  const [autoNegKwApply, setAutoNegKwApply] = useState(false)
-  const [weeklyReportResult, setWeeklyReportResult] = useState(null)
-  const [weeklyReportLoading, setWeeklyReportLoading] = useState(false)
-  const [weeklyReportEmail, setWeeklyReportEmail] = useState('')
-  const [adRefreshResult, setAdRefreshResult] = useState(null)
-  const [adRefreshLoading, setAdRefreshLoading] = useState(false)
-  const [adRefreshAutoApply, setAdRefreshAutoApply] = useState(false)
-  const [budgetScaleResult, setBudgetScaleResult] = useState(null)
-  const [budgetScaleLoading, setBudgetScaleLoading] = useState(false)
-  const [budgetScaleAutoApply, setBudgetScaleAutoApply] = useState(false)
-  const [targetRoas, setTargetRoas] = useState(3)
-
-  async function runAutoBidAdjust() {
-    setAutoBidLoading(true)
-    setAutoBidResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/auto-bid-adjust`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, auto_apply: autoApply }),
-      })
-      const data = await res.json()
-      setAutoBidResult(data)
-    } catch(e) {
-      setAutoBidResult({ success: false, error: e.message })
-    } finally {
-      setAutoBidLoading(false)
-    }
-  }
-
-  async function runWeeklyReport(sendEmail) {
-    setWeeklyReportLoading(true)
-    setWeeklyReportResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/weekly-report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          email: weeklyReportEmail,
-          send_email: sendEmail,
-        }),
-      })
-      const data = await res.json()
-      setWeeklyReportResult(data)
-    } catch(e) {
-      setWeeklyReportResult({ success: false, error: e.message })
-    } finally {
-      setWeeklyReportLoading(false)
-    }
-  }
-
-  async function runBudgetScale() {
-    setBudgetScaleLoading(true)
-    setBudgetScaleResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/auto-budget-scale`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          auto_apply: budgetScaleAutoApply,
-          target_roas: parseFloat(targetRoas),
-        }),
-      })
-      const data = await res.json()
-      setBudgetScaleResult(data)
-    } catch(e) {
-      setBudgetScaleResult({ success: false, error: e.message })
-    } finally {
-      setBudgetScaleLoading(false)
-    }
-  }
-
-  async function runAutoAdRefresh() {
-    setAdRefreshLoading(true)
-    setAdRefreshResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/auto-ad-refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          auto_apply: adRefreshAutoApply,
-          url: window.location.hostname,
-        }),
-      })
-      const data = await res.json()
-      setAdRefreshResult(data)
-    } catch(e) {
-      setAdRefreshResult({ success: false, error: e.message })
-    } finally {
-      setAdRefreshLoading(false)
-    }
-  }
-
-  async function runAutoNegKeywords() {
-    setAutoNegKwLoading(true)
-    setAutoNegKwResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/auto-negative-keywords`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, auto_apply: autoNegKwApply }),
-      })
-      const data = await res.json()
-      setAutoNegKwResult(data)
-    } catch(e) {
-      setAutoNegKwResult({ success: false, error: e.message })
-    } finally {
-      setAutoNegKwLoading(false)
-    }
-  }
 
   async function runOptimization() {
     setLoading(true)
@@ -1369,300 +1043,6 @@ function OptimizePanel({ sessionId }) {
         <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6 }}>
           SEMA analyses your campaign performance and recommends bid adjustments. Enter your desired percentage change — SEMA will validate it and explain the impact before applying.
         </div>
-      </div>
-
-      {/* SEMA 2.0 Auto Bid Adjustment */}
-      <div style={{ padding: '14px', background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#a78bfa' }}>🤖 SEMA 2.0 — Auto Bid Adjustment</div>
-            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI analyzes performance and adjusts bids automatically</div>
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
-            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
-              <input type="checkbox" checked={autoApply} onChange={e => setAutoApply(e.target.checked)}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
-              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: autoApply ? '#7c3aed' : 'var(--bg4)', transition: 'background 0.2s' }} />
-              <div style={{ position: 'absolute', top: '2px', left: autoApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
-            </div>
-          </label>
-        </div>
-        <button onClick={runAutoBidAdjust} disabled={autoBidLoading} style={{
-          width: '100%', padding: '10px', borderRadius: '8px',
-          background: autoBidLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #7c3aed, #4f7dff)',
-          border: 'none', color: autoBidLoading ? 'var(--text3)' : 'white',
-          fontSize: '13px', fontWeight: 600, cursor: autoBidLoading ? 'not-allowed' : 'pointer',
-        }}>
-          {autoBidLoading ? '🔄 Analyzing...' : autoApply ? '🚀 Analyze & Auto-Apply Bids' : '🔍 Analyze Bids (Suggest Only)'}
-        </button>
-
-        {autoBidResult && (
-          <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>{autoBidResult.summary}</div>
-            {(autoBidResult.adjustments || []).map((adj, i) => (
-              <div key={i} style={{ padding: '8px 10px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '6px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600 }}>{adj.campaign_name}</span>
-                  <span style={{ fontSize: '11px', padding: '2px 7px', borderRadius: '5px', fontWeight: 600,
-                    background: adj.action === 'increase' ? 'rgba(34,197,94,0.1)' : adj.action === 'decrease' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
-                    color: adj.action === 'increase' ? '#4ade80' : adj.action === 'decrease' ? '#fbbf24' : '#f87171',
-                  }}>
-                    {adj.action === 'increase' ? '📈 +' : adj.action === 'decrease' ? '📉 -' : '⏸'}{adj.adjustment_pct || 0}%
-                  </span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{adj.reason}</div>
-                <div style={{ fontSize: '10px', marginTop: '3px', color: adj.status === 'applied' ? '#4ade80' : 'var(--text3)' }}>
-                  {adj.status === 'applied' ? '✅ Applied' : adj.status === 'suggested' ? '💡 Suggested' : adj.status}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* SEMA 2.0 Auto Negative Keywords */}
-      <div style={{ padding: '14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#f87171' }}>🚫 SEMA 2.0 — Auto Negative Keywords</div>
-            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI finds wasted spend keywords and blocks them</div>
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
-            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
-              <input type="checkbox" checked={autoNegKwApply} onChange={e => setAutoNegKwApply(e.target.checked)}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
-              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: autoNegKwApply ? '#ef4444' : 'var(--bg4)', transition: 'background 0.2s' }} />
-              <div style={{ position: 'absolute', top: '2px', left: autoNegKwApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
-            </div>
-          </label>
-        </div>
-        <button onClick={runAutoNegKeywords} disabled={autoNegKwLoading} style={{
-          width: '100%', padding: '10px', borderRadius: '8px',
-          background: autoNegKwLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #ef4444, #f97316)',
-          border: 'none', color: autoNegKwLoading ? 'var(--text3)' : 'white',
-          fontSize: '13px', fontWeight: 600, cursor: autoNegKwLoading ? 'not-allowed' : 'pointer',
-        }}>
-          {autoNegKwLoading ? '🔄 Analyzing...' : autoNegKwApply ? '🚫 Find & Block Negative Keywords' : '🔍 Find Negative Keywords (Suggest Only)'}
-        </button>
-
-        {autoNegKwResult && (
-          <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>
-              {autoNegKwResult.summary} ({autoNegKwResult.search_terms_analyzed || 0} terms analyzed)
-            </div>
-            {(autoNegKwResult.negative_keywords || []).map((kw, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg3)', borderRadius: '7px', marginBottom: '5px', border: '1px solid var(--border)' }}>
-                <div>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#f87171' }}>− {kw.keyword}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text3)', marginLeft: '8px' }}>{kw.reason}</span>
-                </div>
-                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '5px', fontWeight: 600,
-                  background: kw.status === 'applied' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                  color: kw.status === 'applied' ? '#4ade80' : '#f87171',
-                }}>
-                  {kw.status === 'applied' ? '✅ Blocked' : '💡 Suggested'}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* SEMA 2.0 Auto Ad Copy Refresh */}
-      <div style={{ padding: '14px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#60a5fa' }}>✍️ SEMA 2.0 — Auto Ad Copy Refresh</div>
-            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI detects low CTR ads and rewrites them automatically</div>
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
-            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
-              <input type="checkbox" checked={adRefreshAutoApply} onChange={e => setAdRefreshAutoApply(e.target.checked)}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
-              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: adRefreshAutoApply ? '#3b82f6' : 'var(--bg4)', transition: 'background 0.2s' }} />
-              <div style={{ position: 'absolute', top: '2px', left: adRefreshAutoApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
-            </div>
-          </label>
-        </div>
-        <button onClick={runAutoAdRefresh} disabled={adRefreshLoading} style={{
-          width: '100%', padding: '10px', borderRadius: '8px',
-          background: adRefreshLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #3b82f6, #6366f1)',
-          border: 'none', color: adRefreshLoading ? 'var(--text3)' : 'white',
-          fontSize: '13px', fontWeight: 600, cursor: adRefreshLoading ? 'not-allowed' : 'pointer',
-        }}>
-          {adRefreshLoading ? '🔄 Analyzing ads...' : adRefreshAutoApply ? '✍️ Analyze & Refresh Ad Copy' : '🔍 Suggest New Ad Copy'}
-        </button>
-
-        {adRefreshResult && (
-          <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>
-              {adRefreshResult.summary} ({adRefreshResult.ads_analyzed || 0} ads analyzed)
-            </div>
-            {(adRefreshResult.refreshed_ads || []).map((ad, i) => (
-              <div key={i} style={{ padding: '10px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '8px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600 }}>{ad.campaign_name}</span>
-                  <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '5px', fontWeight: 600,
-                    background: ad.status === 'applied' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
-                    color: ad.status === 'applied' ? '#4ade80' : '#60a5fa',
-                  }}>
-                    {ad.status === 'applied' ? '✅ Published' : '💡 Suggested'}
-                  </span>
-                </div>
-                <div style={{ fontSize: '11px', color: '#f87171', marginBottom: '6px' }}>⚠ {ad.issue}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>New headlines:</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
-                  {(ad.new_headlines || []).map((h, j) => (
-                    <span key={j} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.2)' }}>{h}</span>
-                  ))}
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>New descriptions:</div>
-                {(ad.new_descriptions || []).map((d, j) => (
-                  <div key={j} style={{ fontSize: '11px', color: 'var(--text2)', padding: '4px 8px', background: 'var(--bg2)', borderRadius: '4px', marginBottom: '3px' }}>{d}</div>
-                ))}
-                <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '6px' }}>💡 {ad.improvement_reason}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* SEMA 2.0 Budget Auto-Scaling */}
-      <div style={{ padding: '14px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#34d399' }}>💰 SEMA 2.0 — Budget Auto-Scaling</div>
-            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI scales budgets based on ROAS performance</div>
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
-            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
-              <input type="checkbox" checked={budgetScaleAutoApply} onChange={e => setBudgetScaleAutoApply(e.target.checked)}
-                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
-              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: budgetScaleAutoApply ? '#10b981' : 'var(--bg4)', transition: 'background 0.2s' }} />
-              <div style={{ position: 'absolute', top: '2px', left: budgetScaleAutoApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
-            </div>
-          </label>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text2)' }}>Target ROAS:</span>
-          <input type="number" min="1" max="10" step="0.5" value={targetRoas} onChange={e => setTargetRoas(e.target.value)}
-            style={{ width: '70px', padding: '5px 8px', borderRadius: '6px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '12px', outline: 'none' }} />
-          <span style={{ fontSize: '12px', color: 'var(--text3)' }}>x return on ad spend</span>
-        </div>
-        <button onClick={runBudgetScale} disabled={budgetScaleLoading} style={{
-          width: '100%', padding: '10px', borderRadius: '8px',
-          background: budgetScaleLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #10b981, #059669)',
-          border: 'none', color: budgetScaleLoading ? 'var(--text3)' : 'white',
-          fontSize: '13px', fontWeight: 600, cursor: budgetScaleLoading ? 'not-allowed' : 'pointer',
-        }}>
-          {budgetScaleLoading ? '🔄 Analyzing...' : budgetScaleAutoApply ? '💰 Analyze & Scale Budgets' : '🔍 Suggest Budget Changes'}
-        </button>
-
-        {budgetScaleResult && (
-          <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>{budgetScaleResult.summary}</div>
-            {budgetScaleResult.total_current_budget > 0 && (
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: '7px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>₹{budgetScaleResult.total_current_budget}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text3)' }}>Current budget</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', fontSize: '16px' }}>→</div>
-                <div style={{ flex: 1, background: 'var(--bg3)', borderRadius: '7px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#34d399' }}>₹{budgetScaleResult.total_recommended_budget}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text3)' }}>Recommended</div>
-                </div>
-              </div>
-            )}
-            {(budgetScaleResult.recommendations || []).map((rec, i) => (
-              <div key={i} style={{ padding: '8px 10px', background: 'var(--bg3)', borderRadius: '7px', marginBottom: '5px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600 }}>{rec.campaign_name}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 600,
-                    color: rec.direction === 'increase' ? '#34d399' : rec.direction === 'decrease' ? '#f87171' : 'var(--text3)',
-                  }}>
-                    {rec.direction === 'increase' ? '📈' : rec.direction === 'decrease' ? '📉' : '➡️'} ₹{rec.current_budget_inr} → ₹{rec.recommended_budget_inr}
-                  </span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>{rec.reason}</div>
-                <div style={{ fontSize: '10px', color: rec.status === 'applied' ? '#34d399' : 'var(--text3)' }}>
-                  {rec.status === 'applied' ? '✅ Applied' : rec.status === 'suggested' ? '💡 Suggested' : rec.status}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* SEMA 2.0 Weekly Report */}
-      <div style={{ padding: '14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#4ade80', marginBottom: '4px' }}>📊 SEMA 2.0 — Weekly Performance Report</div>
-        <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '10px' }}>AI generates and emails your weekly campaign performance report</div>
-        
-        <input
-          type="email"
-          placeholder="Enter email to receive report"
-          value={weeklyReportEmail}
-          onChange={e => setWeeklyReportEmail(e.target.value)}
-          style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '12px', marginBottom: '8px', outline: 'none', boxSizing: 'border-box' }}
-        />
-        
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => runWeeklyReport(false)} disabled={weeklyReportLoading} style={{
-            flex: 1, padding: '9px', borderRadius: '7px', background: 'var(--bg3)',
-            border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80',
-            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
-          }}>
-            {weeklyReportLoading ? '🔄 Generating...' : '👁 Preview Report'}
-          </button>
-          <button onClick={() => runWeeklyReport(true)} disabled={weeklyReportLoading || !weeklyReportEmail} style={{
-            flex: 1, padding: '9px', borderRadius: '7px',
-            background: weeklyReportEmail ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'var(--bg3)',
-            border: 'none', color: weeklyReportEmail ? 'white' : 'var(--text3)',
-            fontSize: '12px', fontWeight: 600, cursor: weeklyReportEmail ? 'pointer' : 'not-allowed',
-          }}>
-            📧 Send to Email
-          </button>
-        </div>
-
-        {weeklyReportResult?.report && (
-          <div style={{ marginTop: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600 }}>{weeklyReportResult.report.subject}</span>
-              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '5px', fontWeight: 600,
-                background: (weeklyReportResult.report.performance_score || 0) >= 70 ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)',
-                color: (weeklyReportResult.report.performance_score || 0) >= 70 ? '#4ade80' : '#fbbf24',
-              }}>
-                {weeklyReportResult.report.performance_score}/100
-              </span>
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6, marginBottom: '8px' }}>
-              {weeklyReportResult.report.executive_summary}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px', marginBottom: '8px' }}>
-              {[
-                { label: 'Clicks', value: weeklyReportResult.stats?.total_clicks || 0 },
-                { label: 'Impressions', value: (weeklyReportResult.stats?.total_impressions || 0).toLocaleString() },
-                { label: 'CTR', value: `${weeklyReportResult.stats?.avg_ctr || 0}%` },
-                { label: 'Spend', value: `₹${weeklyReportResult.stats?.total_spend_inr || 0}` },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ background: 'var(--bg3)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--green)' }}>{value}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text3)' }}>{label}</div>
-                </div>
-              ))}
-            </div>
-            {weeklyReportResult.email?.sent && (
-              <div style={{ fontSize: '12px', color: '#4ade80', padding: '6px 10px', background: 'rgba(34,197,94,0.1)', borderRadius: '6px' }}>
-                ✅ {weeklyReportResult.email.message}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <button onClick={runOptimization} disabled={loading} style={{
@@ -1821,8 +1201,7 @@ function ReportPanel({ sessionId }) {
 }
 
 
-export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages, semaSeen, onSemaSeen }) {
-  const [seenSEMAAlert, setSeenSEMAAlert] = useState(false)
+export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages }) {
   const [tab, setTab] = useState(sessionId ? 'overview' : 'connect')
 
   useEffect(() => {
@@ -1866,7 +1245,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
       </div>
 
       {tab === 'connect' && <ConnectPanel />}
-      {tab === 'overview' && sessionId && <CampaignMonitor sessionId={sessionId} semaSeen={semaSeen} onSemaSeen={onSemaSeen} />}
+      {tab === 'overview' && sessionId && <CampaignMonitor sessionId={sessionId} />}
       {tab === 'publish' && sessionId && (
         <PublishPanel sessionId={sessionId} adCopy={adCopy} seoReport={seoReport} url={url} recommendedPages={recommendedPages || []} />
       )}
