@@ -110,7 +110,7 @@ export default function LandingForm({ onSubmit, loading, error }) {
                   <input
                     type="text" value={url}
                     onChange={e => { setUrl(e.target.value); setAiDetected(false) }}
-                    onBlur={handleUrlBlur}
+
                     placeholder="https://yourwebsite.com"
                     required
                     style={{ width: '100%', padding: '10px 12px 10px 32px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text)', fontSize: '13px', outline: 'none' }}
