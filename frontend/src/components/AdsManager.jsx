@@ -1206,6 +1206,9 @@ function OptimizePanel({ sessionId }) {
   const [autoNegKwResult, setAutoNegKwResult] = useState(null)
   const [autoNegKwLoading, setAutoNegKwLoading] = useState(false)
   const [autoNegKwApply, setAutoNegKwApply] = useState(false)
+  const [weeklyReportResult, setWeeklyReportResult] = useState(null)
+  const [weeklyReportLoading, setWeeklyReportLoading] = useState(false)
+  const [weeklyReportEmail, setWeeklyReportEmail] = useState('')
 
   async function runAutoBidAdjust() {
     setAutoBidLoading(true)
@@ -1222,6 +1225,28 @@ function OptimizePanel({ sessionId }) {
       setAutoBidResult({ success: false, error: e.message })
     } finally {
       setAutoBidLoading(false)
+    }
+  }
+
+  async function runWeeklyReport(sendEmail) {
+    setWeeklyReportLoading(true)
+    setWeeklyReportResult(null)
+    try {
+      const res = await fetch(`${BASE}/api/sema/weekly-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          email: weeklyReportEmail,
+          send_email: sendEmail,
+        }),
+      })
+      const data = await res.json()
+      setWeeklyReportResult(data)
+    } catch(e) {
+      setWeeklyReportResult({ success: false, error: e.message })
+    } finally {
+      setWeeklyReportLoading(false)
     }
   }
 
@@ -1390,6 +1415,73 @@ function OptimizePanel({ sessionId }) {
                 </span>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* SEMA 2.0 Weekly Report */}
+      <div style={{ padding: '14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#4ade80', marginBottom: '4px' }}>📊 SEMA 2.0 — Weekly Performance Report</div>
+        <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '10px' }}>AI generates and emails your weekly campaign performance report</div>
+        
+        <input
+          type="email"
+          placeholder="Enter email to receive report"
+          value={weeklyReportEmail}
+          onChange={e => setWeeklyReportEmail(e.target.value)}
+          style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '12px', marginBottom: '8px', outline: 'none', boxSizing: 'border-box' }}
+        />
+        
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => runWeeklyReport(false)} disabled={weeklyReportLoading} style={{
+            flex: 1, padding: '9px', borderRadius: '7px', background: 'var(--bg3)',
+            border: '1px solid rgba(34,197,94,0.3)', color: '#4ade80',
+            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+          }}>
+            {weeklyReportLoading ? '🔄 Generating...' : '👁 Preview Report'}
+          </button>
+          <button onClick={() => runWeeklyReport(true)} disabled={weeklyReportLoading || !weeklyReportEmail} style={{
+            flex: 1, padding: '9px', borderRadius: '7px',
+            background: weeklyReportEmail ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'var(--bg3)',
+            border: 'none', color: weeklyReportEmail ? 'white' : 'var(--text3)',
+            fontSize: '12px', fontWeight: 600, cursor: weeklyReportEmail ? 'pointer' : 'not-allowed',
+          }}>
+            📧 Send to Email
+          </button>
+        </div>
+
+        {weeklyReportResult?.report && (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600 }}>{weeklyReportResult.report.subject}</span>
+              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '5px', fontWeight: 600,
+                background: (weeklyReportResult.report.performance_score || 0) >= 70 ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)',
+                color: (weeklyReportResult.report.performance_score || 0) >= 70 ? '#4ade80' : '#fbbf24',
+              }}>
+                {weeklyReportResult.report.performance_score}/100
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6, marginBottom: '8px' }}>
+              {weeklyReportResult.report.executive_summary}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px', marginBottom: '8px' }}>
+              {[
+                { label: 'Clicks', value: weeklyReportResult.stats?.total_clicks || 0 },
+                { label: 'Impressions', value: (weeklyReportResult.stats?.total_impressions || 0).toLocaleString() },
+                { label: 'CTR', value: `${weeklyReportResult.stats?.avg_ctr || 0}%` },
+                { label: 'Spend', value: `₹${weeklyReportResult.stats?.total_spend_inr || 0}` },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: 'var(--bg3)', borderRadius: '6px', padding: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--green)' }}>{value}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text3)' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            {weeklyReportResult.email?.sent && (
+              <div style={{ fontSize: '12px', color: '#4ade80', padding: '6px 10px', background: 'rgba(34,197,94,0.1)', borderRadius: '6px' }}>
+                ✅ {weeklyReportResult.email.message}
+              </div>
+            )}
           </div>
         )}
       </div>

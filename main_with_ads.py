@@ -3377,6 +3377,204 @@ Return ONLY this JSON:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/sema/weekly-report")
+async def sema_weekly_report(request: Request):
+    """SEMA 2.0 — Generate and send weekly performance report via email."""
+    try:
+        body = await request.json()
+        session_id = body.get("session_id", "")
+        customer_id = body.get("customer_id", DEFAULT_CUSTOMER_ID)
+        email = body.get("email", "")
+        send_email = body.get("send_email", True)
+
+        session = _sessions.get(session_id, {})
+        if not session:
+            raise HTTPException(status_code=401, detail="Session not found")
+
+        refresh_token = session.get("refresh_token", "")
+        user_email = email or session.get("email", "")
+        from ads_manager import get_headers
+        headers = get_headers(refresh_token)
+        cid = customer_id.replace("-", "")
+
+        # Fetch last 7 days performance
+        query = """
+            SELECT
+              campaign.name,
+              campaign.status,
+              metrics.clicks,
+              metrics.impressions,
+              metrics.ctr,
+              metrics.average_cpc,
+              metrics.cost_micros,
+              metrics.conversions
+            FROM campaign
+            WHERE segments.date DURING LAST_7_DAYS
+              AND campaign.status IN ('ENABLED', 'PAUSED')
+        """
+        search_url = f"https://googleads.googleapis.com/v23/customers/{cid}/googleAds:search"
+        resp = httpx.post(search_url, headers=headers, json={"query": query}, timeout=30)
+
+        campaigns_data = []
+        if resp.status_code == 200:
+            for r in resp.json().get("results", []):
+                m = r.get("metrics", {})
+                c = r.get("campaign", {})
+                campaigns_data.append({
+                    "name": c.get("name", ""),
+                    "status": c.get("status", ""),
+                    "clicks": int(m.get("clicks", 0)),
+                    "impressions": int(m.get("impressions", 0)),
+                    "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                    "avg_cpc_inr": round(int(m.get("averageCpc", 0)) / 1000000, 2),
+                    "spend_inr": round(int(m.get("costMicros", 0)) / 1000000, 2),
+                    "conversions": float(m.get("conversions", 0)),
+                })
+
+        total_clicks = sum(c["clicks"] for c in campaigns_data)
+        total_spend = sum(c["spend_inr"] for c in campaigns_data)
+        total_impressions = sum(c["impressions"] for c in campaigns_data)
+        avg_ctr = round(total_clicks / total_impressions * 100, 2) if total_impressions > 0 else 0
+
+        # AI generate report
+        prompt = f"""You are SEMA, an expert Google Ads AI. Generate a weekly performance report.
+
+Campaign Performance (Last 7 Days):
+{json.dumps(campaigns_data, indent=2)}
+
+Total: {total_clicks} clicks, {total_impressions} impressions, ₹{total_spend} spend, {avg_ctr}% CTR
+
+Generate a professional weekly report with:
+1. Executive summary (2-3 sentences)
+2. Key wins this week
+3. Issues to fix
+4. Next week recommendations
+
+Return ONLY this JSON:
+{{
+  "subject": "Weekly SEM Report - Week of [date]",
+  "executive_summary": "2-3 sentence overview",
+  "key_wins": ["win1", "win2"],
+  "issues": ["issue1", "issue2"],
+  "recommendations": ["rec1", "rec2", "rec3"],
+  "performance_score": 75,
+  "trend": "improving|stable|declining"
+}}"""
+
+        ai_response = await call_gemini(prompt)
+        try:
+            report_data = parse_ai_json(ai_response)
+        except:
+            report_data = {
+                "subject": "Weekly SEM Report",
+                "executive_summary": f"This week: {total_clicks} clicks, ₹{total_spend} spend.",
+                "key_wins": [], "issues": [], "recommendations": [],
+                "performance_score": 50, "trend": "stable"
+            }
+
+        # Build HTML email
+        from datetime import datetime
+        week_str = datetime.now().strftime("%B %d, %Y")
+        score = report_data.get("performance_score", 50)
+        score_color = "#4ade80" if score >= 70 else "#fbbf24" if score >= 40 else "#f87171"
+        trend = report_data.get("trend", "stable")
+        trend_icon = "📈" if trend == "improving" else "📉" if trend == "declining" else "➡️"
+
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+  body {{ font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }}
+  .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }}
+  .header {{ background: linear-gradient(135deg, #7c3aed, #4f7dff); padding: 30px; color: white; text-align: center; }}
+  .header h1 {{ margin: 0 0 8px; font-size: 24px; }}
+  .header p {{ margin: 0; opacity: 0.85; font-size: 14px; }}
+  .score-box {{ background: rgba(255,255,255,0.15); border-radius: 10px; padding: 15px; margin-top: 15px; }}
+  .score {{ font-size: 42px; font-weight: bold; color: {score_color}; }}
+  .body {{ padding: 25px; }}
+  .summary {{ background: #f8f9fa; border-left: 4px solid #7c3aed; padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #444; }}
+  .stats {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }}
+  .stat {{ background: #f8f9fa; padding: 12px; border-radius: 8px; text-align: center; }}
+  .stat-value {{ font-size: 20px; font-weight: bold; color: #7c3aed; }}
+  .stat-label {{ font-size: 11px; color: #888; margin-top: 3px; }}
+  .section {{ margin-bottom: 20px; }}
+  .section h3 {{ font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333; }}
+  .item {{ padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; font-size: 13px; }}
+  .win {{ background: #f0fdf4; color: #166534; border-left: 3px solid #4ade80; }}
+  .issue {{ background: #fff7ed; color: #9a3412; border-left: 3px solid #f97316; }}
+  .rec {{ background: #eff6ff; color: #1e40af; border-left: 3px solid #60a5fa; }}
+  .footer {{ background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #888; }}
+</style></head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🤖 SEMA Weekly Report</h1>
+    <p>Week of {week_str}</p>
+    <div class="score-box">
+      <div class="score">{score}/100</div>
+      <div style="font-size:13px;margin-top:4px">{trend_icon} {trend.capitalize()} performance</div>
+    </div>
+  </div>
+  <div class="body">
+    <div class="summary">{report_data.get("executive_summary", "")}</div>
+    
+    <div class="stats">
+      <div class="stat"><div class="stat-value">{total_clicks}</div><div class="stat-label">Clicks</div></div>
+      <div class="stat"><div class="stat-value">{total_impressions:,}</div><div class="stat-label">Impressions</div></div>
+      <div class="stat"><div class="stat-value">{avg_ctr}%</div><div class="stat-label">CTR</div></div>
+      <div class="stat"><div class="stat-value">₹{total_spend:,.0f}</div><div class="stat-label">Spend</div></div>
+    </div>
+
+    {"".join(f'<div class="section"><h3>✅ Key Wins</h3>' + "".join(f'<div class="item win">→ {w}</div>' for w in report_data.get("key_wins", [])) + "</div>") if report_data.get("key_wins") else ""}
+    {"".join(f'<div class="section"><h3>⚠️ Issues to Fix</h3>' + "".join(f'<div class="item issue">→ {i}</div>' for i in report_data.get("issues", [])) + "</div>") if report_data.get("issues") else ""}
+    {"".join(f'<div class="section"><h3>🎯 Next Week Recommendations</h3>' + "".join(f'<div class="item rec">→ {r}</div>' for r in report_data.get("recommendations", [])) + "</div>") if report_data.get("recommendations") else ""}
+
+    <div style="text-align:center;padding:15px;background:#f8f9fa;border-radius:8px;font-size:12px;color:#888">
+      Powered by SEMA AI · sakthivelraja.ai
+    </div>
+  </div>
+  <div class="footer">This report was automatically generated by SEMA AI Agent</div>
+</div>
+</body></html>"""
+
+        email_result = {"sent": False, "message": "Email not sent (send_email=False)"}
+        
+        if send_email and user_email:
+            resend_api_key = os.environ.get("RESEND_API_KEY", "")
+            if resend_api_key:
+                email_resp = httpx.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {resend_api_key}", "Content-Type": "application/json"},
+                    json={
+                        "from": "SEMA AI <reports@sakthivelraja.ai>",
+                        "to": [user_email],
+                        "subject": report_data.get("subject", f"Weekly SEM Report - {week_str}"),
+                        "html": html_body,
+                    },
+                    timeout=30
+                )
+                if email_resp.status_code == 200:
+                    email_result = {"sent": True, "message": f"Report sent to {user_email}"}
+                else:
+                    email_result = {"sent": False, "message": str(email_resp.json())}
+
+        return {
+            "success": True,
+            "report": report_data,
+            "stats": {
+                "total_clicks": total_clicks,
+                "total_impressions": total_impressions,
+                "total_spend_inr": total_spend,
+                "avg_ctr": avg_ctr,
+                "campaigns": len(campaigns_data)
+            },
+            "email": email_result,
+            "html_preview": html_body
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/ads/apply-sema-fixes")
 async def apply_sema_fixes(request: Request):
     """Apply SEMA recommended fixes to Google Ads campaign."""
