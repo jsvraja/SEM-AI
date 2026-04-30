@@ -1209,6 +1209,9 @@ function OptimizePanel({ sessionId }) {
   const [weeklyReportResult, setWeeklyReportResult] = useState(null)
   const [weeklyReportLoading, setWeeklyReportLoading] = useState(false)
   const [weeklyReportEmail, setWeeklyReportEmail] = useState('')
+  const [adRefreshResult, setAdRefreshResult] = useState(null)
+  const [adRefreshLoading, setAdRefreshLoading] = useState(false)
+  const [adRefreshAutoApply, setAdRefreshAutoApply] = useState(false)
 
   async function runAutoBidAdjust() {
     setAutoBidLoading(true)
@@ -1247,6 +1250,28 @@ function OptimizePanel({ sessionId }) {
       setWeeklyReportResult({ success: false, error: e.message })
     } finally {
       setWeeklyReportLoading(false)
+    }
+  }
+
+  async function runAutoAdRefresh() {
+    setAdRefreshLoading(true)
+    setAdRefreshResult(null)
+    try {
+      const res = await fetch(`${BASE}/api/sema/auto-ad-refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          auto_apply: adRefreshAutoApply,
+          url: window.location.hostname,
+        }),
+      })
+      const data = await res.json()
+      setAdRefreshResult(data)
+    } catch(e) {
+      setAdRefreshResult({ success: false, error: e.message })
+    } finally {
+      setAdRefreshLoading(false)
     }
   }
 
@@ -1413,6 +1438,66 @@ function OptimizePanel({ sessionId }) {
                 }}>
                   {kw.status === 'applied' ? '✅ Blocked' : '💡 Suggested'}
                 </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SEMA 2.0 Auto Ad Copy Refresh */}
+      <div style={{ padding: '14px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#60a5fa' }}>✍️ SEMA 2.0 — Auto Ad Copy Refresh</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI detects low CTR ads and rewrites them automatically</div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
+            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
+              <input type="checkbox" checked={adRefreshAutoApply} onChange={e => setAdRefreshAutoApply(e.target.checked)}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
+              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: adRefreshAutoApply ? '#3b82f6' : 'var(--bg4)', transition: 'background 0.2s' }} />
+              <div style={{ position: 'absolute', top: '2px', left: adRefreshAutoApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+            </div>
+          </label>
+        </div>
+        <button onClick={runAutoAdRefresh} disabled={adRefreshLoading} style={{
+          width: '100%', padding: '10px', borderRadius: '8px',
+          background: adRefreshLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #3b82f6, #6366f1)',
+          border: 'none', color: adRefreshLoading ? 'var(--text3)' : 'white',
+          fontSize: '13px', fontWeight: 600, cursor: adRefreshLoading ? 'not-allowed' : 'pointer',
+        }}>
+          {adRefreshLoading ? '🔄 Analyzing ads...' : adRefreshAutoApply ? '✍️ Analyze & Refresh Ad Copy' : '🔍 Suggest New Ad Copy'}
+        </button>
+
+        {adRefreshResult && (
+          <div style={{ marginTop: '10px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>
+              {adRefreshResult.summary} ({adRefreshResult.ads_analyzed || 0} ads analyzed)
+            </div>
+            {(adRefreshResult.refreshed_ads || []).map((ad, i) => (
+              <div key={i} style={{ padding: '10px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600 }}>{ad.campaign_name}</span>
+                  <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '5px', fontWeight: 600,
+                    background: ad.status === 'applied' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
+                    color: ad.status === 'applied' ? '#4ade80' : '#60a5fa',
+                  }}>
+                    {ad.status === 'applied' ? '✅ Published' : '💡 Suggested'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#f87171', marginBottom: '6px' }}>⚠ {ad.issue}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>New headlines:</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                  {(ad.new_headlines || []).map((h, j) => (
+                    <span key={j} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.2)' }}>{h}</span>
+                  ))}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>New descriptions:</div>
+                {(ad.new_descriptions || []).map((d, j) => (
+                  <div key={j} style={{ fontSize: '11px', color: 'var(--text2)', padding: '4px 8px', background: 'var(--bg2)', borderRadius: '4px', marginBottom: '3px' }}>{d}</div>
+                ))}
+                <div style={{ fontSize: '11px', color: '#4ade80', marginTop: '6px' }}>💡 {ad.improvement_reason}</div>
               </div>
             ))}
           </div>

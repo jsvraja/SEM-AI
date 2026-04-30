@@ -3575,6 +3575,171 @@ Return ONLY this JSON:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/sema/auto-ad-refresh")
+async def sema_auto_ad_refresh(request: Request):
+    """SEMA 2.0 — Detect low CTR ads and auto-refresh with AI-generated copy."""
+    try:
+        body = await request.json()
+        session_id = body.get("session_id", "")
+        customer_id = body.get("customer_id", DEFAULT_CUSTOMER_ID)
+        auto_apply = body.get("auto_apply", False)
+        url = body.get("url", "")
+
+        session = _sessions.get(session_id, {})
+        if not session:
+            raise HTTPException(status_code=401, detail="Session not found")
+
+        refresh_token = session.get("refresh_token", "")
+        from ads_manager import get_headers
+        headers = get_headers(refresh_token)
+        cid = customer_id.replace("-", "")
+
+        # Fetch ad performance
+        query = """
+            SELECT
+              ad_group_ad.resource_name,
+              ad_group_ad.ad.responsive_search_ad.headlines,
+              ad_group_ad.ad.responsive_search_ad.descriptions,
+              ad_group_ad.ad.final_urls,
+              ad_group.resource_name,
+              campaign.name,
+              metrics.clicks,
+              metrics.impressions,
+              metrics.ctr,
+              metrics.cost_micros
+            FROM ad_group_ad
+            WHERE segments.date DURING LAST_30_DAYS
+              AND ad_group_ad.status = 'ENABLED'
+              AND campaign.status = 'ENABLED'
+        """
+        search_url = f"https://googleads.googleapis.com/v23/customers/{cid}/googleAds:search"
+        resp = httpx.post(search_url, headers=headers, json={"query": query}, timeout=30)
+
+        ads_data = []
+        if resp.status_code == 200:
+            for r in resp.json().get("results", []):
+                m = r.get("metrics", {})
+                ada = r.get("adGroupAd", {})
+                ad = ada.get("ad", {})
+                rsa = ad.get("responsiveSearchAd", {})
+                
+                headlines = [h.get("text", "") for h in rsa.get("headlines", [])]
+                descriptions = [d.get("text", "") for d in rsa.get("descriptions", [])]
+                
+                ads_data.append({
+                    "resource_name": ada.get("resourceName", ""),
+                    "ad_group_resource": r.get("adGroup", {}).get("resourceName", ""),
+                    "campaign_name": r.get("campaign", {}).get("name", ""),
+                    "headlines": headlines[:3],
+                    "descriptions": descriptions[:2],
+                    "final_url": ad.get("finalUrls", [""])[0] if ad.get("finalUrls") else url,
+                    "clicks": int(m.get("clicks", 0)),
+                    "impressions": int(m.get("impressions", 0)),
+                    "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                    "spend_inr": round(int(m.get("costMicros", 0)) / 1000000, 2),
+                })
+
+        # Filter low CTR ads (CTR < 2% with >100 impressions)
+        low_ctr_ads = [a for a in ads_data if a["ctr"] < 2.0 and a["impressions"] > 100]
+        
+        if not low_ctr_ads and ads_data:
+            low_ctr_ads = ads_data  # refresh all if no specific low CTR
+
+        # AI generate new ad copy
+        prompt = f"""You are SEMA, a Google Ads copywriter AI. Generate improved ad copy for these low-performing ads.
+
+Website URL: {url or "the business website"}
+Low CTR Ads:
+{json.dumps(low_ctr_ads[:5], indent=2)}
+
+Rules:
+- Headlines: max 30 characters each
+- Descriptions: max 90 characters each
+- Make headlines compelling, benefit-focused
+- Include call-to-action in descriptions
+- Use power words: Free, Proven, Expert, Fast, etc.
+
+Return ONLY this JSON:
+{{
+  "refreshed_ads": [
+    {{
+      "resource_name": "original resource name",
+      "ad_group_resource": "ad group resource",
+      "campaign_name": "campaign name",
+      "current_ctr": 0.0,
+      "issue": "why current ad is underperforming",
+      "new_headlines": ["Headline 1", "Headline 2", "Headline 3", "Headline 4", "Headline 5"],
+      "new_descriptions": ["Description 1 with CTA.", "Description 2 with benefit."],
+      "final_url": "url",
+      "improvement_reason": "why new copy will perform better"
+    }}
+  ],
+  "summary": "overall analysis"
+}}"""
+
+        ai_response = await call_gemini(prompt)
+        try:
+            ai_data = parse_ai_json(ai_response)
+        except:
+            ai_data = {"refreshed_ads": [], "summary": "Analysis complete"}
+
+        refreshed_ads = ai_data.get("refreshed_ads", [])
+        results = []
+
+        if auto_apply and refreshed_ads:
+            for ad in refreshed_ads:
+                try:
+                    ad_group_resource = ad.get("ad_group_resource", "")
+                    new_headlines = ad.get("new_headlines", [])[:5]
+                    new_descriptions = ad.get("new_descriptions", [])[:2]
+                    final_url = ad.get("final_url", url)
+
+                    if not ad_group_resource or not new_headlines:
+                        results.append({**ad, "status": "skipped", "message": "Missing data"})
+                        continue
+
+                    # Create new responsive search ad
+                    headlines_payload = [{"text": h[:30]} for h in new_headlines if h]
+                    descriptions_payload = [{"text": d[:90]} for d in new_descriptions if d]
+
+                    create_url = f"https://googleads.googleapis.com/v23/customers/{cid}/adGroupAds:mutate"
+                    create_body = {"operations": [{"create": {
+                        "adGroup": ad_group_resource,
+                        "ad": {
+                            "finalUrls": [final_url],
+                            "responsiveSearchAd": {
+                                "headlines": headlines_payload,
+                                "descriptions": descriptions_payload,
+                            }
+                        },
+                        "status": "ENABLED"
+                    }}]}
+
+                    create_resp = httpx.post(create_url, headers=headers, json=create_body, timeout=30)
+                    
+                    if create_resp.status_code == 200:
+                        results.append({**ad, "status": "applied", "message": "New ad created successfully"})
+                    else:
+                        error_data = create_resp.json()
+                        results.append({**ad, "status": "error", "message": str(error_data)})
+
+                except Exception as e:
+                    results.append({**ad, "status": "error", "message": str(e)})
+        else:
+            results = [{**ad, "status": "suggested"} for ad in refreshed_ads]
+
+        return {
+            "success": True,
+            "auto_applied": auto_apply,
+            "ads_analyzed": len(ads_data),
+            "low_ctr_ads": len(low_ctr_ads),
+            "refreshed_ads": results,
+            "summary": ai_data.get("summary", "")
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/ads/apply-sema-fixes")
 async def apply_sema_fixes(request: Request):
     """Apply SEMA recommended fixes to Google Ads campaign."""
