@@ -3950,3 +3950,53 @@ async def apply_sema_fixes(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ─────────────────────────────────────────
+# AI Auto-Detect Business & Keywords
+# ─────────────────────────────────────────
+class DetectBusinessRequest(BaseModel):
+    url: str
+
+@app.post("/api/detect-business")
+async def detect_business(req: DetectBusinessRequest):
+    try:
+        import httpx
+        # Fetch homepage
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            resp = await client.get(req.url, headers={"User-Agent": "Mozilla/5.0"})
+            html = resp.text[:8000]
+
+        # Strip tags
+        import re
+        clean = re.sub(r'<[^>]+>', ' ', html)
+        clean = re.sub(r'\s+', ' ', clean).strip()[:3000]
+
+        prompt = f"""Analyse this website content and return ONLY a JSON object with no extra text:
+{{
+  "business_description": "one line description of what this business does (max 80 chars)",
+  "target_keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+}}
+
+Website URL: {req.url}
+Website Content: {clean}
+
+Rules:
+- business_description must be concise, specific, and useful for Google Ads targeting
+- target_keywords must be 5 relevant SEO/SEM keywords for this business
+- Return ONLY the JSON, no markdown, no explanation"""
+
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                json={"contents": [{"parts": [{"text": prompt}]}]},
+            )
+            data = r.json()
+
+        raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        raw = re.sub(r'^```json|^```|```$', '', raw, flags=re.MULTILINE).strip()
+        result = json.loads(raw)
+        return result
+
+    except Exception as e:
+        return {"business_description": "", "target_keywords": [], "error": str(e)}
