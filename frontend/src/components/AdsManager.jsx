@@ -988,361 +988,251 @@ function BidAdjuster({ rec, sessionId }) {
 }
 
 function OptimizePanel({ sessionId }) {
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
-  const [applying, setApplying] = useState({})
-  const [autoApply, setAutoApply] = useState(false)
-  const [autoBidResult, setAutoBidResult] = useState(null)
-  const [autoBidLoading, setAutoBidLoading] = useState(false)
-  const [autoNegKwResult, setAutoNegKwResult] = useState(null)
-  const [autoNegKwLoading, setAutoNegKwLoading] = useState(false)
-  const [autoNegKwApply, setAutoNegKwApply] = useState(false)
-  const [adRefreshResult, setAdRefreshResult] = useState(null)
-  const [adRefreshLoading, setAdRefreshLoading] = useState(false)
-  const [adRefreshAutoApply, setAdRefreshAutoApply] = useState(false)
-  const [budgetScaleResult, setBudgetScaleResult] = useState(null)
-  const [budgetScaleLoading, setBudgetScaleLoading] = useState(false)
-  const [budgetScaleAutoApply, setBudgetScaleAutoApply] = useState(false)
-  const [targetRoas, setTargetRoas] = useState(3)
-  const [weeklyReportResult, setWeeklyReportResult] = useState(null)
-  const [weeklyReportLoading, setWeeklyReportLoading] = useState(false)
-  const [weeklyReportEmail, setWeeklyReportEmail] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [scanned, setScanned] = useState(false)
+  const [issues, setIssues] = useState([])
+  const [fixing, setFixing] = useState({})
+  const [fixed, setFixed] = useState({})
+  const [weeklyEmail, setWeeklyEmail] = useState('')
+  const [weeklyLoading, setWeeklyLoading] = useState(false)
+  const [weeklyResult, setWeeklyResult] = useState(null)
+  const [healthScore, setHealthScore] = useState(null)
+  const [summary, setSummary] = useState('')
 
-  async function runAutoBidAdjust() {
-    setAutoBidLoading(true); setAutoBidResult(null)
+  async function scanCampaigns() {
+    setScanning(true)
+    setScanned(false)
+    setIssues([])
     try {
-      const res = await fetch(`${BASE}/api/sema/auto-bid-adjust`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, auto_apply:autoApply}) })
-      setAutoBidResult(await res.json())
-    } catch(e) { setAutoBidResult({success:false,error:e.message}) }
-    finally { setAutoBidLoading(false) }
+      // Run all 3 analyses in parallel
+      const [bidRes, negRes, budgetRes] = await Promise.all([
+        fetch(`${BASE}/api/sema/auto-bid-adjust`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, auto_apply:false}) }).then(r=>r.json()),
+        fetch(`${BASE}/api/sema/auto-negative-keywords`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, auto_apply:false}) }).then(r=>r.json()),
+        fetch(`${BASE}/api/sema/auto-budget-scale`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, auto_apply:false, target_roas:3}) }).then(r=>r.json()),
+      ])
+
+      const allIssues = []
+
+      // Bid issues
+      ;(bidRes.adjustments||[]).forEach(adj => {
+        if (adj.action !== 'keep') allIssues.push({
+          id: `bid_${adj.campaign_name}`,
+          type: 'bid',
+          severity: adj.priority === 'high' ? 'critical' : 'warning',
+          title: `${adj.action === 'increase' ? 'Increase' : adj.action === 'decrease' ? 'Decrease' : 'Pause'} bid — ${adj.campaign_name}`,
+          desc: adj.reason,
+          impact: `${adj.adjustment_pct || 0}% bid ${adj.action}`,
+          data: adj,
+          endpoint: '/api/sema/auto-bid-adjust',
+        })
+      })
+
+      // Negative keyword issues
+      ;(negRes.negative_keywords||[]).slice(0,5).forEach((kw,i) => {
+        allIssues.push({
+          id: `neg_${i}`,
+          type: 'negative_kw',
+          severity: kw.priority === 'high' ? 'critical' : 'warning',
+          title: `Block wasted keyword: "${kw.keyword}"`,
+          desc: kw.reason,
+          impact: 'Reduce wasted spend',
+          data: kw,
+          endpoint: '/api/sema/auto-negative-keywords',
+        })
+      })
+
+      // Budget issues
+      ;(budgetRes.recommendations||[]).forEach(rec => {
+        if (rec.direction !== 'keep') allIssues.push({
+          id: `budget_${rec.campaign_name}`,
+          type: 'budget',
+          severity: rec.priority === 'high' ? 'critical' : 'warning',
+          title: `${rec.direction === 'increase' ? 'Scale up' : 'Scale down'} budget — ${rec.campaign_name}`,
+          desc: rec.reason,
+          impact: `₹${rec.current_budget_inr} → ₹${rec.recommended_budget_inr}`,
+          data: rec,
+          endpoint: '/api/sema/auto-budget-scale',
+        })
+      })
+
+      // Calculate health score
+      const criticalCount = allIssues.filter(i => i.severity === 'critical').length
+      const warningCount = allIssues.filter(i => i.severity === 'warning').length
+      const score = Math.max(0, 100 - (criticalCount * 20) - (warningCount * 5))
+      
+      setHealthScore(score)
+      setIssues(allIssues)
+      setSummary(bidRes.summary || negRes.summary || '')
+      setScanned(true)
+    } catch(e) {
+      console.error(e)
+    }
+    setScanning(false)
   }
 
-  async function runAutoNegKeywords() {
-    setAutoNegKwLoading(true); setAutoNegKwResult(null)
+  async function fixIssue(issue) {
+    setFixing(f => ({...f, [issue.id]: true}))
     try {
-      const res = await fetch(`${BASE}/api/sema/auto-negative-keywords`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, auto_apply:autoNegKwApply}) })
-      setAutoNegKwResult(await res.json())
-    } catch(e) { setAutoNegKwResult({success:false,error:e.message}) }
-    finally { setAutoNegKwLoading(false) }
-  }
-
-  async function runAutoAdRefresh() {
-    setAdRefreshLoading(true); setAdRefreshResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/auto-ad-refresh`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, auto_apply:adRefreshAutoApply}) })
-      setAdRefreshResult(await res.json())
-    } catch(e) { setAdRefreshResult({success:false,error:e.message}) }
-    finally { setAdRefreshLoading(false) }
-  }
-
-  async function runBudgetScale() {
-    setBudgetScaleLoading(true); setBudgetScaleResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/auto-budget-scale`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, auto_apply:budgetScaleAutoApply, target_roas:parseFloat(targetRoas)}) })
-      setBudgetScaleResult(await res.json())
-    } catch(e) { setBudgetScaleResult({success:false,error:e.message}) }
-    finally { setBudgetScaleLoading(false) }
-  }
-
-  async function runWeeklyReport(sendEmail) {
-    setWeeklyReportLoading(true); setWeeklyReportResult(null)
-    try {
-      const res = await fetch(`${BASE}/api/sema/weekly-report`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId, email:weeklyReportEmail, send_email:sendEmail}) })
-      setWeeklyReportResult(await res.json())
-    } catch(e) { setWeeklyReportResult({success:false,error:e.message}) }
-    finally { setWeeklyReportLoading(false) }
-  }
-
-  async function runOptimization() {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`${BASE}/api/ads/optimize`, {
+      const res = await fetch(`${BASE}${issue.endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId }),
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({session_id: sessionId, auto_apply: true, target_roas: 3})
       })
       const data = await res.json()
-      setResult(data)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
+      if (data.success) {
+        setFixed(f => ({...f, [issue.id]: true}))
+        setIssues(prev => prev.filter(i => i.id !== issue.id))
+      }
+    } catch(e) { console.error(e) }
+    setFixing(f => ({...f, [issue.id]: false}))
+  }
+
+  async function fixAllIssues() {
+    for (const issue of issues) {
+      await fixIssue(issue)
     }
   }
 
-  async function applyNegativeKeywords(rec) {
-    if (!rec.negative_keywords?.length) return
-    setApplying(a => ({ ...a, [rec.campaign_resource]: true }))
+  async function sendWeeklyReport(send) {
+    setWeeklyLoading(true)
     try {
-      const res = await fetch(`${BASE}/api/ads/negative-keywords`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          campaign_resource_name: rec.campaign_resource,
-          keywords: rec.negative_keywords,
-        }),
+      const res = await fetch(`${BASE}/api/sema/weekly-report`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({session_id: sessionId, email: weeklyEmail, send_email: send})
       })
-      const data = await res.json()
-      if (data.success) alert(`✅ Added ${data.added} negative keywords!`)
-      else throw new Error(data.error)
-    } catch (e) {
-      alert('Error: ' + e.message)
-    } finally {
-      setApplying(a => ({ ...a, [rec.campaign_resource]: false }))
-    }
+      setWeeklyResult(await res.json())
+    } catch(e) {}
+    setWeeklyLoading(false)
   }
 
-  const healthColor = result?.overall_health === 'good' ? '#4ade80' : result?.overall_health === 'warning' ? '#fbbf24' : '#f87171'
+  const scoreColor = healthScore === null ? 'var(--text3)' : healthScore >= 80 ? '#4ade80' : healthScore >= 50 ? '#fbbf24' : '#f87171'
+  const criticalIssues = issues.filter(i => i.severity === 'critical')
+  const warningIssues = issues.filter(i => i.severity === 'warning')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div style={{ padding: '14px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>⚡ AI Campaign Optimiser</div>
-        <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6 }}>
-          SEMA analyses your campaign performance and recommends bid adjustments. Enter your desired percentage change — SEMA will validate it and explain the impact before applying.
-        </div>
-      </div>
-
-      {/* SEMA 2.0 Auto Bid */}
-      <div style={{padding:'14px',background:'rgba(124,58,237,0.06)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:'12px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-          <div><div style={{fontSize:'13px',fontWeight:600,color:'#a78bfa'}}>🤖 SEMA 2.0 — Auto Bid Adjustment</div><div style={{fontSize:'11px',color:'var(--text3)',marginTop:'2px'}}>AI analyzes performance and adjusts bids automatically</div></div>
-          <label style={{display:'flex',alignItems:'center',gap:'6px',cursor:'pointer'}}>
-            <span style={{fontSize:'11px',color:'var(--text3)'}}>Auto Apply</span>
-            <div style={{position:'relative',width:'36px',height:'20px'}}>
-              <input type="checkbox" checked={autoApply} onChange={e=>setAutoApply(e.target.checked)} style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer',margin:0}}/>
-              <div style={{width:'36px',height:'20px',borderRadius:'10px',background:autoApply?'#7c3aed':'var(--bg4)',transition:'background 0.2s'}}/>
-              <div style={{position:'absolute',top:'2px',left:autoApply?'18px':'2px',width:'16px',height:'16px',borderRadius:'50%',background:'white',transition:'left 0.2s'}}/>
-            </div>
-          </label>
-        </div>
-        <button onClick={runAutoBidAdjust} disabled={autoBidLoading} style={{width:'100%',padding:'10px',borderRadius:'8px',background:autoBidLoading?'var(--bg3)':'linear-gradient(135deg,#7c3aed,#4f7dff)',border:'none',color:autoBidLoading?'var(--text3)':'white',fontSize:'13px',fontWeight:600,cursor:autoBidLoading?'not-allowed':'pointer'}}>
-          {autoBidLoading?'🔄 Analyzing...':autoApply?'🚀 Analyze & Auto-Apply Bids':'🔍 Analyze Bids (Suggest Only)'}
-        </button>
-        {autoBidResult && <div style={{marginTop:'10px'}}>
-          <div style={{fontSize:'12px',color:'var(--text2)',marginBottom:'8px',lineHeight:1.6}}>{autoBidResult.summary}</div>
-          {(autoBidResult.adjustments||[]).map((adj,i)=>(
-            <div key={i} style={{padding:'8px 10px',background:'var(--bg3)',borderRadius:'8px',marginBottom:'6px',border:'1px solid var(--border)'}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:'3px'}}>
-                <span style={{fontSize:'12px',fontWeight:600}}>{adj.campaign_name}</span>
-                <span style={{fontSize:'11px',padding:'2px 7px',borderRadius:'5px',fontWeight:600,background:adj.action==='increase'?'rgba(34,197,94,0.1)':adj.action==='decrease'?'rgba(245,158,11,0.1)':'rgba(239,68,68,0.1)',color:adj.action==='increase'?'#4ade80':adj.action==='decrease'?'#fbbf24':'#f87171'}}>
-                  {adj.action==='increase'?'📈 +':adj.action==='decrease'?'📉 -':'⏸'}{adj.adjustment_pct||0}%
-                </span>
-              </div>
-              <div style={{fontSize:'11px',color:'var(--text3)'}}>{adj.reason}</div>
-              <div style={{fontSize:'10px',marginTop:'3px',color:adj.status==='applied'?'#4ade80':'var(--text3)'}}>{adj.status==='applied'?'✅ Applied':adj.status==='suggested'?'💡 Suggested':adj.status}</div>
-            </div>
-          ))}
-        </div>}
-      </div>
-
-      {/* SEMA 2.0 Auto Negative Keywords */}
-      <div style={{padding:'14px',background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:'12px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-          <div><div style={{fontSize:'13px',fontWeight:600,color:'#f87171'}}>🚫 SEMA 2.0 — Auto Negative Keywords</div><div style={{fontSize:'11px',color:'var(--text3)',marginTop:'2px'}}>AI finds wasted spend keywords and blocks them</div></div>
-          <label style={{display:'flex',alignItems:'center',gap:'6px',cursor:'pointer'}}>
-            <span style={{fontSize:'11px',color:'var(--text3)'}}>Auto Apply</span>
-            <div style={{position:'relative',width:'36px',height:'20px'}}>
-              <input type="checkbox" checked={autoNegKwApply} onChange={e=>setAutoNegKwApply(e.target.checked)} style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer',margin:0}}/>
-              <div style={{width:'36px',height:'20px',borderRadius:'10px',background:autoNegKwApply?'#ef4444':'var(--bg4)',transition:'background 0.2s'}}/>
-              <div style={{position:'absolute',top:'2px',left:autoNegKwApply?'18px':'2px',width:'16px',height:'16px',borderRadius:'50%',background:'white',transition:'left 0.2s'}}/>
-            </div>
-          </label>
-        </div>
-        <button onClick={runAutoNegKeywords} disabled={autoNegKwLoading} style={{width:'100%',padding:'10px',borderRadius:'8px',background:autoNegKwLoading?'var(--bg3)':'linear-gradient(135deg,#ef4444,#f97316)',border:'none',color:autoNegKwLoading?'var(--text3)':'white',fontSize:'13px',fontWeight:600,cursor:autoNegKwLoading?'not-allowed':'pointer'}}>
-          {autoNegKwLoading?'🔄 Analyzing...':autoNegKwApply?'🚫 Find & Block Negative Keywords':'🔍 Find Negative Keywords (Suggest Only)'}
-        </button>
-        {autoNegKwResult && <div style={{marginTop:'10px'}}>
-          <div style={{fontSize:'12px',color:'var(--text2)',marginBottom:'8px',lineHeight:1.6}}>{autoNegKwResult.summary} ({autoNegKwResult.search_terms_analyzed||0} terms analyzed)</div>
-          {(autoNegKwResult.negative_keywords||[]).map((kw,i)=>(
-            <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 10px',background:'var(--bg3)',borderRadius:'7px',marginBottom:'5px',border:'1px solid var(--border)'}}>
-              <div><span style={{fontSize:'12px',fontWeight:600,color:'#f87171'}}>− {kw.keyword}</span><span style={{fontSize:'11px',color:'var(--text3)',marginLeft:'8px'}}>{kw.reason}</span></div>
-              <span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'5px',fontWeight:600,background:kw.status==='applied'?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:kw.status==='applied'?'#4ade80':'#f87171'}}>{kw.status==='applied'?'✅ Blocked':'💡 Suggested'}</span>
-            </div>
-          ))}
-        </div>}
-      </div>
-
-      {/* SEMA 2.0 Auto Ad Refresh */}
-      <div style={{padding:'14px',background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:'12px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-          <div><div style={{fontSize:'13px',fontWeight:600,color:'#60a5fa'}}>✍️ SEMA 2.0 — Auto Ad Copy Refresh</div><div style={{fontSize:'11px',color:'var(--text3)',marginTop:'2px'}}>AI detects low CTR ads and rewrites them automatically</div></div>
-          <label style={{display:'flex',alignItems:'center',gap:'6px',cursor:'pointer'}}>
-            <span style={{fontSize:'11px',color:'var(--text3)'}}>Auto Apply</span>
-            <div style={{position:'relative',width:'36px',height:'20px'}}>
-              <input type="checkbox" checked={adRefreshAutoApply} onChange={e=>setAdRefreshAutoApply(e.target.checked)} style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer',margin:0}}/>
-              <div style={{width:'36px',height:'20px',borderRadius:'10px',background:adRefreshAutoApply?'#3b82f6':'var(--bg4)',transition:'background 0.2s'}}/>
-              <div style={{position:'absolute',top:'2px',left:adRefreshAutoApply?'18px':'2px',width:'16px',height:'16px',borderRadius:'50%',background:'white',transition:'left 0.2s'}}/>
-            </div>
-          </label>
-        </div>
-        <button onClick={runAutoAdRefresh} disabled={adRefreshLoading} style={{width:'100%',padding:'10px',borderRadius:'8px',background:adRefreshLoading?'var(--bg3)':'linear-gradient(135deg,#3b82f6,#6366f1)',border:'none',color:adRefreshLoading?'var(--text3)':'white',fontSize:'13px',fontWeight:600,cursor:adRefreshLoading?'not-allowed':'pointer'}}>
-          {adRefreshLoading?'🔄 Analyzing ads...':adRefreshAutoApply?'✍️ Analyze & Refresh Ad Copy':'🔍 Suggest New Ad Copy'}
-        </button>
-        {adRefreshResult && <div style={{marginTop:'10px'}}>
-          <div style={{fontSize:'12px',color:'var(--text2)',marginBottom:'8px',lineHeight:1.6}}>{adRefreshResult.summary} ({adRefreshResult.ads_analyzed||0} ads analyzed)</div>
-          {(adRefreshResult.refreshed_ads||[]).map((ad,i)=>(
-            <div key={i} style={{padding:'10px',background:'var(--bg3)',borderRadius:'8px',marginBottom:'8px',border:'1px solid var(--border)'}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
-                <span style={{fontSize:'12px',fontWeight:600}}>{ad.campaign_name}</span>
-                <span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'5px',fontWeight:600,background:ad.status==='applied'?'rgba(34,197,94,0.1)':'rgba(59,130,246,0.1)',color:ad.status==='applied'?'#4ade80':'#60a5fa'}}>{ad.status==='applied'?'✅ Published':'💡 Suggested'}</span>
-              </div>
-              <div style={{fontSize:'11px',color:'#f87171',marginBottom:'6px'}}>⚠ {ad.issue}</div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:'4px',marginBottom:'6px'}}>{(ad.new_headlines||[]).map((h,j)=><span key={j} style={{fontSize:'11px',padding:'2px 8px',borderRadius:'4px',background:'rgba(59,130,246,0.1)',color:'#60a5fa',border:'1px solid rgba(59,130,246,0.2)'}}>{h}</span>)}</div>
-              {(ad.new_descriptions||[]).map((d,j)=><div key={j} style={{fontSize:'11px',color:'var(--text2)',padding:'4px 8px',background:'var(--bg2)',borderRadius:'4px',marginBottom:'3px'}}>{d}</div>)}
-            </div>
-          ))}
-        </div>}
-      </div>
-
-      {/* SEMA 2.0 Budget Auto-Scaling */}
-      <div style={{padding:'14px',background:'rgba(16,185,129,0.06)',border:'1px solid rgba(16,185,129,0.2)',borderRadius:'12px'}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-          <div><div style={{fontSize:'13px',fontWeight:600,color:'#34d399'}}>💰 SEMA 2.0 — Budget Auto-Scaling</div><div style={{fontSize:'11px',color:'var(--text3)',marginTop:'2px'}}>AI scales budgets based on ROAS performance</div></div>
-          <label style={{display:'flex',alignItems:'center',gap:'6px',cursor:'pointer'}}>
-            <span style={{fontSize:'11px',color:'var(--text3)'}}>Auto Apply</span>
-            <div style={{position:'relative',width:'36px',height:'20px'}}>
-              <input type="checkbox" checked={budgetScaleAutoApply} onChange={e=>setBudgetScaleAutoApply(e.target.checked)} style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer',margin:0}}/>
-              <div style={{width:'36px',height:'20px',borderRadius:'10px',background:budgetScaleAutoApply?'#10b981':'var(--bg4)',transition:'background 0.2s'}}/>
-              <div style={{position:'absolute',top:'2px',left:budgetScaleAutoApply?'18px':'2px',width:'16px',height:'16px',borderRadius:'50%',background:'white',transition:'left 0.2s'}}/>
-            </div>
-          </label>
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px'}}>
-          <span style={{fontSize:'12px',color:'var(--text2)'}}>Target ROAS:</span>
-          <input type="number" min="1" max="10" step="0.5" value={targetRoas} onChange={e=>setTargetRoas(e.target.value)} style={{width:'70px',padding:'5px 8px',borderRadius:'6px',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:'12px',outline:'none'}}/>
-          <span style={{fontSize:'12px',color:'var(--text3)'}}>x return on ad spend</span>
-        </div>
-        <button onClick={runBudgetScale} disabled={budgetScaleLoading} style={{width:'100%',padding:'10px',borderRadius:'8px',background:budgetScaleLoading?'var(--bg3)':'linear-gradient(135deg,#10b981,#059669)',border:'none',color:budgetScaleLoading?'var(--text3)':'white',fontSize:'13px',fontWeight:600,cursor:budgetScaleLoading?'not-allowed':'pointer'}}>
-          {budgetScaleLoading?'🔄 Analyzing...':budgetScaleAutoApply?'💰 Analyze & Scale Budgets':'🔍 Suggest Budget Changes'}
-        </button>
-        {budgetScaleResult && <div style={{marginTop:'10px'}}>
-          <div style={{fontSize:'12px',color:'var(--text2)',marginBottom:'8px',lineHeight:1.6}}>{budgetScaleResult.summary}</div>
-          {(budgetScaleResult.recommendations||[]).map((rec,i)=>(
-            <div key={i} style={{padding:'8px 10px',background:'var(--bg3)',borderRadius:'7px',marginBottom:'5px',border:'1px solid var(--border)'}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:'3px'}}>
-                <span style={{fontSize:'12px',fontWeight:600}}>{rec.campaign_name}</span>
-                <span style={{fontSize:'11px',fontWeight:600,color:rec.direction==='increase'?'#34d399':rec.direction==='decrease'?'#f87171':'var(--text3)'}}>
-                  {rec.direction==='increase'?'📈':rec.direction==='decrease'?'📉':'➡️'} ₹{rec.current_budget_inr} → ₹{rec.recommended_budget_inr}
-                </span>
-              </div>
-              <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'2px'}}>{rec.reason}</div>
-              <div style={{fontSize:'10px',color:rec.status==='applied'?'#34d399':'var(--text3)'}}>{rec.status==='applied'?'✅ Applied':rec.status==='suggested'?'💡 Suggested':rec.status}</div>
-            </div>
-          ))}
-        </div>}
-      </div>
-
-      {/* SEMA 2.0 Weekly Report */}
-      <div style={{padding:'14px',background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:'12px'}}>
-        <div style={{fontSize:'13px',fontWeight:600,color:'#4ade80',marginBottom:'4px'}}>📊 SEMA 2.0 — Weekly Performance Report</div>
-        <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'10px'}}>AI generates and emails your weekly campaign performance report</div>
-        <input type="email" placeholder="Enter email to receive report" value={weeklyReportEmail} onChange={e=>setWeeklyReportEmail(e.target.value)} style={{width:'100%',padding:'8px 10px',borderRadius:'7px',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:'12px',marginBottom:'8px',outline:'none',boxSizing:'border-box'}}/>
-        <div style={{display:'flex',gap:'8px'}}>
-          <button onClick={()=>runWeeklyReport(false)} disabled={weeklyReportLoading} style={{flex:1,padding:'9px',borderRadius:'7px',background:'var(--bg3)',border:'1px solid rgba(34,197,94,0.3)',color:'#4ade80',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
-            {weeklyReportLoading?'🔄 Generating...':'👁 Preview Report'}
-          </button>
-          <button onClick={()=>runWeeklyReport(true)} disabled={weeklyReportLoading||!weeklyReportEmail} style={{flex:1,padding:'9px',borderRadius:'7px',background:weeklyReportEmail?'linear-gradient(135deg,#22c55e,#16a34a)':'var(--bg3)',border:'none',color:weeklyReportEmail?'white':'var(--text3)',fontSize:'12px',fontWeight:600,cursor:weeklyReportEmail?'pointer':'not-allowed'}}>
-            📧 Send to Email
-          </button>
-        </div>
-        {weeklyReportResult?.report && <div style={{marginTop:'12px'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-            <span style={{fontSize:'12px',fontWeight:600}}>{weeklyReportResult.report.subject}</span>
-            <span style={{fontSize:'11px',padding:'2px 8px',borderRadius:'5px',fontWeight:600,background:(weeklyReportResult.report.performance_score||0)>=70?'rgba(34,197,94,0.1)':'rgba(245,158,11,0.1)',color:(weeklyReportResult.report.performance_score||0)>=70?'#4ade80':'#fbbf24'}}>{weeklyReportResult.report.performance_score}/100</span>
+    <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+      
+      {/* Health Score Card */}
+      <div style={{background:'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(79,125,255,0.08))',border:'1px solid rgba(124,58,237,0.2)',borderRadius:'14px',padding:'20px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <div style={{fontSize:'13px',fontWeight:600,color:'#a78bfa',marginBottom:'4px'}}>🤖 SEMA 2.0 — Campaign Health</div>
+            <div style={{fontSize:'12px',color:'var(--text3)'}}>AI-powered campaign optimization dashboard</div>
           </div>
-          <div style={{fontSize:'12px',color:'var(--text2)',lineHeight:1.6,marginBottom:'8px'}}>{weeklyReportResult.report.executive_summary}</div>
-          {weeklyReportResult.email?.sent && <div style={{fontSize:'12px',color:'#4ade80',padding:'6px 10px',background:'rgba(34,197,94,0.1)',borderRadius:'6px'}}>✅ {weeklyReportResult.email.message}</div>}
-        </div>}
+          {healthScore !== null && (
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:'36px',fontWeight:700,color:scoreColor,lineHeight:1}}>{healthScore}</div>
+              <div style={{fontSize:'10px',color:'var(--text3)',marginTop:'2px'}}>Health Score</div>
+            </div>
+          )}
+        </div>
+
+        {summary && <div style={{fontSize:'12px',color:'var(--text2)',marginTop:'10px',padding:'8px 12px',background:'var(--bg3)',borderRadius:'8px',lineHeight:1.6}}>{summary}</div>}
+
+        <button onClick={scanCampaigns} disabled={scanning} style={{
+          width:'100%',marginTop:'12px',padding:'12px',borderRadius:'10px',
+          background:scanning?'var(--bg3)':'linear-gradient(135deg,#7c3aed,#4f7dff)',
+          border:'none',color:scanning?'var(--text3)':'white',
+          fontSize:'13px',fontWeight:600,cursor:scanning?'not-allowed':'pointer',
+          display:'flex',alignItems:'center',justifyContent:'center',gap:'8px'
+        }}>
+          {scanning ? <><RefreshCw size={14} style={{animation:'spin 1s linear infinite'}}/> Scanning campaigns...</> : scanned ? '🔄 Re-scan Campaigns' : '🔍 Scan & Analyse Campaigns'}
+        </button>
       </div>
 
-      <button onClick={runOptimization} disabled={loading} style={{
-        padding: '12px', borderRadius: '10px',
-        background: loading ? 'var(--bg3)' : 'linear-gradient(135deg, #6366f1, #818cf8)',
-        border: 'none', color: loading ? 'var(--text3)' : 'white',
-        fontSize: '14px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-      }}>
-        {loading
-          ? <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Analysing campaigns...</>
-          : '⚡ Run AI Optimisation'
-        }
-      </button>
-
-      {error && <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', fontSize: '13px', color: '#f87171' }}>⚠ {error}</div>}
-
-      {result && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ padding: '12px 14px', background: 'var(--bg3)', borderRadius: '10px', border: `1px solid ${healthColor}40` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: healthColor }} />
-              <span style={{ fontSize: '13px', fontWeight: 600, color: healthColor, textTransform: 'capitalize' }}>
-                {result.overall_health || 'Analysed'} — Campaign Health
-              </span>
+      {/* Issues Dashboard */}
+      {scanned && (
+        <>
+          {issues.length === 0 ? (
+            <div style={{textAlign:'center',padding:'2rem',background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:'12px'}}>
+              <div style={{fontSize:'32px',marginBottom:'8px'}}>✅</div>
+              <div style={{fontSize:'14px',fontWeight:600,color:'#4ade80'}}>All campaigns are healthy!</div>
+              <div style={{fontSize:'12px',color:'var(--text3)',marginTop:'4px'}}>No issues found. SEMA is monitoring continuously.</div>
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6 }}>{result.summary}</div>
-          </div>
-
-          {(result.recommendations || []).length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text3)', fontSize: '13px' }}>
-              No optimisations needed — campaigns are performing well!
-            </div>
-          ) : (result.recommendations || []).map((rec, i) => (
-            <div key={i} style={{ padding: '14px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600 }}>{rec.campaign_name}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>
-                    CTR: {((rec.current_ctr || 0) * 100).toFixed(2)}% · Avg CPC: ₹{rec.avg_cpc || 0}
-                  </div>
+          ) : (
+            <>
+              {/* Summary bar */}
+              <div style={{display:'flex',gap:'8px',alignItems:'center',padding:'10px 14px',background:'var(--bg3)',borderRadius:'10px',border:'1px solid var(--border)'}}>
+                <div style={{flex:1,fontSize:'12px',color:'var(--text2)'}}>
+                  {criticalIssues.length > 0 && <span style={{color:'#f87171',fontWeight:600,marginRight:'12px'}}>🔴 {criticalIssues.length} Critical</span>}
+                  {warningIssues.length > 0 && <span style={{color:'#fbbf24',fontWeight:600}}>🟡 {warningIssues.length} Warnings</span>}
                 </div>
-                <span style={{
-                  fontSize: '11px', padding: '3px 8px', borderRadius: '6px', fontWeight: 500,
-                  background: rec.action === 'increase_bid' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)',
-                  color: rec.action === 'increase_bid' ? '#4ade80' : '#fbbf24',
-                  border: `1px solid ${rec.action === 'increase_bid' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
-                }}>
-                  {rec.action === 'increase_bid' ? '📈 Increase Bid' : '📉 Decrease Bid'}
-                </span>
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '4px', lineHeight: 1.6 }}>{rec.reason}</div>
-              {rec.suggested_change && (
-                <div style={{ fontSize: '12px', color: '#818cf8', marginBottom: '4px' }}>💡 SEMA suggests: {rec.suggested_change}</div>
-              )}
-
-              {(rec.action === 'increase_bid' || rec.action === 'decrease_bid') && (
-                <BidAdjuster rec={rec} sessionId={sessionId} />
-              )}
-
-              {rec.negative_keywords?.length > 0 && (
-                <div style={{ marginTop: '10px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '6px' }}>Suggested negative keywords:</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px' }}>
-                    {rec.negative_keywords.map((kw, j) => (
-                      <span key={j} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>−{kw}</span>
-                    ))}
-                  </div>
-                  <button onClick={() => applyNegativeKeywords(rec)} disabled={applying[rec.campaign_resource]} style={{
-                    padding: '6px 12px', borderRadius: '7px', fontSize: '12px',
-                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                    color: '#f87171', cursor: 'pointer', fontWeight: 500,
-                  }}>
-                    {applying[rec.campaign_resource] ? 'Adding...' : '+ Add Negative Keywords'}
+                {issues.length > 1 && (
+                  <button onClick={fixAllIssues} style={{padding:'6px 14px',borderRadius:'7px',background:'linear-gradient(135deg,#7c3aed,#4f7dff)',border:'none',color:'white',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
+                    ⚡ Fix All ({issues.length})
                   </button>
+                )}
+              </div>
+
+              {/* Issue Cards */}
+              {issues.map(issue => (
+                <div key={issue.id} style={{
+                  padding:'14px',borderRadius:'12px',border:`1px solid ${issue.severity==='critical'?'rgba(239,68,68,0.25)':'rgba(245,158,11,0.25)'}`,
+                  background:issue.severity==='critical'?'rgba(239,68,68,0.04)':'rgba(245,158,11,0.04)'
+                }}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:'10px'}}>
+                    <div style={{flex:1}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'}}>
+                        <span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'10px',fontWeight:600,
+                          background:issue.severity==='critical'?'rgba(239,68,68,0.12)':'rgba(245,158,11,0.12)',
+                          color:issue.severity==='critical'?'#f87171':'#fbbf24'
+                        }}>{issue.severity === 'critical' ? '🔴 Critical' : '🟡 Warning'}</span>
+                        <span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'10px',background:'var(--bg3)',color:'var(--text3)',border:'1px solid var(--border)'}}>
+                          {issue.type === 'bid' ? '💰 Bid' : issue.type === 'negative_kw' ? '🚫 Keywords' : '📊 Budget'}
+                        </span>
+                      </div>
+                      <div style={{fontSize:'13px',fontWeight:600,marginBottom:'3px'}}>{issue.title}</div>
+                      <div style={{fontSize:'11px',color:'var(--text3)',lineHeight:1.5}}>{issue.desc}</div>
+                      <div style={{fontSize:'11px',color:'#a78bfa',marginTop:'4px'}}>💡 Impact: {issue.impact}</div>
+                    </div>
+                    <button onClick={()=>fixIssue(issue)} disabled={fixing[issue.id]||fixed[issue.id]} style={{
+                      padding:'7px 14px',borderRadius:'8px',flexShrink:0,
+                      background:fixed[issue.id]?'rgba(34,197,94,0.1)':fixing[issue.id]?'var(--bg3)':'linear-gradient(135deg,#7c3aed,#4f7dff)',
+                      border:`1px solid ${fixed[issue.id]?'rgba(34,197,94,0.3)':'transparent'}`,
+                      color:fixed[issue.id]?'#4ade80':fixing[issue.id]?'var(--text3)':'white',
+                      fontSize:'12px',fontWeight:600,cursor:fixing[issue.id]||fixed[issue.id]?'not-allowed':'pointer',
+                      whiteSpace:'nowrap'
+                    }}>
+                      {fixed[issue.id]?'✅ Fixed':fixing[issue.id]?'Fixing...':'⚡ Fix'}
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+              ))}
+            </>
+          )}
+        </>
       )}
+
+      {/* Weekly Report */}
+      <div style={{padding:'14px',background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:'12px'}}>
+        <div style={{fontSize:'13px',fontWeight:600,color:'#4ade80',marginBottom:'4px'}}>📊 Weekly Performance Report</div>
+        <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'10px'}}>AI generates and emails your weekly campaign summary</div>
+        <input type="email" placeholder="your@email.com" value={weeklyEmail} onChange={e=>setWeeklyEmail(e.target.value)}
+          style={{width:'100%',padding:'8px 10px',borderRadius:'7px',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:'12px',marginBottom:'8px',outline:'none',boxSizing:'border-box'}}/>
+        <div style={{display:'flex',gap:'8px'}}>
+          <button onClick={()=>sendWeeklyReport(false)} disabled={weeklyLoading} style={{flex:1,padding:'9px',borderRadius:'7px',background:'var(--bg3)',border:'1px solid rgba(34,197,94,0.3)',color:'#4ade80',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
+            {weeklyLoading?'Generating...':'👁 Preview'}
+          </button>
+          <button onClick={()=>sendWeeklyReport(true)} disabled={weeklyLoading||!weeklyEmail} style={{flex:1,padding:'9px',borderRadius:'7px',background:weeklyEmail?'linear-gradient(135deg,#22c55e,#16a34a)':'var(--bg3)',border:'none',color:weeklyEmail?'white':'var(--text3)',fontSize:'12px',fontWeight:600,cursor:weeklyEmail?'pointer':'not-allowed'}}>
+            📧 Send Email
+          </button>
+        </div>
+        {weeklyResult?.report && (
+          <div style={{marginTop:'10px',padding:'10px',background:'var(--bg3)',borderRadius:'8px'}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
+              <span style={{fontSize:'12px',fontWeight:600}}>{weeklyResult.report.subject}</span>
+              <span style={{fontSize:'11px',color:(weeklyResult.report.performance_score||0)>=70?'#4ade80':'#fbbf24',fontWeight:600}}>{weeklyResult.report.performance_score}/100</span>
+            </div>
+            <div style={{fontSize:'12px',color:'var(--text2)',lineHeight:1.6}}>{weeklyResult.report.executive_summary}</div>
+            {weeklyResult.email?.sent && <div style={{fontSize:'11px',color:'#4ade80',marginTop:'6px'}}>✅ {weeklyResult.email.message}</div>}
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }
 
-// ─── Report Panel ─────────────────────────────────────────────────────────────
 function ReportPanel({ sessionId }) {
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState(null)
