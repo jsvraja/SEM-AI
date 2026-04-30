@@ -3994,6 +3994,9 @@ Rules:
             )
             data = r.json()
 
+        # Handle Gemini response safely
+        if "candidates" not in data or not data["candidates"]:
+            return {"business_description": "", "target_keywords": [], "error": "Gemini no candidates: " + str(data)[:200]}
         raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
         raw = re.sub(r'^```json|^```|```$', '', raw, flags=re.MULTILINE).strip()
         result = json.loads(raw)
