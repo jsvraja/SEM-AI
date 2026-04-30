@@ -3248,6 +3248,135 @@ Return ONLY this JSON:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/sema/auto-negative-keywords")
+async def sema_auto_negative_keywords(request: Request):
+    """SEMA 2.0 — Auto detect and add negative keywords from search terms."""
+    try:
+        body = await request.json()
+        session_id = body.get("session_id", "")
+        customer_id = body.get("customer_id", DEFAULT_CUSTOMER_ID)
+        auto_apply = body.get("auto_apply", False)
+
+        session = _sessions.get(session_id, {})
+        if not session:
+            raise HTTPException(status_code=401, detail="Session not found")
+
+        refresh_token = session.get("refresh_token", "")
+        from ads_manager import get_headers, add_negative_keywords
+        headers = get_headers(refresh_token)
+        cid = customer_id.replace("-", "")
+
+        # Fetch search terms report
+        query = """
+            SELECT
+              search_term_view.search_term,
+              search_term_view.resource_name,
+              campaign.resource_name,
+              campaign.name,
+              metrics.clicks,
+              metrics.impressions,
+              metrics.ctr,
+              metrics.cost_micros
+            FROM search_term_view
+            WHERE segments.date DURING LAST_30_DAYS
+              AND metrics.impressions > 5
+        """
+        search_url = f"https://googleads.googleapis.com/v23/customers/{cid}/googleAds:search"
+        resp = httpx.post(search_url, headers=headers, json={"query": query}, timeout=30)
+
+        if resp.status_code != 200:
+            # No search terms yet — use AI to suggest common negatives
+            search_terms = []
+        else:
+            results = resp.json().get("results", [])
+            search_terms = []
+            for r in results:
+                m = r.get("metrics", {})
+                search_terms.append({
+                    "term": r.get("searchTermView", {}).get("searchTerm", ""),
+                    "campaign": r.get("campaign", {}).get("name", ""),
+                    "campaign_resource": r.get("campaign", {}).get("resourceName", ""),
+                    "clicks": int(m.get("clicks", 0)),
+                    "impressions": int(m.get("impressions", 0)),
+                    "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                    "cost_inr": round(int(m.get("costMicros", 0)) / 1000000, 2),
+                })
+
+        # AI analyze and suggest negative keywords
+        prompt = f"""You are SEMA, a Google Ads AI agent. Analyze search terms and identify negative keywords.
+
+Search Terms Report (Last 30 Days):
+{json.dumps(search_terms[:50], indent=2) if search_terms else "No search terms data yet - suggest common negative keywords for an AI/Technology business"}
+
+Rules for negative keywords:
+- 0 clicks but >10 impressions = definitely negative
+- CTR < 0.5% and cost > ₹100 = waste of budget, add as negative
+- Irrelevant terms (jobs, free, crack, download, etc.) = negative
+- Competitor brand names (if not intentional) = negative
+
+Return ONLY this JSON:
+{{
+  "negative_keywords": [
+    {{
+      "keyword": "search term",
+      "reason": "why it should be negative",
+      "campaign_resource": "campaign resource name or 'all'",
+      "campaign_name": "campaign name or 'All Campaigns'",
+      "priority": "high|medium|low"
+    }}
+  ],
+  "summary": "brief summary of findings"
+}}"""
+
+        ai_response = await call_gemini(prompt)
+        try:
+            ai_data = parse_ai_json(ai_response)
+        except:
+            ai_data = {"negative_keywords": [], "summary": "Analysis complete"}
+
+        suggestions = ai_data.get("negative_keywords", [])
+        results_list = []
+
+        if auto_apply and suggestions:
+            # Group by campaign
+            campaign_keywords = {}
+            for s in suggestions:
+                camp_resource = s.get("campaign_resource", "all")
+                if camp_resource == "all" and search_terms:
+                    camp_resource = search_terms[0].get("campaign_resource", "")
+                if camp_resource not in campaign_keywords:
+                    campaign_keywords[camp_resource] = []
+                campaign_keywords[camp_resource].append(s.get("keyword", ""))
+
+            for camp_resource, keywords in campaign_keywords.items():
+                if not camp_resource or not keywords:
+                    continue
+                try:
+                    result = add_negative_keywords(cid, refresh_token, camp_resource, keywords)
+                    for kw in keywords:
+                        matching = next((s for s in suggestions if s.get("keyword") == kw), {})
+                        results_list.append({
+                            **matching,
+                            "status": "applied" if result.get("success") else "error",
+                            "message": result.get("message", result.get("error", ""))
+                        })
+                except Exception as e:
+                    for kw in keywords:
+                        results_list.append({"keyword": kw, "status": "error", "message": str(e)})
+        else:
+            results_list = [{**s, "status": "suggested"} for s in suggestions]
+
+        return {
+            "success": True,
+            "auto_applied": auto_apply,
+            "negative_keywords": results_list,
+            "search_terms_analyzed": len(search_terms),
+            "summary": ai_data.get("summary", "")
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/ads/apply-sema-fixes")
 async def apply_sema_fixes(request: Request):
     """Apply SEMA recommended fixes to Google Ads campaign."""

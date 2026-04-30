@@ -1203,6 +1203,9 @@ function OptimizePanel({ sessionId }) {
   const [autoApply, setAutoApply] = useState(false)
   const [autoBidResult, setAutoBidResult] = useState(null)
   const [autoBidLoading, setAutoBidLoading] = useState(false)
+  const [autoNegKwResult, setAutoNegKwResult] = useState(null)
+  const [autoNegKwLoading, setAutoNegKwLoading] = useState(false)
+  const [autoNegKwApply, setAutoNegKwApply] = useState(false)
 
   async function runAutoBidAdjust() {
     setAutoBidLoading(true)
@@ -1219,6 +1222,24 @@ function OptimizePanel({ sessionId }) {
       setAutoBidResult({ success: false, error: e.message })
     } finally {
       setAutoBidLoading(false)
+    }
+  }
+
+  async function runAutoNegKeywords() {
+    setAutoNegKwLoading(true)
+    setAutoNegKwResult(null)
+    try {
+      const res = await fetch(`${BASE}/api/sema/auto-negative-keywords`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, auto_apply: autoNegKwApply }),
+      })
+      const data = await res.json()
+      setAutoNegKwResult(data)
+    } catch(e) {
+      setAutoNegKwResult({ success: false, error: e.message })
+    } finally {
+      setAutoNegKwLoading(false)
     }
   }
 
@@ -1318,6 +1339,55 @@ function OptimizePanel({ sessionId }) {
                 <div style={{ fontSize: '10px', marginTop: '3px', color: adj.status === 'applied' ? '#4ade80' : 'var(--text3)' }}>
                   {adj.status === 'applied' ? '✅ Applied' : adj.status === 'suggested' ? '💡 Suggested' : adj.status}
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SEMA 2.0 Auto Negative Keywords */}
+      <div style={{ padding: '14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#f87171' }}>🚫 SEMA 2.0 — Auto Negative Keywords</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI finds wasted spend keywords and blocks them</div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
+            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
+              <input type="checkbox" checked={autoNegKwApply} onChange={e => setAutoNegKwApply(e.target.checked)}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
+              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: autoNegKwApply ? '#ef4444' : 'var(--bg4)', transition: 'background 0.2s' }} />
+              <div style={{ position: 'absolute', top: '2px', left: autoNegKwApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+            </div>
+          </label>
+        </div>
+        <button onClick={runAutoNegKeywords} disabled={autoNegKwLoading} style={{
+          width: '100%', padding: '10px', borderRadius: '8px',
+          background: autoNegKwLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #ef4444, #f97316)',
+          border: 'none', color: autoNegKwLoading ? 'var(--text3)' : 'white',
+          fontSize: '13px', fontWeight: 600, cursor: autoNegKwLoading ? 'not-allowed' : 'pointer',
+        }}>
+          {autoNegKwLoading ? '🔄 Analyzing...' : autoNegKwApply ? '🚫 Find & Block Negative Keywords' : '🔍 Find Negative Keywords (Suggest Only)'}
+        </button>
+
+        {autoNegKwResult && (
+          <div style={{ marginTop: '10px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>
+              {autoNegKwResult.summary} ({autoNegKwResult.search_terms_analyzed || 0} terms analyzed)
+            </div>
+            {(autoNegKwResult.negative_keywords || []).map((kw, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg3)', borderRadius: '7px', marginBottom: '5px', border: '1px solid var(--border)' }}>
+                <div>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#f87171' }}>− {kw.keyword}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text3)', marginLeft: '8px' }}>{kw.reason}</span>
+                </div>
+                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '5px', fontWeight: 600,
+                  background: kw.status === 'applied' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                  color: kw.status === 'applied' ? '#4ade80' : '#f87171',
+                }}>
+                  {kw.status === 'applied' ? '✅ Blocked' : '💡 Suggested'}
+                </span>
               </div>
             ))}
           </div>
