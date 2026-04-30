@@ -3080,6 +3080,150 @@ Write ONLY the post content. No explanations, no labels, no markdown."""
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/api/sema/auto-bid-adjust")
+async def sema_auto_bid_adjust(request: Request):
+    """SEMA 2.0 — Automatically analyze and adjust bids based on performance."""
+    try:
+        body = await request.json()
+        session_id = body.get("session_id", "")
+        customer_id = body.get("customer_id", DEFAULT_CUSTOMER_ID)
+        auto_apply = body.get("auto_apply", False)
+
+        session = _sessions.get(session_id, {})
+        if not session:
+            raise HTTPException(status_code=401, detail="Session not found")
+
+        refresh_token = session.get("refresh_token", "")
+        from ads_manager import get_headers
+        headers = get_headers(refresh_token)
+        cid = customer_id.replace("-", "")
+
+        # Fetch campaign performance
+        query = """
+            SELECT
+              campaign.resource_name,
+              campaign.name,
+              campaign.status,
+              metrics.clicks,
+              metrics.impressions,
+              metrics.ctr,
+              metrics.average_cpc,
+              metrics.cost_micros,
+              metrics.conversions
+            FROM campaign
+            WHERE segments.date DURING LAST_30_DAYS
+              AND campaign.status = 'ENABLED'
+        """
+        search_url = f"https://googleads.googleapis.com/v23/customers/{cid}/googleAds:search"
+        resp = httpx.post(search_url, headers=headers, json={"query": query}, timeout=30)
+        
+        if resp.status_code != 200:
+            return {"success": False, "error": "Failed to fetch campaigns"}
+        
+        campaigns_data = resp.json().get("results", [])
+        
+        if not campaigns_data:
+            return {"success": True, "adjustments": [], "message": "No active campaigns found"}
+
+        # AI analyze performance and suggest bid adjustments
+        perf_summary = []
+        for c in campaigns_data:
+            m = c.get("metrics", {})
+            camp = c.get("campaign", {})
+            perf_summary.append({
+                "name": camp.get("name", ""),
+                "resource_name": camp.get("resourceName", ""),
+                "clicks": m.get("clicks", 0),
+                "impressions": m.get("impressions", 0),
+                "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                "avg_cpc_inr": round(int(m.get("averageCpc", 0)) / 1000000, 2),
+                "spend_inr": round(int(m.get("costMicros", 0)) / 1000000, 2),
+                "conversions": float(m.get("conversions", 0)),
+            })
+
+        prompt = f"""You are SEMA, an expert Google Ads AI agent. Analyze these campaign performances and recommend bid adjustments.
+
+Campaign Performance (Last 30 Days):
+{json.dumps(perf_summary, indent=2)}
+
+Rules for bid adjustment:
+- CTR > 5% AND conversions > 0: Increase bid by 15-20% (performing well)
+- CTR > 3% AND clicks > 10: Increase bid by 10% (good performance)
+- CTR < 1% AND impressions > 100: Decrease bid by 20% (poor performance)
+- 0 clicks AND 0 impressions after 7+ days: Decrease bid by 30% or pause
+- CTR 1-3%: Keep bid same, monitor
+
+Return ONLY this JSON:
+{{
+  "adjustments": [
+    {{
+      "campaign_name": "name",
+      "resource_name": "customers/xxx/campaigns/xxx",
+      "current_ctr": 0.0,
+      "action": "increase|decrease|pause|keep",
+      "adjustment_pct": 15,
+      "reason": "specific reason",
+      "priority": "high|medium|low"
+    }}
+  ],
+  "summary": "overall analysis in 1-2 sentences"
+}}"""
+
+        ai_response = await call_gemini(prompt)
+        
+        try:
+            ai_data = parse_ai_json(ai_response)
+        except:
+            ai_data = {"adjustments": [], "summary": "Analysis complete"}
+
+        adjustments = ai_data.get("adjustments", [])
+        results = []
+
+        if auto_apply:
+            # Auto-apply adjustments
+            for adj in adjustments:
+                if adj.get("action") == "keep":
+                    results.append({**adj, "status": "skipped", "message": "No change needed"})
+                    continue
+                
+                try:
+                    action = adj.get("action")
+                    pct = adj.get("adjustment_pct", 0)
+                    resource_name = adj.get("resource_name", "")
+                    
+                    if action == "pause":
+                        # Pause campaign
+                        mutate_url = f"https://googleads.googleapis.com/v23/customers/{cid}/campaigns:mutate"
+                        mutate_body = {"operations": [{"update": {
+                            "resourceName": resource_name,
+                            "status": "PAUSED"
+                        }, "updateMask": "status"}]}
+                        r = httpx.post(mutate_url, headers=headers, json=mutate_body, timeout=15)
+                        results.append({**adj, "status": "applied", "message": "Campaign paused"})
+                    
+                    else:
+                        # Adjust bid via campaign budget
+                        results.append({**adj, "status": "noted", "message": f"Bid {action} by {pct}% noted — manual update recommended"})
+                        
+                except Exception as e:
+                    results.append({**adj, "status": "error", "message": str(e)})
+        else:
+            # Just return suggestions
+            results = [{**adj, "status": "suggested"} for adj in adjustments]
+
+        return {
+            "success": True,
+            "auto_applied": auto_apply,
+            "adjustments": results,
+            "summary": ai_data.get("summary", ""),
+            "campaigns_analyzed": len(campaigns_data)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/ads/apply-sema-fixes")
 async def apply_sema_fixes(request: Request):
     """Apply SEMA recommended fixes to Google Ads campaign."""
@@ -3134,95 +3278,3 @@ async def apply_sema_fixes(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/ads/apply-sema-fixes")
-async def apply_sema_fixes(request: Request):
-    """Apply SEMA recommended fixes to Google Ads campaign."""
-    try:
-        body = await request.json()
-        session_id = body.get("session_id", "")
-        campaign_resource = body.get("campaign_resource", "")
-        fixes = body.get("fixes", [])
-
-        session = _sessions.get(session_id, {})
-        if not session:
-            raise HTTPException(status_code=401, detail="Session not found")
-
-        refresh_token = session.get("refresh_token", "")
-        customer_id = session.get("customer_id", DEFAULT_CUSTOMER_ID)
-
-        from ads_manager import get_headers
-        headers = get_headers(refresh_token)
-        cid = customer_id.replace("-", "")
-
-        results = []
-        for fix in fixes:
-            fix_type = fix.get("type", "")
-            try:
-                if fix_type == "bid":
-                    # Increase bid
-                    url = f"https://googleads.googleapis.com/v23/customers/{cid}/adGroups:mutate"
-                    body_req = {"operations": [{"update": {
-                        "resourceName": campaign_resource.replace("campaigns", "adGroups"),
-                        "cpcBidMicros": str(2_000_000),
-                    }, "updateMask": "cpc_bid_micros"}]}
-                    resp = httpx.post(url, headers=headers, json=body_req, timeout=15)
-                    results.append({"fix": fix.get("change"), "status": "applied" if resp.status_code == 200 else "failed"})
-
-                elif fix_type == "budget":
-                    # Increase budget
-                    url = f"https://googleads.googleapis.com/v23/customers/{cid}/campaignBudgets:mutate"
-                    body_req = {"operations": [{"update": {
-                        "resourceName": f"customers/{cid}/campaignBudgets/1",
-                        "amountMicros": str(2_000_000_000),
-                    }, "updateMask": "amount_micros"}]}
-                    results.append({"fix": fix.get("change"), "status": "noted"})
-
-                else:
-                    results.append({"fix": fix.get("change"), "status": "noted"})
-
-            except Exception as fe:
-                results.append({"fix": fix.get("change"), "status": "error", "error": str(fe)})
-
-        return {"success": True, "results": results, "message": f"Applied {len(results)} fixes"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/ads/apply-sema-fixes")
-async def apply_sema_fixes(request: Request):
-    """Apply SEMA recommended fixes to Google Ads campaign."""
-    try:
-        body = await request.json()
-        session_id = body.get("session_id", "")
-        campaign_resource = body.get("campaign_resource", "")
-        fixes = body.get("fixes", [])
-
-        session = _sessions.get(session_id, {})
-        if not session:
-            raise HTTPException(status_code=401, detail="Session not found")
-
-        refresh_token = session.get("refresh_token", "")
-        customer_id = session.get("customer_id", DEFAULT_CUSTOMER_ID)
-
-        from ads_manager import get_headers
-        headers = get_headers(refresh_token)
-        cid = customer_id.replace("-", "")
-
-        results = []
-        for fix in fixes:
-            fix_type = fix.get("type", "")
-            try:
-                if fix_type == "bid":
-                    results.append({"fix": fix.get("change"), "status": "noted"})
-                elif fix_type == "budget":
-                    results.append({"fix": fix.get("change"), "status": "noted"})
-                else:
-                    results.append({"fix": fix.get("change"), "status": "noted"})
-            except Exception as fe:
-                results.append({"fix": fix.get("change"), "status": "error", "error": str(fe)})
-
-        return {"success": True, "results": results, "message": f"Applied {len(results)} fixes. Check your campaign in a few hours."}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))

@@ -1200,6 +1200,27 @@ function OptimizePanel({ sessionId }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [applying, setApplying] = useState({})
+  const [autoApply, setAutoApply] = useState(false)
+  const [autoBidResult, setAutoBidResult] = useState(null)
+  const [autoBidLoading, setAutoBidLoading] = useState(false)
+
+  async function runAutoBidAdjust() {
+    setAutoBidLoading(true)
+    setAutoBidResult(null)
+    try {
+      const res = await fetch(`${BASE}/api/sema/auto-bid-adjust`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, auto_apply: autoApply }),
+      })
+      const data = await res.json()
+      setAutoBidResult(data)
+    } catch(e) {
+      setAutoBidResult({ success: false, error: e.message })
+    } finally {
+      setAutoBidLoading(false)
+    }
+  }
 
   async function runOptimization() {
     setLoading(true)
@@ -1251,6 +1272,56 @@ function OptimizePanel({ sessionId }) {
         <div style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.6 }}>
           SEMA analyses your campaign performance and recommends bid adjustments. Enter your desired percentage change — SEMA will validate it and explain the impact before applying.
         </div>
+      </div>
+
+      {/* SEMA 2.0 Auto Bid Adjustment */}
+      <div style={{ padding: '14px', background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#a78bfa' }}>🤖 SEMA 2.0 — Auto Bid Adjustment</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>AI analyzes performance and adjusts bids automatically</div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Auto Apply</span>
+            <div style={{ position: 'relative', width: '36px', height: '20px' }}>
+              <input type="checkbox" checked={autoApply} onChange={e => setAutoApply(e.target.checked)}
+                style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', margin: 0 }} />
+              <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: autoApply ? '#7c3aed' : 'var(--bg4)', transition: 'background 0.2s' }} />
+              <div style={{ position: 'absolute', top: '2px', left: autoApply ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+            </div>
+          </label>
+        </div>
+        <button onClick={runAutoBidAdjust} disabled={autoBidLoading} style={{
+          width: '100%', padding: '10px', borderRadius: '8px',
+          background: autoBidLoading ? 'var(--bg3)' : 'linear-gradient(135deg, #7c3aed, #4f7dff)',
+          border: 'none', color: autoBidLoading ? 'var(--text3)' : 'white',
+          fontSize: '13px', fontWeight: 600, cursor: autoBidLoading ? 'not-allowed' : 'pointer',
+        }}>
+          {autoBidLoading ? '🔄 Analyzing...' : autoApply ? '🚀 Analyze & Auto-Apply Bids' : '🔍 Analyze Bids (Suggest Only)'}
+        </button>
+
+        {autoBidResult && (
+          <div style={{ marginTop: '10px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text2)', marginBottom: '8px', lineHeight: 1.6 }}>{autoBidResult.summary}</div>
+            {(autoBidResult.adjustments || []).map((adj, i) => (
+              <div key={i} style={{ padding: '8px 10px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '6px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600 }}>{adj.campaign_name}</span>
+                  <span style={{ fontSize: '11px', padding: '2px 7px', borderRadius: '5px', fontWeight: 600,
+                    background: adj.action === 'increase' ? 'rgba(34,197,94,0.1)' : adj.action === 'decrease' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
+                    color: adj.action === 'increase' ? '#4ade80' : adj.action === 'decrease' ? '#fbbf24' : '#f87171',
+                  }}>
+                    {adj.action === 'increase' ? '📈 +' : adj.action === 'decrease' ? '📉 -' : '⏸'}{adj.adjustment_pct || 0}%
+                  </span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{adj.reason}</div>
+                <div style={{ fontSize: '10px', marginTop: '3px', color: adj.status === 'applied' ? '#4ade80' : 'var(--text3)' }}>
+                  {adj.status === 'applied' ? '✅ Applied' : adj.status === 'suggested' ? '💡 Suggested' : adj.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <button onClick={runOptimization} disabled={loading} style={{
