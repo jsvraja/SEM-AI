@@ -32,6 +32,8 @@ export default function LandingForm({ onSubmit, loading, error }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!url.trim()) return
+    if (!desc.trim()) { alert('Please enter a Business Description — this helps AI generate accurate analysis.'); return }
+    if (!keywords.trim()) { alert('Please enter at least one Target Keyword — this improves SEO and ad targeting.'); return }
     onSubmit({
       url: url.trim(),
       businessDescription: desc.trim(),
@@ -143,7 +145,7 @@ export default function LandingForm({ onSubmit, loading, error }) {
 
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text2)', marginBottom: '6px' }}>
-                  Business Description <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(optional)</span>
+                  Business Description <span style={{ color: '#f87171', fontWeight: 600 }}>*</span>
                 </label>
                 <input
                   type="text" value={desc}
@@ -162,7 +164,7 @@ export default function LandingForm({ onSubmit, loading, error }) {
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text2)', marginBottom: '6px' }}>
-                  Target Keywords <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(comma separated)</span>
+                  Target Keywords <span style={{ color: '#f87171', fontWeight: 600 }}>*</span> <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(comma separated)</span>
                 </label>
                 <input
                   type="text" value={keywords}
