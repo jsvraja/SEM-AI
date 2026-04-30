@@ -3989,7 +3989,7 @@ Rules:
         gemini_key = os.environ.get("GEMINI_API_KEY", "")
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key={gemini_key}",
                 json={"contents": [{"parts": [{"text": prompt}]}]},
             )
             data = r.json()
