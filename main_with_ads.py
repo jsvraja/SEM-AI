@@ -1,3 +1,4 @@
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -4000,3 +4001,18 @@ Rules:
 
     except Exception as e:
         return {"business_description": "", "target_keywords": [], "error": str(e)}
+
+# ─────────────────────────────────────────
+# Serve React Frontend (Production)
+# ─────────────────────────────────────────
+import os as _os
+from fastapi.responses import FileResponse as _FileResponse
+
+_dist = _os.path.join(_os.path.dirname(__file__), "frontend", "dist")
+if _os.path.exists(_dist):
+    app.mount("/assets", StaticFiles(directory=_os.path.join(_dist, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        index = _os.path.join(_dist, "index.html")
+        return _FileResponse(index)
