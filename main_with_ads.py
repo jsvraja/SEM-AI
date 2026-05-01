@@ -4298,7 +4298,7 @@ def init_feature_flags_table():
 
 init_feature_flags_table()
 
-@app.get("/api/feature-flags")
+@app.post("/api/feature-flags")
 async def get_feature_flags():
     conn = get_db_connection()
     if not conn: return {"flags": {}}

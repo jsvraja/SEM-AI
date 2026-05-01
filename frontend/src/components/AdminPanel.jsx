@@ -33,7 +33,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
       setStats(statsData)
       setUsers(usersData.users || [])
       // Fetch feature flags
-      const flagsRes = await fetch(`${API}/api/feature-flags`)
+      const flagsRes = await fetch(`${API}/api/feature-flags`, { method: 'POST', headers })
       const flagsData = await flagsRes.json()
       setFlags(flagsData.flags || {})
     } catch (e) {
