@@ -205,7 +205,7 @@ const TABS = [
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
-  const [showPricing, setShowPricing] = React.useState(false)
+  const [showPricing, setShowPricing] = useState(false)
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
