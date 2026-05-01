@@ -2022,6 +2022,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
           />
         )}
       </main>
+      {showPricing && <PricingModal onClose={() => setShowPricing(false)} user={user} />}
     </div>
   )
 }
