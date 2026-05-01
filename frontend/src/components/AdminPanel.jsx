@@ -3,7 +3,8 @@ import { Users, TrendingUp, Shield, Trash2, Crown, Loader2, AlertCircle, ArrowLe
 
 const API = 'https://sem-ai-production.up.railway.app'
 
-export default function AdminPanel({ user, token, onBack }) {
+export default function AdminPanel({ user, token: tokenProp, onBack }) {
+  const token = tokenProp || localStorage.getItem('sem_token') || ''
   const [stats, setStats] = useState(null)
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
