@@ -9,3 +9,6 @@ python-multipart==0.0.12
 python-dotenv==1.0.0
 google-generativeai
 psycopg2-binary==2.9.9
+bcrypt==5.0.0
+passlib==1.7.4
+python-jose==3.5.0

@@ -4019,3 +4019,167 @@ if _os.path.exists(_dist):
     async def serve_frontend(full_path: str):
         index = _os.path.join(_dist, "index.html")
         return _FileResponse(index)
+
+# ─────────────────────────────────────────
+# Multi-User Authentication
+# ─────────────────────────────────────────
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "sem-ai-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def init_users_table():
+    conn = get_db_connection()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                name TEXT,
+                password_hash TEXT,
+                google_id TEXT,
+                avatar TEXT,
+                plan TEXT DEFAULT 'free',
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Users table ready")
+    except Exception as e:
+        print(f"Users table error: {e}")
+
+init_users_table()
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/api/auth/register")
+async def register(req: RegisterRequest):
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "DB connection failed"}
+    try:
+        cur = conn.cursor()
+        # Check if email exists
+        cur.execute("SELECT id FROM users WHERE email = %s", (req.email,))
+        if cur.fetchone():
+            cur.close(); conn.close()
+            return {"error": "Email already registered"}
+        # Hash password
+        password_hash = pwd_context.hash(req.password)
+        cur.execute(
+            "INSERT INTO users (email, name, password_hash) VALUES (%s, %s, %s) RETURNING id, email, name, plan",
+            (req.email, req.name, password_hash)
+        )
+        user = cur.fetchone()
+        conn.commit()
+        cur.close(); conn.close()
+        token = create_access_token({"sub": str(user[0]), "email": user[1]})
+        return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[3]}}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/auth/login")
+async def login(req: LoginRequest):
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "DB connection failed"}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, email, name, password_hash, plan, avatar FROM users WHERE email = %s", (req.email,))
+        user = cur.fetchone()
+        cur.close(); conn.close()
+        if not user or not pwd_context.verify(req.password, user[3]):
+            return {"error": "Invalid email or password"}
+        token = create_access_token({"sub": str(user[0]), "email": user[1]})
+        return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[4], "avatar": user[5]}}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/auth/me")
+async def get_me(authorization: str = None, request: Request = None):
+    token = None
+    if request:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        return {"error": "No token provided"}
+    payload = verify_token(token)
+    if not payload:
+        return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "DB connection failed"}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, email, name, plan, avatar, created_at FROM users WHERE id = %s", (payload["sub"],))
+        user = cur.fetchone()
+        cur.close(); conn.close()
+        if not user:
+            return {"error": "User not found"}
+        return {"user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[3], "avatar": user[4], "created_at": str(user[5])}}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/auth/google-login")
+async def google_login_auth(request: Request):
+    """Convert existing Google session to JWT user"""
+    body = await request.json()
+    session_id = body.get("session_id")
+    email = body.get("email")
+    if not session_id or not email:
+        return {"error": "Missing session_id or email"}
+    session = _sessions.get(session_id)
+    if not session:
+        return {"error": "Invalid session"}
+    conn = get_db_connection()
+    if not conn:
+        return {"error": "DB connection failed"}
+    try:
+        cur = conn.cursor()
+        # Upsert user
+        cur.execute("SELECT id, email, name, plan FROM users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        if not user:
+            name = session.get("name", email.split("@")[0])
+            cur.execute(
+                "INSERT INTO users (email, name, google_id) VALUES (%s, %s, %s) RETURNING id, email, name, plan",
+                (email, name, session.get("google_id", ""))
+            )
+            user = cur.fetchone()
+        conn.commit()
+        cur.close(); conn.close()
+        token = create_access_token({"sub": str(user[0]), "email": user[1]})
+        return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[3]}}
+    except Exception as e:
+        return {"error": str(e)}
