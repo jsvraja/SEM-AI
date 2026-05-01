@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Users, TrendingUp, Shield, Trash2, Crown, Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = 'https://sem-ai-production.up.railway.app'
 
 export default function AdminPanel({ user, token, onBack }) {
   const [stats, setStats] = useState(null)
