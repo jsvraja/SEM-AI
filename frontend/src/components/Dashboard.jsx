@@ -202,7 +202,7 @@ const TABS = [
   { id: 'competitor', label: 'Competitors', icon: Target },
 ]
 
-export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
+export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
@@ -326,6 +326,24 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail }) {
             background: 'transparent', color: 'var(--text3)',
             fontSize: '12px', cursor: 'pointer',
           }}>← New analysis</button>
+
+          {/* User info + Logout */}
+          {user && (
+            <div style={{ marginTop: '8px', padding: '10px 12px', borderRadius: '8px', background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: 'white', flexShrink: 0 }}>
+                  {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
+                </div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name || user.email}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'capitalize' }}>{user.plan || 'free'} plan</div>
+                </div>
+              </div>
+              <button onClick={onLogout} style={{ width: '100%', padding: '6px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text3)', fontSize: '11px', cursor: 'pointer' }}>
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
