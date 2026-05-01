@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Globe, Zap, BarChart3, Target, Search, TrendingUp, Share2, ChevronRight, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 
-export default function LandingForm({ onSubmit, loading, error, user, onLogout }) {
+export default function LandingForm({ onSubmit, loading, error, user, onLogout, onAdmin }) {
   const [url, setUrl] = useState('')
   const [desc, setDesc] = useState('')
   const [keywords, setKeywords] = useState('')
@@ -89,6 +89,9 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout }
                 {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
               </div>
               <span style={{ fontSize: '12px', color: 'var(--text2)' }}>{user.name || user.email}</span>
+              {onAdmin && (
+                <button onClick={onAdmin} style={{ fontSize: '11px', color: 'var(--accent)', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: '4px', padding: '3px 8px', cursor: 'pointer' }}>Admin</button>
+              )}
               <button onClick={onLogout} style={{ fontSize: '11px', color: 'var(--text3)', background: 'none', border: '1px solid var(--border)', borderRadius: '4px', padding: '3px 8px', cursor: 'pointer' }}>Logout</button>
             </div>
           )}

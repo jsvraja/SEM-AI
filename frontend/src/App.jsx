@@ -3,6 +3,7 @@ import { runFullReport } from './api'
 import LandingForm from './components/LandingForm'
 import Dashboard from './components/Dashboard'
 import AuthPage from './components/AuthPage'
+import AdminPanel from './components/AdminPanel'
 import './App.css'
 
 const savedTheme = localStorage.getItem('theme') || 'light'
@@ -19,6 +20,7 @@ export default function App() {
   const [state, setState] = useState('idle')
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [showAdmin, setShowAdmin] = useState(false)
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sem_user')) || null } catch { return null }
   })
@@ -101,6 +103,11 @@ export default function App() {
     return <AuthPage onAuth={handleAuth} />
   }
 
+  // Show admin panel
+  if (showAdmin && user.email === 'jsvking@gmail.com') {
+    return <AdminPanel user={user} token={token} onBack={() => setShowAdmin(false)} />
+  }
+
   if (state === 'done' && result) {
     return (
       <Dashboard
@@ -123,6 +130,7 @@ export default function App() {
       googleEmail={googleEmail}
       user={user}
       onLogout={handleLogout}
+      onAdmin={user.email === 'jsvking@gmail.com' ? () => setShowAdmin(true) : null}
     />
   )
 }

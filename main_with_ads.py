@@ -4183,3 +4183,85 @@ async def google_login_auth(request: Request):
         return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[3]}}
     except Exception as e:
         return {"error": str(e)}
+
+# ─────────────────────────────────────────
+# Admin Panel Endpoints
+# ─────────────────────────────────────────
+SUPER_ADMIN_EMAIL = os.environ.get("SUPER_ADMIN_EMAIL", "jsvking@gmail.com")
+
+def is_admin(token: str) -> bool:
+    payload = verify_token(token)
+    if not payload: return False
+    return payload.get("email") == SUPER_ADMIN_EMAIL
+
+@app.get("/api/admin/users")
+async def admin_get_users(request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
+        return {"error": "Unauthorized"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, email, name, plan, created_at FROM users ORDER BY created_at DESC")
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return {"users": [{"id": r[0], "email": r[1], "name": r[2], "plan": r[3], "created_at": str(r[4])} for r in rows]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/admin/users/{user_id}/plan")
+async def admin_update_plan(user_id: int, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
+        return {"error": "Unauthorized"}
+    body = await request.json()
+    plan = body.get("plan", "free")
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET plan = %s WHERE id = %s", (plan, user_id))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True, "plan": plan}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/admin/users/{user_id}")
+async def admin_delete_user(user_id: int, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
+        return {"error": "Unauthorized"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/admin/stats")
+async def admin_stats(request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
+        return {"error": "Unauthorized"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM users")
+        total_users = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM users WHERE plan = 'pro'")
+        pro_users = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM users WHERE plan = 'agency'")
+        agency_users = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days'")
+        new_this_week = cur.fetchone()[0]
+        cur.close(); conn.close()
+        return {"total_users": total_users, "pro_users": pro_users, "agency_users": agency_users, "free_users": total_users - pro_users - agency_users, "new_this_week": new_this_week}
+    except Exception as e:
+        return {"error": str(e)}
