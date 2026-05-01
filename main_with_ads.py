@@ -4095,7 +4095,7 @@ async def register(req: RegisterRequest):
             cur.close(); conn.close()
             return {"error": "Email already registered"}
         # Hash password
-        password_hash = pwd_context.hash(req.password)
+        password_hash = pwd_context.hash(req.password[:72])
         cur.execute(
             "INSERT INTO users (email, name, password_hash) VALUES (%s, %s, %s) RETURNING id, email, name, plan",
             (req.email, req.name, password_hash)
@@ -4118,7 +4118,7 @@ async def login(req: LoginRequest):
         cur.execute("SELECT id, email, name, password_hash, plan, avatar FROM users WHERE email = %s", (req.email,))
         user = cur.fetchone()
         cur.close(); conn.close()
-        if not user or not pwd_context.verify(req.password, user[3]):
+        if not user or not pwd_context.verify(req.password[:72], user[3]):
             return {"error": "Invalid email or password"}
         token = create_access_token({"sub": str(user[0]), "email": user[1]})
         return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[4], "avatar": user[5]}}
