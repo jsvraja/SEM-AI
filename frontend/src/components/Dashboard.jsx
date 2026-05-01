@@ -4,7 +4,9 @@ import SiteAudit from './SiteAudit'
 import SocialMedia from './SocialMedia'
 import Competitor from './Competitor'
 import AdsManager from './AdsManager'
+import React from 'react'
 import ThemeToggle from './ThemeToggle'
+import PricingModal from './PricingModal'
 import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -203,6 +205,7 @@ const TABS = [
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
+  const [showPricing, setShowPricing] = React.useState(false)
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
@@ -343,7 +346,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                 <div style={{ padding: '8px', borderRadius: '6px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', marginBottom: '8px' }}>
                   <div style={{ fontSize: '11px', fontWeight: 600, color: 'white', marginBottom: '2px' }}>✨ Upgrade to Pro</div>
                   <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.8)', marginBottom: '6px' }}>Unlock all features</div>
-                  <button style={{ width: '100%', padding: '5px', background: 'white', border: 'none', borderRadius: '4px', color: '#6366f1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                  <button onClick={() => setShowPricing(true)} style={{ width: '100%', padding: '5px', background: 'white', border: 'none', borderRadius: '4px', color: '#6366f1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
                     View Plans
                   </button>
                 </div>
