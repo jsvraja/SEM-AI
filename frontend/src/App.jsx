@@ -117,6 +117,7 @@ export default function App() {
         googleEmail={googleEmail}
         user={user}
         onLogout={handleLogout}
+        onAdmin={user && user.email === 'jsvking@gmail.com' ? () => setShowAdmin(true) : null}
       />
     )
   }
