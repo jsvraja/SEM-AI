@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Zap, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || ''
+const API = 'https://sem-ai-production.up.railway.app'
 
 export default function AuthPage({ onAuth }) {
   const [mode, setMode] = useState('login')
