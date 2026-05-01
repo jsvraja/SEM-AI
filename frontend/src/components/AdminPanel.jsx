@@ -214,18 +214,18 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
                 <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{f.label}</div>
                 <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{f.desc}</div>
               </div>
-              <div onClick={() => toggleFlag(f.key, !flags[f.key])} style={{
+              <button onClick={() => toggleFlag(f.key, !flags[f.key])} style={{
                 width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s',
-                background: flags[f.key] ? 'var(--green)' : 'var(--bg3)',
-                border: '1px solid var(--border)', position: 'relative',
+                background: flags[f.key] ? 'var(--green, #22c55e)' : '#d1d5db',
+                border: 'none', position: 'relative', padding: 0,
               }}>
                 <div style={{
                   width: '18px', height: '18px', borderRadius: '50%', background: 'white',
-                  position: 'absolute', top: '2px', transition: 'all 0.2s',
-                  left: flags[f.key] ? '22px' : '2px',
+                  position: 'absolute', top: '3px', transition: 'all 0.2s',
+                  left: flags[f.key] ? '23px' : '3px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                 }} />
-              </div>
+              </button>
             </div>
           ))}
         </div>
