@@ -202,7 +202,7 @@ const TABS = [
   { id: 'competitor', label: 'Competitors', icon: Target },
 ]
 
-export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout }) {
+export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
@@ -339,6 +339,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                   <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'capitalize' }}>{user.plan || 'free'} plan</div>
                 </div>
               </div>
+              {onAdmin && (
+                <button onClick={onAdmin} style={{ width: '100%', padding: '6px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: '6px', color: 'var(--accent)', fontSize: '11px', cursor: 'pointer', marginBottom: '6px' }}>
+                  Admin Panel
+                </button>
+              )}
               <button onClick={onLogout} style={{ width: '100%', padding: '6px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text3)', fontSize: '11px', cursor: 'pointer' }}>
                 Sign out
               </button>
