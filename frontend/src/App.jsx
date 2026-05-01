@@ -21,6 +21,15 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [featureFlags, setFeatureFlags] = useState({})
+
+  useEffect(() => {
+    const API = import.meta.env.VITE_API_URL || 'https://sem-ai-production.up.railway.app'
+    fetch(`${API}/api/feature-flags`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => setFeatureFlags(d.flags || {}))
+      .catch(() => {})
+  }, [])
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sem_user')) || null } catch { return null }
   })
@@ -118,6 +127,7 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
         onAdmin={user && user.email === 'jsvking@gmail.com' ? () => setShowAdmin(true) : null}
+        featureFlags={featureFlags}
       />
     )
   }
@@ -132,6 +142,7 @@ export default function App() {
       user={user}
       onLogout={handleLogout}
       onAdmin={user.email === 'jsvking@gmail.com' ? () => setShowAdmin(true) : null}
+      featureFlags={featureFlags}
     />
   )
 }

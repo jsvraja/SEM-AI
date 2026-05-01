@@ -202,7 +202,7 @@ const TABS = [
   { id: 'competitor', label: 'Competitors', icon: Target },
 ]
 
-export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin }) {
+export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
@@ -339,6 +339,15 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                   <div style={{ fontSize: '10px', color: 'var(--text3)', textTransform: 'capitalize' }}>{user.plan || 'free'} plan</div>
                 </div>
               </div>
+              {featureFlags.stripe_billing && user?.plan === 'free' && (
+                <div style={{ padding: '8px', borderRadius: '6px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'white', marginBottom: '2px' }}>✨ Upgrade to Pro</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.8)', marginBottom: '6px' }}>Unlock all features</div>
+                  <button style={{ width: '100%', padding: '5px', background: 'white', border: 'none', borderRadius: '4px', color: '#6366f1', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                    View Plans
+                  </button>
+                </div>
+              )}
               {onAdmin && (
                 <button onClick={onAdmin} style={{ width: '100%', padding: '6px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: '6px', color: 'var(--accent)', fontSize: '11px', cursor: 'pointer', marginBottom: '6px' }}>
                   Admin Panel
