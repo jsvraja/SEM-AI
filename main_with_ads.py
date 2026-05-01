@@ -4265,3 +4265,69 @@ async def admin_stats(request: Request):
         return {"total_users": total_users, "pro_users": pro_users, "agency_users": agency_users, "free_users": total_users - pro_users - agency_users, "new_this_week": new_this_week}
     except Exception as e:
         return {"error": str(e)}
+
+# ─────────────────────────────────────────
+# Feature Flags
+# ─────────────────────────────────────────
+def init_feature_flags_table():
+    conn = get_db_connection()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS feature_flags (
+                key TEXT PRIMARY KEY,
+                enabled BOOLEAN DEFAULT false,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        # Default flags
+        cur.execute("""
+            INSERT INTO feature_flags (key, enabled) VALUES
+                ('stripe_billing', false),
+                ('team_workspaces', false),
+                ('white_label', false)
+            ON CONFLICT (key) DO NOTHING
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Feature flags table ready")
+    except Exception as e:
+        print(f"Feature flags error: {e}")
+
+init_feature_flags_table()
+
+@app.get("/api/feature-flags")
+async def get_feature_flags():
+    conn = get_db_connection()
+    if not conn: return {"flags": {}}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT key, enabled FROM feature_flags")
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return {"flags": {r[0]: r[1] for r in rows}}
+    except Exception as e:
+        return {"flags": {}, "error": str(e)}
+
+@app.post("/api/admin/feature-flags/{key}")
+async def toggle_feature_flag(key: str, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
+        return {"error": "Unauthorized"}
+    body = await request.json()
+    enabled = body.get("enabled", False)
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO feature_flags (key, enabled) VALUES (%s, %s)
+            ON CONFLICT (key) DO UPDATE SET enabled = %s, updated_at = NOW()
+        """, (key, enabled, enabled))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True, "key": key, "enabled": enabled}
+    except Exception as e:
+        return {"error": str(e)}

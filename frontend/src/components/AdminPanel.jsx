@@ -10,6 +10,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatingId, setUpdatingId] = useState(null)
+  const [flags, setFlags] = useState({})
 
   useEffect(() => {
     fetchData()
@@ -31,6 +32,10 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
       if (usersData.error) { setError('Users error: ' + usersData.error); return }
       setStats(statsData)
       setUsers(usersData.users || [])
+      // Fetch feature flags
+      const flagsRes = await fetch(`${API}/api/feature-flags`)
+      const flagsData = await flagsRes.json()
+      setFlags(flagsData.flags || {})
     } catch (e) {
       setError('Failed to load admin data')
     } finally {
@@ -68,6 +73,18 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
     } finally {
       setUpdatingId(null)
     }
+  }
+
+  async function toggleFlag(key, enabled) {
+    try {
+      const res = await fetch(`${API}/api/admin/feature-flags/${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ enabled }),
+      })
+      const data = await res.json()
+      if (data.success) setFlags(prev => ({ ...prev, [key]: enabled }))
+    } catch (e) { console.error(e) }
   }
 
   const planColors = { free: '#6b7280', pro: '#3b82f6', agency: '#8b5cf6' }
@@ -180,6 +197,40 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
           </>
         )}
       </div>
+      {/* Feature Flags */}
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginTop: '24px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Feature Flags</h2>
+          <p style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '2px' }}>Enable or disable features for all users</p>
+        </div>
+        <div style={{ padding: '16px 20px' }}>
+          {[
+            { key: 'stripe_billing', label: 'Stripe Billing', desc: 'Enable subscription & payment features' },
+            { key: 'team_workspaces', label: 'Team Workspaces', desc: 'Enable team collaboration features' },
+            { key: 'white_label', label: 'White Label', desc: 'Enable white-label branding for agencies' },
+          ].map(f => (
+            <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>{f.label}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{f.desc}</div>
+              </div>
+              <div onClick={() => toggleFlag(f.key, !flags[f.key])} style={{
+                width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s',
+                background: flags[f.key] ? 'var(--green)' : 'var(--bg3)',
+                border: '1px solid var(--border)', position: 'relative',
+              }}>
+                <div style={{
+                  width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                  position: 'absolute', top: '2px', transition: 'all 0.2s',
+                  left: flags[f.key] ? '22px' : '2px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
