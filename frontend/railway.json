@@ -1,7 +1,7 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "echo 'skip build'"
+    "buildCommand": "npm install && npm run build"
   },
   "deploy": {
     "startCommand": "npx serve@14 dist -s -p $PORT"
