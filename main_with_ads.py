@@ -4331,3 +4331,76 @@ async def toggle_feature_flag(key: str, request: Request):
         return {"success": True, "key": key, "enabled": enabled}
     except Exception as e:
         return {"error": str(e)}
+
+# ─────────────────────────────────────────
+# Razorpay Payment Integration
+# ─────────────────────────────────────────
+import razorpay
+
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
+PLANS = {
+    "pro": {"amount": 299900, "name": "Pro Plan", "description": "SEM AI Pro - Unlimited analyses"},
+    "agency": {"amount": 999900, "name": "Agency Plan", "description": "SEM AI Agency - Unlimited everything"},
+}
+
+class CreateOrderRequest(BaseModel):
+    plan: str
+    user_id: int
+
+@app.post("/api/payment/create-order")
+async def create_order(req: CreateOrderRequest, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload:
+        return {"error": "Invalid token"}
+    if req.plan not in PLANS:
+        return {"error": "Invalid plan"}
+    try:
+        client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        plan = PLANS[req.plan]
+        order = client.order.create({
+            "amount": plan["amount"],
+            "currency": "INR",
+            "receipt": f"order_{req.user_id}_{req.plan}",
+            "notes": {"plan": req.plan, "user_id": str(req.user_id)}
+        })
+        return {"order_id": order["id"], "amount": plan["amount"], "currency": "INR", "key_id": RAZORPAY_KEY_ID, "plan": req.plan, "name": plan["name"]}
+    except Exception as e:
+        return {"error": str(e)}
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    plan: str
+    user_id: int
+
+@app.post("/api/payment/verify")
+async def verify_payment(req: VerifyPaymentRequest, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload:
+        return {"error": "Invalid token"}
+    try:
+        client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+        client.utility.verify_payment_signature({
+            "razorpay_order_id": req.razorpay_order_id,
+            "razorpay_payment_id": req.razorpay_payment_id,
+            "razorpay_signature": req.razorpay_signature,
+        })
+        # Update user plan
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET plan = %s WHERE id = %s", (req.plan, req.user_id))
+            conn.commit()
+            cur.close(); conn.close()
+        return {"success": True, "plan": req.plan}
+    except Exception as e:
+        return {"error": str(e)}

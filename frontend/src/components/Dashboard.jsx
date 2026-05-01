@@ -2022,7 +2022,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
           />
         )}
       </main>
-      {showPricing && <PricingModal onClose={() => setShowPricing(false)} user={user} />}
+      {showPricing && <PricingModal onClose={() => setShowPricing(false)} user={user} token={localStorage.getItem('sem_token')} onPlanUpgraded={(plan) => { window.location.reload() }} />}
     </div>
   )
 }
