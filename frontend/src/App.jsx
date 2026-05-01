@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { runFullReport } from './api'
 import LandingForm from './components/LandingForm'
 import Dashboard from './components/Dashboard'
+import AuthPage from './components/AuthPage'
 import './App.css'
 
-// Apply saved theme on load
 const savedTheme = localStorage.getItem('theme') || 'light'
 if (savedTheme === 'dark') {
   document.documentElement.setAttribute('data-theme', 'dark')
@@ -19,6 +19,12 @@ export default function App() {
   const [state, setState] = useState('idle')
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sem_user')) || null } catch { return null }
+  })
+  const [token, setToken] = useState(() => {
+    try { return localStorage.getItem('sem_token') || null } catch { return null }
+  })
   const [sessionId, setSessionId] = useState(() => {
     try { return sessionStorage.getItem('sem_session_id') || null } catch { return null }
   })
@@ -26,7 +32,6 @@ export default function App() {
     try { return sessionStorage.getItem('sem_google_email') || null } catch { return null }
   })
 
-  // Check for OAuth callback params in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const sid = params.get('session_id')
@@ -34,15 +39,43 @@ export default function App() {
     if (sid) {
       setSessionId(sid)
       setGoogleEmail(email)
-      // Persist to sessionStorage
       try {
         sessionStorage.setItem('sem_session_id', sid)
         if (email) sessionStorage.setItem('sem_google_email', email)
       } catch {}
-      // Clean URL
+      // Auto-login via Google session
+      if (email) {
+        const API = import.meta.env.VITE_API_URL || ''
+        fetch(`${API}/api/auth/google-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sid, email }),
+        }).then(r => r.json()).then(data => {
+          if (data.token) {
+            localStorage.setItem('sem_token', data.token)
+            localStorage.setItem('sem_user', JSON.stringify(data.user))
+            setUser(data.user)
+            setToken(data.token)
+          }
+        }).catch(() => {})
+      }
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
+
+  function handleAuth(userData, userToken) {
+    setUser(userData)
+    setToken(userToken)
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('sem_token')
+    localStorage.removeItem('sem_user')
+    setUser(null)
+    setToken(null)
+    setState('idle')
+    setResult(null)
+  }
 
   async function handleSubmit(data) {
     setState('loading')
@@ -51,7 +84,6 @@ export default function App() {
       const report = await runFullReport(data)
       setResult(report)
       setState('done')
-      // Don't cache result - always fresh
     } catch (e) {
       setError(e.message)
       setState('error')
@@ -62,7 +94,11 @@ export default function App() {
     setState('idle')
     setResult(null)
     setError(null)
+  }
 
+  // Show auth page if not logged in
+  if (!user) {
+    return <AuthPage onAuth={handleAuth} />
   }
 
   if (state === 'done' && result) {
@@ -72,6 +108,8 @@ export default function App() {
         onReset={handleReset}
         sessionId={sessionId}
         googleEmail={googleEmail}
+        user={user}
+        onLogout={handleLogout}
       />
     )
   }
@@ -83,6 +121,8 @@ export default function App() {
       error={error}
       sessionId={sessionId}
       googleEmail={googleEmail}
+      user={user}
+      onLogout={handleLogout}
     />
   )
 }
