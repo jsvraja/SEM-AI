@@ -20,8 +20,8 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
     try {
       const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }
       const [statsRes, usersRes] = await Promise.all([
-        fetch(`${API}/api/admin/stats`, { headers }),
-        fetch(`${API}/api/admin/users`, { headers }),
+        fetch(`${API}/api/admin/stats`, { method: 'POST', headers }),
+        fetch(`${API}/api/admin/users`, { method: 'POST', headers }),
       ])
       const statsData = await statsRes.json()
       const usersData = await usersRes.json()
