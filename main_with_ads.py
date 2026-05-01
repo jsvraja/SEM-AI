@@ -4194,7 +4194,7 @@ def is_admin(token: str) -> bool:
     if not payload: return False
     return payload.get("email") == SUPER_ADMIN_EMAIL
 
-@app.get("/api/admin/users")
+@app.post("/api/admin/users")
 async def admin_get_users(request: Request):
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
@@ -4244,7 +4244,7 @@ async def admin_delete_user(user_id: int, request: Request):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/api/admin/stats")
+@app.post("/api/admin/stats")
 async def admin_stats(request: Request):
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
