@@ -17,14 +17,17 @@ export default function AdminPanel({ user, token, onBack }) {
   async function fetchData() {
     setLoading(true)
     try {
-      const headers = { Authorization: `Bearer ${token}` }
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }
       const [statsRes, usersRes] = await Promise.all([
         fetch(`${API}/api/admin/stats`, { headers }),
         fetch(`${API}/api/admin/users`, { headers }),
       ])
       const statsData = await statsRes.json()
       const usersData = await usersRes.json()
-      if (statsData.error) { setError(statsData.error); return }
+      console.log('Stats response:', statsData)
+      console.log('Users response:', usersData)
+      if (statsData.error) { setError('Stats error: ' + statsData.error); return }
+      if (usersData.error) { setError('Users error: ' + usersData.error); return }
       setStats(statsData)
       setUsers(usersData.users || [])
     } catch (e) {
