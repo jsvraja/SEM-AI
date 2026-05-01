@@ -1,6 +1,6 @@
 {
   "build": {
-    "buildCommand": "npm install && npm run build"
+    "buildCommand": "npm install && VITE_API_URL=https://sem-ai-production.up.railway.app npm run build"
   },
   "deploy": {
     "startCommand": "npx serve@14 dist -s -p $PORT"
