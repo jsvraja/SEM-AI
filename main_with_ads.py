@@ -4595,3 +4595,83 @@ async def accept_invite(token: str, request: Request):
         return {"success": True, "workspace_id": invite[1]}
     except Exception as e:
         return {"error": str(e)}
+
+# ─────────────────────────────────────────
+# Usage Limits
+# ─────────────────────────────────────────
+def init_usage_table():
+    conn = get_db_connection()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS usage_tracking (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                action TEXT DEFAULT 'analysis',
+                date DATE DEFAULT CURRENT_DATE,
+                count INTEGER DEFAULT 0,
+                UNIQUE(user_id, action, date)
+            )
+        """)
+        conn.commit()
+        cur.close(); conn.close()
+        print("Usage table ready")
+    except Exception as e:
+        print(f"Usage table error: {e}")
+
+init_usage_table()
+
+PLAN_LIMITS = {
+    "free": 1,
+    "pro": 999999,
+    "agency": 999999,
+}
+
+def check_and_increment_usage(user_id: int, plan: str, action: str = "analysis") -> dict:
+    limit = PLAN_LIMITS.get(plan, 1)
+    conn = get_db_connection()
+    if not conn: return {"allowed": True}
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO usage_tracking (user_id, action, date, count)
+            VALUES (%s, %s, CURRENT_DATE, 1)
+            ON CONFLICT (user_id, action, date)
+            DO UPDATE SET count = usage_tracking.count + 1
+            RETURNING count
+        """, (user_id, action))
+        count = cur.fetchone()[0]
+        conn.commit()
+        cur.close(); conn.close()
+        if count > limit:
+            return {"allowed": False, "count": count, "limit": limit, "plan": plan}
+        return {"allowed": True, "count": count, "limit": limit}
+    except Exception as e:
+        print(f"Usage check error: {e}")
+        return {"allowed": True}
+
+@app.post("/api/usage/check")
+async def check_usage(request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "): return {"allowed": True}
+    payload = verify_token(auth[7:])
+    if not payload: return {"allowed": True}
+    conn = get_db_connection()
+    if not conn: return {"allowed": True}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT plan FROM users WHERE id = %s", (payload["sub"],))
+        user = cur.fetchone()
+        cur.execute("""
+            SELECT count FROM usage_tracking 
+            WHERE user_id = %s AND action = 'analysis' AND date = CURRENT_DATE
+        """, (payload["sub"],))
+        usage = cur.fetchone()
+        cur.close(); conn.close()
+        plan = user[0] if user else "free"
+        count = usage[0] if usage else 0
+        limit = PLAN_LIMITS.get(plan, 1)
+        return {"allowed": count < limit, "count": count, "limit": limit, "plan": plan}
+    except Exception as e:
+        return {"allowed": True}
