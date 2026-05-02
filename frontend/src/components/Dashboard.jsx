@@ -1332,7 +1332,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
               </div>
             </Card>
 
-              <Card>
+            <Card>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <SectionTitle icon={Zap}>AI Fix Suggestions</SectionTitle>
                   <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '3px 8px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
