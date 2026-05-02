@@ -1333,89 +1333,89 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             </Card>
 
             <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <SectionTitle icon={Zap}>AI Fix Suggestions</SectionTitle>
-                  <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '3px 8px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                    🤖 Exact steps to fix each issue
-                  </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <SectionTitle icon={Zap}>AI Fix Suggestions</SectionTitle>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', padding: '3px 8px', background: 'var(--bg3)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                  🤖 Exact steps to fix each issue
                 </div>
-                {(() => {
-                  const fixes = seo?.fix_suggestions || []
-                  // If no fix_suggestions, generate from weaknesses
-                  const items = fixes.length > 0 ? fixes : (seo?.weaknesses || []).map(w => ({
-                    issue: w.point,
-                    priority: w.impact || 'medium',
-                    effort: 'medium',
-                    time_to_fix: '1-2 hours',
-                    impact: w.impact === 'high' ? 'Significant improvement to SEO score' : 'Moderate improvement',
-                    exact_fix: w.fix || 'See recommendation below',
-                    steps: [w.fix || 'Review and fix this issue'].filter(Boolean)
-                  }))
-                  
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {items.slice(0, 6).map((fix, i) => {
-                        const priorityColor = fix.priority === 'high' ? 'var(--red)' : fix.priority === 'medium' ? 'var(--yellow)' : 'var(--green)'
-                        const priorityBg = fix.priority === 'high' ? 'var(--red-bg)' : fix.priority === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)'
-                        const effortColor = fix.effort === 'easy' ? 'var(--green)' : fix.effort === 'medium' ? 'var(--yellow)' : 'var(--red)'
-                        return (
-                          <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', borderLeft: '3px solid ' + priorityColor }}>
-                            {/* Header - clickable */}
-                            <div onClick={() => setExpandedFix(expandedFix === i ? null : i)} style={{ padding: '12px 14px', background: priorityBg, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '16px' }}>{fix.priority === 'high' ? '🚨' : fix.priority === 'medium' ? '⚠️' : '💡'}</span>
-                                <span style={{ fontSize: '13px', fontWeight: 700, color: priorityColor }}>{fix.issue}</span>
-                              </div>
-                              <div style={{ display: 'flex', gap: '6px' }}>
-                                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: priorityBg, border: '1px solid ' + priorityColor, color: priorityColor, fontWeight: 600 }}>{(fix.priority || 'medium').toUpperCase()} PRIORITY</span>
-                                <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)' }}>⏱ {fix.time_to_fix || '1-2 hours'}</span>
-                              </div>
+              </div>
+              {(() => {
+                const fixes = seo?.fix_suggestions || []
+                // If no fix_suggestions, generate from weaknesses
+                const items = fixes.length > 0 ? fixes : (seo?.weaknesses || []).map(w => ({
+                  issue: w.point,
+                  priority: w.impact || 'medium',
+                  effort: 'medium',
+                  time_to_fix: '1-2 hours',
+                  impact: w.impact === 'high' ? 'Significant improvement to SEO score' : 'Moderate improvement',
+                  exact_fix: w.fix || 'See recommendation below',
+                  steps: [w.fix || 'Review and fix this issue'].filter(Boolean)
+                }))
+                
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {items.slice(0, 6).map((fix, i) => {
+                      const priorityColor = fix.priority === 'high' ? 'var(--red)' : fix.priority === 'medium' ? 'var(--yellow)' : 'var(--green)'
+                      const priorityBg = fix.priority === 'high' ? 'var(--red-bg)' : fix.priority === 'medium' ? 'var(--yellow-bg)' : 'var(--green-bg)'
+                      const effortColor = fix.effort === 'easy' ? 'var(--green)' : fix.effort === 'medium' ? 'var(--yellow)' : 'var(--red)'
+                      return (
+                        <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', borderLeft: '3px solid ' + priorityColor }}>
+                          {/* Header - clickable */}
+                          <div onClick={() => setExpandedFix(expandedFix === i ? null : i)} style={{ padding: '12px 14px', background: priorityBg, display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '16px' }}>{fix.priority === 'high' ? '🚨' : fix.priority === 'medium' ? '⚠️' : '💡'}</span>
+                              <span style={{ fontSize: '13px', fontWeight: 700, color: priorityColor }}>{fix.issue}</span>
                             </div>
-                            
-                            <div style={{ padding: '12px 14px' }}>
-                              {/* Impact */}
-                              {fix.impact && (
-                                <div style={{ fontSize: '12px', color: 'var(--green)', marginBottom: '10px', padding: '6px 10px', background: 'var(--green-bg)', borderRadius: '6px' }}>
-                                  📈 Expected Impact: {fix.impact}
-                                </div>
-                              )}
-
-                              {/* Exact fix */}
-                              {fix.exact_fix && (
-                                <div style={{ marginBottom: '10px' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '4px', textTransform: 'uppercase' }}>What to do:</div>
-                                  <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6 }}>{fix.exact_fix}</div>
-                                </div>
-                              )}
-
-                              {/* Code snippet */}
-                              {fix.code_snippet && (
-                                <div style={{ marginBottom: '10px' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '4px', textTransform: 'uppercase' }}>Code to add:</div>
-                                  <pre style={{ fontSize: '11px', background: 'var(--bg4)', padding: '10px', borderRadius: '8px', overflow: 'auto', color: 'var(--cyan)', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{fix.code_snippet}</pre>
-                                </div>
-                              )}
-
-                              {/* Steps */}
-                              {fix.steps?.length > 0 && (
-                                <div>
-                                  <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase' }}>Step-by-step:</div>
-                                  {fix.steps.map((step, j) => (
-                                    <div key={j} style={{ display: 'flex', gap: '8px', marginBottom: '4px', alignItems: 'flex-start' }}>
-                                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-bg)', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{j+1}</span>
-                                      <span style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.5 }}>{step}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: priorityBg, border: '1px solid ' + priorityColor, color: priorityColor, fontWeight: 600 }}>{(fix.priority || 'medium').toUpperCase()} PRIORITY</span>
+                              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text3)' }}>⏱ {fix.time_to_fix || '1-2 hours'}</span>
                             </div>
                           </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()}
-              </Card>
+                          
+                          <div style={{ padding: '12px 14px' }}>
+                            {/* Impact */}
+                            {fix.impact && (
+                              <div style={{ fontSize: '12px', color: 'var(--green)', marginBottom: '10px', padding: '6px 10px', background: 'var(--green-bg)', borderRadius: '6px' }}>
+                                📈 Expected Impact: {fix.impact}
+                              </div>
+                            )}
+  
+                            {/* Exact fix */}
+                            {fix.exact_fix && (
+                              <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '4px', textTransform: 'uppercase' }}>What to do:</div>
+                                <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6 }}>{fix.exact_fix}</div>
+                              </div>
+                            )}
+  
+                            {/* Code snippet */}
+                            {fix.code_snippet && (
+                              <div style={{ marginBottom: '10px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '4px', textTransform: 'uppercase' }}>Code to add:</div>
+                                <pre style={{ fontSize: '11px', background: 'var(--bg4)', padding: '10px', borderRadius: '8px', overflow: 'auto', color: 'var(--cyan)', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{fix.code_snippet}</pre>
+                              </div>
+                            )}
+  
+                            {/* Steps */}
+                            {fix.steps?.length > 0 && (
+                              <div>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase' }}>Step-by-step:</div>
+                                {fix.steps.map((step, j) => (
+                                  <div key={j} style={{ display: 'flex', gap: '8px', marginBottom: '4px', alignItems: 'flex-start' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-bg)', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{j+1}</span>
+                                    <span style={{ fontSize: '12px', color: 'var(--text2)', lineHeight: 1.5 }}>{step}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </Card>
             )}
 
             {/* Core Web Vitals */}

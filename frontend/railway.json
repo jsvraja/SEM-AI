@@ -1,6 +1,6 @@
 {
   "build": {
-    "buildCommand": "echo 'Using pre-built dist'"
+    "buildCommand": "npm install && VITE_API_URL=https://sem-ai-production.up.railway.app npm run build"
   },
   "deploy": {
     "startCommand": "npx serve@14 dist -s -p $PORT"
