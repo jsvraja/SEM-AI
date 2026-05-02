@@ -666,7 +666,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                         </div>
                       )
                     })
-                    )
                   })()}
                 </div>
               </Card>
