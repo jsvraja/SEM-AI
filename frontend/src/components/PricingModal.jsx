@@ -3,7 +3,7 @@ import { X, Check, Zap, Crown, Building2, Loader2 } from 'lucide-react'
 
 const API = 'https://sem-ai-production.up.railway.app'
 
-export default function PricingModal({ onClose, user, token, onPlanUpgraded }) {
+export default function PricingModal({ onClose, user, token, onPlanUpgraded, limitReached = false }) {
   const [loading, setLoading] = useState(null)
   const [error, setError] = useState('')
 
@@ -110,7 +110,12 @@ export default function PricingModal({ onClose, user, token, onPlanUpgraded }) {
           <div style={{ padding: '24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text)' }}>Choose your plan</h2>
-              <p style={{ fontSize: '13px', color: 'var(--text3)', marginTop: '4px' }}>Scale your marketing with AI — cancel anytime</p>
+              {limitReached && (
+                <div style={{ marginTop: '8px', padding: '8px 12px', background: 'var(--red-bg)', border: '1px solid rgba(162,45,45,0.2)', borderRadius: '8px', fontSize: '13px', color: 'var(--red)' }}>
+                  🚫 You've reached your daily free limit (1 analysis/day). Upgrade to continue.
+                </div>
+              )}
+              {!limitReached && <p style={{ fontSize: '13px', color: 'var(--text3)', marginTop: '4px' }}>Scale your marketing with AI — cancel anytime</p>}
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: '4px' }}>
               <X size={20} />

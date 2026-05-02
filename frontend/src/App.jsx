@@ -142,7 +142,7 @@ export default function App() {
 
   // Show admin panel
   if (showUpgradeModal) {
-    return <PricingModal onClose={() => setShowUpgradeModal(false)} user={user} token={token} onPlanUpgraded={(plan) => { setShowUpgradeModal(false); window.location.reload() }} />
+    return <PricingModal onClose={() => setShowUpgradeModal(false)} user={user} token={token} limitReached={true} onPlanUpgraded={(plan) => { setShowUpgradeModal(false); window.location.reload() }} />
   }
 
   if (showAdmin && user.email === 'jsvking@gmail.com') {
