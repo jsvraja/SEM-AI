@@ -4480,7 +4480,7 @@ async def create_workspace(req: CreateWorkspaceRequest, request: Request):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/api/workspaces")
+@app.post("/api/workspaces")
 async def get_workspaces(request: Request):
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer "): return {"error": "Unauthorized"}
@@ -4504,7 +4504,7 @@ async def get_workspaces(request: Request):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/api/workspaces/{workspace_id}/members")
+@app.post("/api/workspaces/{workspace_id}/members")
 async def get_workspace_members(workspace_id: int, request: Request):
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer "): return {"error": "Unauthorized"}

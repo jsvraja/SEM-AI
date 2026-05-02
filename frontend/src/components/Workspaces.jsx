@@ -23,7 +23,7 @@ export default function Workspaces({ user }) {
   async function fetchWorkspaces() {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/api/workspaces`, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await fetch(`${API}/api/workspaces`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
       const data = await res.json()
       setWorkspaces(data.workspaces || [])
       // Fetch members for each workspace
@@ -36,7 +36,7 @@ export default function Workspaces({ user }) {
 
   async function fetchMembers(wsId) {
     try {
-      const res = await fetch(`${API}/api/workspaces/${wsId}/members`, { headers: { Authorization: `Bearer ${token}` } })
+      const res = await fetch(`${API}/api/workspaces/${wsId}/members`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
       const data = await res.json()
       setMembers(prev => ({ ...prev, [wsId]: data.members || [] }))
     } catch (e) {}
