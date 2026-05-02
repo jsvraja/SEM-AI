@@ -356,7 +356,26 @@ async def root():
     return {"status": "SEM AI Platform v2", "ai": GEMINI_MODEL, "sessions": len(_sessions)}
 
 @app.post("/api/full-report")
-async def full_report(req: FullReportRequest):
+async def full_report(req: FullReportRequest, request: Request):
+    # Usage limit check
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        payload = verify_token(auth[7:])
+        if payload:
+            try:
+                conn = get_db_connection()
+                if conn:
+                    cur = conn.cursor()
+                    cur.execute("SELECT plan FROM users WHERE id = %s", (payload["sub"],))
+                    user = cur.fetchone()
+                    cur.close(); conn.close()
+                    plan = user[0] if user else "free"
+                    usage = check_and_increment_usage(payload["sub"], plan)
+                    if not usage["allowed"]:
+                        from fastapi.responses import JSONResponse
+                        return JSONResponse({"error": "usage_limit_exceeded", "plan": plan, "limit": usage["limit"], "message": "Daily analysis limit reached. Upgrade to Pro for unlimited analyses."})
+            except Exception as e:
+                print(f"Usage check error: {e}")
     url = req.url.strip()
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
