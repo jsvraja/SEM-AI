@@ -792,15 +792,12 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                                   { label: 'SEO', score: r.seo },
                                   { label: 'Accessibility', score: r.accessibility },
                                   { label: 'Best Practices', score: r.best_practices },
-                                ].map(({ label, score }) => {
-                                  const c = score >= 90 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)'
-                                  return (
+                                ].map(({ label, score }) => (
                                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--bg3)', borderRadius: '6px' }}>
                                       <span style={{ fontSize: '11px', color: 'var(--text3)' }}>{label}</span>
-                                      <span style={{ fontSize: '11px', fontWeight: 700, color: c }}>{score}</span>
+                                      <span style={{ fontSize: '11px', fontWeight: 700, color: score >= 90 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)' }}>{score}</span>
                                     </div>
-                                  )
-                                })}
+                                ))}
                               </div>
                               {/* Core Web Vitals */}
                               <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border)' }}>
