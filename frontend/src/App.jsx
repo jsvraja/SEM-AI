@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { runFullReport } from './api'
+import PricingModal from './components/PricingModal'
 import LandingForm from './components/LandingForm'
 import Dashboard from './components/Dashboard'
 import AuthPage from './components/AuthPage'
@@ -20,6 +21,7 @@ export default function App() {
   const [state, setState] = useState('idle')
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
   const [featureFlags, setFeatureFlags] = useState({})
 
@@ -119,8 +121,7 @@ export default function App() {
       setState('done')
     } catch (e) {
       if (e.message.startsWith('USAGE_LIMIT:')) {
-        const parts = e.message.split(':')
-        setError(`🚫 Daily limit reached! Free plan allows ${parts[1]} analysis/day. Upgrade to Pro for unlimited analyses.`)
+        setShowUpgradeModal(true)
       } else {
         setError(e.message)
       }
@@ -140,6 +141,10 @@ export default function App() {
   }
 
   // Show admin panel
+  if (showUpgradeModal) {
+    return <PricingModal onClose={() => setShowUpgradeModal(false)} user={user} token={token} onPlanUpgraded={(plan) => { setShowUpgradeModal(false); window.location.reload() }} />
+  }
+
   if (showAdmin && user.email === 'jsvking@gmail.com') {
     return <AdminPanel user={user} token={token} onBack={() => setShowAdmin(false)} />
   }
