@@ -118,7 +118,12 @@ export default function App() {
       setResult(report)
       setState('done')
     } catch (e) {
-      setError(e.message)
+      if (e.message.startsWith('USAGE_LIMIT:')) {
+        const parts = e.message.split(':')
+        setError(`🚫 Daily limit reached! Free plan allows ${parts[1]} analysis/day. Upgrade to Pro for unlimited analyses.`)
+      } else {
+        setError(e.message)
+      }
       setState('error')
     }
   }
