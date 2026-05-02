@@ -41,6 +41,10 @@ export default function PricingModal({ onClose, user, token, onPlanUpgraded }) {
           })
           const result = await verifyRes.json()
           if (result.success) {
+            // Update localStorage user data
+            const userData = JSON.parse(localStorage.getItem('sem_user') || '{}')
+            userData.plan = planKey
+            localStorage.setItem('sem_user', JSON.stringify(userData))
             if (onPlanUpgraded) onPlanUpgraded(planKey)
             onClose()
             alert(`Successfully upgraded to ${planKey} plan!`)
