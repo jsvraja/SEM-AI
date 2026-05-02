@@ -4551,7 +4551,27 @@ async def invite_member(req: InviteMemberRequest, request: Request):
         """, (req.workspace_id, req.email, req.role, token))
         conn.commit()
         cur.close(); conn.close()
-        return {"success": True, "invite_token": token, "message": f"Invite sent to {req.email}"}
+        # Send invite email via Resend
+        resend_key = os.environ.get("RESEND_API_KEY", "")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://believable-rebirth-production-7e19.up.railway.app")
+        invite_link = f"{frontend_url}?invite={token}"
+        if resend_key:
+            try:
+                import httpx as _httpx
+                async with _httpx.AsyncClient() as _client:
+                    await _client.post(
+                        "https://api.resend.com/emails",
+                        headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                        json={
+                            "from": "SEM AI <onboarding@resend.dev>",
+                            "to": [req.email],
+                            "subject": "You have been invited to a SEM AI Workspace",
+                            "html": f"""<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;"><h2 style="color:#6366f1;">You have been invited to join a SEM AI Workspace</h2><p>You have been invited to collaborate on SEM AI platform.</p><p>Click the button below to accept your invitation:</p><a href="{invite_link}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:white;text-decoration:none;border-radius:8px;font-weight:600;">Accept Invitation</a><p style="color:#6b7280;font-size:12px;margin-top:24px;">If you did not expect this invitation, you can ignore this email.</p></div>"""
+                        }
+                    )
+            except Exception as e:
+                print(f"Email send error: {e}")
+        return {"success": True, "invite_token": token, "invite_link": invite_link, "message": f"Invite sent to {req.email}"}
     except Exception as e:
         return {"error": str(e)}
 
