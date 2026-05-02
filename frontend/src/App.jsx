@@ -43,6 +43,16 @@ export default function App() {
     try { return sessionStorage.getItem('sem_google_email') || null } catch { return null }
   })
 
+  // Check for invite token in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const inviteToken = params.get('invite')
+    if (inviteToken) {
+      sessionStorage.setItem('pending_invite', inviteToken)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const sid = params.get('session_id')
@@ -74,9 +84,21 @@ export default function App() {
     }
   }, [])
 
-  function handleAuth(userData, userToken) {
+  async function handleAuth(userData, userToken) {
     setUser(userData)
     setToken(userToken)
+    // Accept pending invite
+    const pendingInvite = sessionStorage.getItem('pending_invite')
+    if (pendingInvite) {
+      sessionStorage.removeItem('pending_invite')
+      try {
+        const API = import.meta.env.VITE_API_URL || 'https://sem-ai-production.up.railway.app'
+        await fetch(`${API}/api/workspaces/accept-invite/${pendingInvite}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        })
+      } catch(e) { console.error(e) }
+    }
   }
 
   function handleLogout() {
