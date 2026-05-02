@@ -512,6 +512,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                         ⚠ These are our tool's scores based on raw HTML analysis. Compare with performance analysis for full accuracy.
                       </div>
                     </div>
+                  )
                 })()}
               </Card>
 
