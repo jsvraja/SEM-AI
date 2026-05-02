@@ -4563,7 +4563,7 @@ async def invite_member(req: InviteMemberRequest, request: Request):
                         "https://api.resend.com/emails",
                         headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
                         json={
-                            "from": "SEM AI <onboarding@resend.dev>",
+                            "from": "SEM AI <reports@sakthivelraja.ai>",
                             "to": [req.email],
                             "subject": "You have been invited to a SEM AI Workspace",
                             "html": f"""<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;"><h2 style="color:#6366f1;">You have been invited to join a SEM AI Workspace</h2><p>You have been invited to collaborate on SEM AI platform.</p><p>Click the button below to accept your invitation:</p><a href="{invite_link}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:white;text-decoration:none;border-radius:8px;font-weight:600;">Accept Invitation</a><p style="color:#6b7280;font-size:12px;margin-top:24px;">If you did not expect this invitation, you can ignore this email.</p></div>"""
