@@ -513,7 +513,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       </div>
                     </div>
                   )
-                })() || null}
               </Card>
 
               <Card>
@@ -592,7 +591,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                           </div>
                         </div>
                       )
-                    })() || null}
+                    })()}
                   </>
                 )}
               </Card>
@@ -666,7 +665,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                         </div>
                       )
                     })
-                  })() || null}
                 </div>
               </Card>
             </div>
@@ -723,7 +721,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     ))}
                   </div>
                 )
-              })() || null}
+              })()}
 
               {seo.priority_actions?.length > 0 && (
                 <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '8px' }}>
@@ -893,7 +891,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                   </div>
                 </Card>
               )
-            })() || null}
 
             {/* SERP Preview */}
             <Card>
@@ -983,7 +980,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     )}
                   </div>
                 )
-              })() || null}
             </Card>
 
             {/* Charts row */}
@@ -1085,7 +1081,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       </RadarChart>
                     </ResponsiveContainer>
                   )
-                })() || null}
+                })()}
               </Card>
 
               <Card>
@@ -1133,7 +1129,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       </div>
                     </div>
                   )
-                })() || null}
+                })()}
               </Card>
             </div>
 
@@ -1242,7 +1238,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     </div>
                   </div>
                 )
-              })() || null}
             </Card>
 
             {/* Meta info */}
@@ -1417,7 +1412,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       })}
                     </div>
                   )
-                })() || null} 
               </Card>
             )}
 
@@ -1633,7 +1627,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     )}
                   </div>
                 )
-              })() || null}
             </Card>
 
             {/* Link Analysis */}
@@ -1758,7 +1751,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     )}
                   </div>
                 )
-              })() || null}
             </Card>
 
             {/* Keywords */}
