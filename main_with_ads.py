@@ -4404,3 +4404,174 @@ async def verify_payment(req: VerifyPaymentRequest, request: Request):
         return {"success": True, "plan": req.plan}
     except Exception as e:
         return {"error": str(e)}
+
+# ─────────────────────────────────────────
+# Team Workspaces
+# ─────────────────────────────────────────
+def init_workspace_tables():
+    conn = get_db_connection()
+    if not conn: return
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS workspaces (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                owner_id INTEGER REFERENCES users(id),
+                plan TEXT DEFAULT 'pro',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS workspace_members (
+                id SERIAL PRIMARY KEY,
+                workspace_id INTEGER REFERENCES workspaces(id),
+                user_id INTEGER REFERENCES users(id),
+                role TEXT DEFAULT 'viewer',
+                joined_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE(workspace_id, user_id)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS workspace_invites (
+                id SERIAL PRIMARY KEY,
+                workspace_id INTEGER REFERENCES workspaces(id),
+                email TEXT NOT NULL,
+                role TEXT DEFAULT 'viewer',
+                token TEXT UNIQUE,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        conn.commit()
+        cur.close(); conn.close()
+        print("Workspace tables ready")
+    except Exception as e:
+        print(f"Workspace tables error: {e}")
+
+init_workspace_tables()
+
+class CreateWorkspaceRequest(BaseModel):
+    name: str
+
+@app.post("/api/workspaces/create")
+async def create_workspace(req: CreateWorkspaceRequest, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "): return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload: return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        # Check user plan
+        cur.execute("SELECT plan FROM users WHERE id = %s", (payload["sub"],))
+        user = cur.fetchone()
+        if not user or user[0] not in ['pro', 'agency']:
+            cur.close(); conn.close()
+            return {"error": "Upgrade to Pro or Agency to create workspaces"}
+        cur.execute("INSERT INTO workspaces (name, owner_id) VALUES (%s, %s) RETURNING id, name, created_at", (req.name, payload["sub"]))
+        workspace = cur.fetchone()
+        # Add owner as admin member
+        cur.execute("INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (%s, %s, 'admin')", (workspace[0], payload["sub"]))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"workspace": {"id": workspace[0], "name": workspace[1], "created_at": str(workspace[2]), "role": "admin"}}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/workspaces")
+async def get_workspaces(request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "): return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload: return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT w.id, w.name, w.owner_id, w.created_at, wm.role,
+                   (SELECT COUNT(*) FROM workspace_members WHERE workspace_id = w.id) as member_count
+            FROM workspaces w
+            JOIN workspace_members wm ON w.id = wm.workspace_id
+            WHERE wm.user_id = %s
+            ORDER BY w.created_at DESC
+        """, (payload["sub"],))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return {"workspaces": [{"id": r[0], "name": r[1], "owner_id": r[2], "created_at": str(r[3]), "role": r[4], "member_count": r[5]} for r in rows]}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/workspaces/{workspace_id}/members")
+async def get_workspace_members(workspace_id: int, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "): return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload: return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT u.id, u.name, u.email, wm.role, wm.joined_at
+            FROM workspace_members wm
+            JOIN users u ON wm.user_id = u.id
+            WHERE wm.workspace_id = %s
+        """, (workspace_id,))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        return {"members": [{"id": r[0], "name": r[1], "email": r[2], "role": r[3], "joined_at": str(r[4])} for r in rows]}
+    except Exception as e:
+        return {"error": str(e)}
+
+class InviteMemberRequest(BaseModel):
+    workspace_id: int
+    email: str
+    role: str = "viewer"
+
+@app.post("/api/workspaces/invite")
+async def invite_member(req: InviteMemberRequest, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "): return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload: return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        import secrets
+        token = secrets.token_urlsafe(32)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO workspace_invites (workspace_id, email, role, token)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT DO NOTHING
+            RETURNING id
+        """, (req.workspace_id, req.email, req.role, token))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True, "invite_token": token, "message": f"Invite sent to {req.email}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/workspaces/accept-invite/{token}")
+async def accept_invite(token: str, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "): return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload: return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, workspace_id, email, role FROM workspace_invites WHERE token = %s AND status = 'pending'", (token,))
+        invite = cur.fetchone()
+        if not invite: return {"error": "Invalid or expired invite"}
+        cur.execute("INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING", (invite[1], payload["sub"], invite[3]))
+        cur.execute("UPDATE workspace_invites SET status = 'accepted' WHERE id = %s", (invite[0],))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True, "workspace_id": invite[1]}
+    except Exception as e:
+        return {"error": str(e)}

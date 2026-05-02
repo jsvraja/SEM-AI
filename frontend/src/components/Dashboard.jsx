@@ -7,6 +7,7 @@ import AdsManager from './AdsManager'
 import React from 'react'
 import ThemeToggle from './ThemeToggle'
 import PricingModal from './PricingModal'
+import Workspaces from './Workspaces'
 import { useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -2009,6 +2010,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             : <div style={{textAlign:'center',padding:'3rem',color:'var(--text3)',fontSize:'13px'}}>
                 Run a URL analysis first to enable competitor analysis
               </div>
+        )}
+
+        {tab === 'workspaces' && (
+          <Workspaces user={user} />
         )}
 
         {tab === 'google-ads' && (
