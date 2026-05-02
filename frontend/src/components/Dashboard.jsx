@@ -666,6 +666,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                         </div>
                       )
                     })
+                    )
                   })()}
                 </div>
               </Card>
@@ -892,6 +893,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     ))}
                   </div>
                 </Card>
+              )
             })()}
 
             {/* SERP Preview */}
