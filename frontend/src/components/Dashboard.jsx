@@ -414,9 +414,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         </div>
       )}
 
-      {mobileSidebar && <div onClick={() => setMobileSidebar(false)} style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} className="mobile-overlay" />}
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-        <button onClick={() => setMobileSidebar(!mobileSidebar)} style={{ display: 'none', position: 'fixed', top: '12px', left: '12px', zIndex: 201, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', cursor: 'pointer', color: 'var(--text)' }} className="hamburger">
           ☰
         </button>
 
