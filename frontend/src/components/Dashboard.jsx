@@ -209,6 +209,7 @@ const TABS = [
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
   const [showPricing, setShowPricing] = useState(false)
+  const [mobileNav, setMobileNav] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   const [showSubscription, setShowSubscription] = useState(false)
@@ -415,6 +416,19 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
       )}
 
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+        {/* Mobile hamburger */}
+        <button onClick={() => setMobileNav(!mobileNav)} className="mob-menu-btn" style={{ display: 'none', marginBottom: '12px', padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text)', fontSize: '13px' }}>
+          ☰ Menu
+        </button>
+        {mobileNav && (
+          <div className="mob-nav" style={{ display: 'none', marginBottom: '16px', background: 'var(--bg2)', borderRadius: '10px', border: '1px solid var(--border)', padding: '8px' }}>
+            {TABS.filter(t => !t.flagRequired || featureFlags[t.flagRequired]).map(t => (
+              <button key={t.id} onClick={() => { setTab(t.id); setMobileNav(false) }} style={{ width: '100%', padding: '8px 12px', background: tab === t.id ? 'var(--accent-bg)' : 'none', border: 'none', borderRadius: '6px', color: tab === t.id ? 'var(--accent)' : 'var(--text2)', fontSize: '13px', cursor: 'pointer', textAlign: 'left' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Page header */}
         <div style={{ marginBottom: '20px' }}>

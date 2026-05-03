@@ -143,3 +143,9 @@ main > div > div:empty,
     display: block !important;
   }
 }
+
+@media (max-width: 768px) {
+  aside { display: none; }
+  .mob-menu-btn { display: block; }
+  .mob-nav { display: block; }
+}
