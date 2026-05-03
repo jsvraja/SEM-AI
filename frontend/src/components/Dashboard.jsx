@@ -204,7 +204,7 @@ const TABS = [
   { id: 'ai-traffic', label: 'AI Traffic', icon: Globe },
   { id: 'social', label: 'Social Media', icon: Share2 },
   { id: 'competitor', label: 'Competitors', icon: Target },
-  { id: 'workspaces', label: 'Workspaces', icon: Users },
+  ...(false ? [{ id: 'workspaces', label: 'Workspaces', icon: Users }] : []),
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
@@ -292,7 +292,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
 
         {/* Nav items */}
         <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
-          {TABS.map(t => {
+          {/* featureFlags controlled nav */}
+          {TABS.filter(t => !t.flagRequired || featureFlags[t.flagRequired]).map(t => {
             const Icon = t.icon
             const isActive = tab === t.id
             return (
