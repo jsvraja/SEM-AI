@@ -4694,3 +4694,29 @@ async def check_usage(request: Request):
         return {"allowed": count < limit, "count": count, "limit": limit, "plan": plan}
     except Exception as e:
         return {"allowed": True}
+
+
+# ─────────────────────────────────────────
+# Subscription Management
+# ─────────────────────────────────────────
+class ChangeSubscriptionRequest(BaseModel):
+    plan: str
+
+@app.post("/api/subscription/change")
+async def change_subscription(req: ChangeSubscriptionRequest, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "): return {"error": "Unauthorized"}
+    payload = verify_token(auth[7:])
+    if not payload: return {"error": "Invalid token"}
+    if req.plan not in ["free", "pro", "agency"]:
+        return {"error": "Invalid plan"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET plan = %s WHERE id = %s", (req.plan, payload["sub"]))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True, "plan": req.plan}
+    except Exception as e:
+        return {"error": str(e)}

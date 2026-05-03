@@ -7,6 +7,7 @@ import AdsManager from './AdsManager'
 import React from 'react'
 import ThemeToggle from './ThemeToggle'
 import PricingModal from './PricingModal'
+import SubscriptionModal from './SubscriptionModal'
 import Workspaces from './Workspaces'
 import { useState } from 'react'
 import {
@@ -208,6 +209,7 @@ const TABS = [
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
   const [showPricing, setShowPricing] = useState(false)
+  const [showSubscription, setShowSubscription] = useState(false)
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
@@ -356,6 +358,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
               {onAdmin && (
                 <button onClick={onAdmin} style={{ width: '100%', padding: '6px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: '6px', color: 'var(--accent)', fontSize: '11px', cursor: 'pointer', marginBottom: '6px' }}>
                   Admin Panel
+                </button>
+              )}
+              {featureFlags.subscription_management && user?.plan !== 'free' && (
+                <button onClick={() => setShowSubscription(true)} style={{ width: '100%', padding: '6px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text3)', fontSize: '11px', cursor: 'pointer', marginBottom: '6px' }}>
+                  Manage Subscription
                 </button>
               )}
               <button onClick={onLogout} style={{ width: '100%', padding: '6px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text3)', fontSize: '11px', cursor: 'pointer' }}>
@@ -2025,6 +2032,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
           />
         )}
       </main>
+      {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} user={user} token={localStorage.getItem('sem_token')} onPlanChanged={(plan) => window.location.reload()} />}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} user={user} token={localStorage.getItem('sem_token')} onPlanUpgraded={(plan) => { const u = JSON.parse(localStorage.getItem('sem_user') || '{}'); u.plan = plan; localStorage.setItem('sem_user', JSON.stringify(u)); window.location.reload(); }} />}
     </div>
   )
