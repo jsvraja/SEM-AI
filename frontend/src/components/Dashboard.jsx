@@ -415,8 +415,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
       )}
 
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-          ☰
-        </button>
 
         {/* Page header */}
         <div style={{ marginBottom: '20px' }}>
