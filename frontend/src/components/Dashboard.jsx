@@ -2046,3 +2046,4 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   )
 }
 
+// mobile fix Sun May  3 13:58:18 IST 2026
