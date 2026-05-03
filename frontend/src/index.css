@@ -87,3 +87,59 @@ button { font-family: inherit; cursor: pointer; }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+
+
+/* Hide orphan )} text rendering */
+main > div > div:empty,
+.card-content:empty {
+  display: none;
+}
+
+/* ── Mobile Responsive ── */
+@media (max-width: 768px) {
+  aside {
+    position: fixed !important;
+    left: -220px !important;
+    z-index: 200 !important;
+    transition: left 0.25s ease !important;
+    height: 100vh !important;
+  }
+  aside.mobile-open {
+    left: 0 !important;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3) !important;
+  }
+  main {
+    padding: 12px !important;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  aside {
+    position: fixed;
+    left: -220px;
+    z-index: 200;
+    transition: left 0.25s ease;
+    height: 100vh;
+  }
+  aside.mobile-open {
+    left: 0;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+  }
+  main {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hamburger {
+    display: block !important;
+  }
+  .mobile-overlay {
+    display: block !important;
+  }
+}

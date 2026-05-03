@@ -209,6 +209,8 @@ const TABS = [
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
   const [showPricing, setShowPricing] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   const [showSubscription, setShowSubscription] = useState(false)
   const [tab, setTab] = useState('overview')
   const [recommendedPages, setRecommendedPages] = useState([])
@@ -276,6 +278,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', color: 'var(--text)', overflow: 'hidden' }}>
+      <style>{`@media (max-width: 768px) { .sidebar { position: fixed !important; left: -220px; z-index: 200; transition: left 0.3s; } .sidebar.open { left: 0 !important; } .sidebar-overlay { display: block !important; } .main-content { margin-left: 0 !important; } }`}</style>
 
       {/* ── Sidebar ── */}
       <aside style={{
@@ -411,7 +414,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         </div>
       )}
 
+      {mobileSidebar && <div onClick={() => setMobileSidebar(false)} style={{ display: 'none', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 199 }} className="mobile-overlay" />}
       <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+        <button onClick={() => setMobileSidebar(!mobileSidebar)} style={{ display: 'none', position: 'fixed', top: '12px', left: '12px', zIndex: 201, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', cursor: 'pointer', color: 'var(--text)' }} className="hamburger">
+          ☰
+        </button>
 
         {/* Page header */}
         <div style={{ marginBottom: '20px' }}>
