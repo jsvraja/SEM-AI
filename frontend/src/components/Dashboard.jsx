@@ -204,7 +204,7 @@ const TABS = [
   { id: 'ai-traffic', label: 'AI Traffic', icon: Globe },
   { id: 'social', label: 'Social Media', icon: Share2 },
   { id: 'competitor', label: 'Competitors', icon: Target },
-  ...(false ? [{ id: 'workspaces', label: 'Workspaces', icon: Users }] : []),
+  { id: 'workspaces', label: 'Workspaces', icon: Users, flagRequired: 'team_workspaces' },
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
