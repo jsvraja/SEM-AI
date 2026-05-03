@@ -208,6 +208,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
             { key: 'stripe_billing', label: 'Stripe Billing', desc: 'Enable subscription & payment features' },
             { key: 'team_workspaces', label: 'Team Workspaces', desc: 'Enable team collaboration features' },
             { key: 'white_label', label: 'White Label', desc: 'Enable white-label branding for agencies' },
+            { key: 'subscription_management', label: 'Subscription Management', desc: 'Enable subscription cancel/downgrade for users' },
           ].map(f => (
             <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
               <div>
