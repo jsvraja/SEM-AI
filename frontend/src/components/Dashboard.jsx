@@ -279,10 +279,22 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', color: 'var(--text)', overflow: 'hidden' }}>
-      <style>{`@media (max-width: 768px) { .sidebar { position: fixed !important; left: -220px; z-index: 200; transition: left 0.3s; } .sidebar.open { left: 0 !important; } .sidebar-overlay { display: block !important; } .main-content { margin-left: 0 !important; } }`}</style>
+      <style>{`
+        @media (max-width: 768px) {
+          .sidebar { position: fixed !important; left: -220px; z-index: 200; transition: left 0.3s; }
+          .sidebar.open { left: 0 !important; }
+          .sidebar-overlay { display: block !important; }
+          .main-content { margin-left: 0 !important; }
+          .hamburger-btn { display: flex !important; }
+        }
+        .hamburger-btn { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--border); cursor: pointer; color: var(--text); font-size: 18px; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
+      `}</style>
+      {/* Sidebar overlay for mobile */}
+      <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
 
       {/* ── Sidebar ── */}
-      <aside style={{
+      <aside className={`sidebar${sidebarOpen ? ' open' : ''}`} style={{
         width: '220px', flexShrink: 0, background: 'var(--bg2)',
         borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column', height: '100vh',
@@ -422,6 +434,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         </button>
         {mobileNav && (
           <div className="mob-nav" style={{ display: 'none', marginBottom: '16px', background: 'var(--bg2)', borderRadius: '10px', border: '1px solid var(--border)', padding: '8px' }}>
+            {/* Hamburger - mobile only */}
+            <button className="hamburger-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
             {TABS.filter(t => !t.flagRequired || featureFlags[t.flagRequired]).map(t => (
               <button key={t.id} onClick={() => { setTab(t.id); setMobileNav(false) }} style={{ width: '100%', padding: '8px 12px', background: tab === t.id ? 'var(--accent-bg)' : 'none', border: 'none', borderRadius: '6px', color: tab === t.id ? 'var(--accent)' : 'var(--text2)', fontSize: '13px', cursor: 'pointer', textAlign: 'left' }}>
                 {t.label}
