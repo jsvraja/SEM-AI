@@ -278,7 +278,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   const PIE_COLORS = ['var(--accent)', 'var(--cyan)', 'var(--accent2)']
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', color: 'var(--text)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', color: 'var(--text)', overflow: 'hidden', position: 'relative' }}>
       <style>{`
         @media (max-width: 768px) {
           .sidebar { position: fixed !important; left: -220px; z-index: 200; transition: left 0.3s; }
@@ -427,7 +427,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         </div>
       )}
 
-      <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+      <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '24px 28px' }}>
         {/* Mobile hamburger */}
         <button onClick={() => setMobileNav(!mobileNav)} className="mob-menu-btn" style={{ display: 'none', marginBottom: '12px', padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text)', fontSize: '13px' }}>
           ☰ Menu
@@ -445,13 +445,20 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         )}
 
         {/* Page header */}
-        <div style={{ marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>
-            {TABS.find(t => t.id === tab)?.label || 'Overview'}
-          </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text3)' }}>
-            {domain} · Analysed today
-          </p>
+        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            className="hamburger-btn"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{ flexShrink: 0 }}
+          >☰</button>
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>
+              {TABS.find(t => t.id === tab)?.label || 'Overview'}
+            </h1>
+            <p style={{ fontSize: '13px', color: 'var(--text3)' }}>
+              {domain} · Analysed today
+            </p>
+          </div>
         </div>
 
         {tab === 'overview' && (
