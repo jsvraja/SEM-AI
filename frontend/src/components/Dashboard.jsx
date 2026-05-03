@@ -290,10 +290,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
           body { overflow: auto !important; }
         }
         .hamburger-btn { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--border); cursor: pointer; color: var(--text); font-size: 18px; }
-        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
+        .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
       `}</style>
       {/* Sidebar overlay for mobile */}
-      <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
       {/* ── Sidebar ── */}
       <aside className={`sidebar${sidebarOpen ? ' open' : ''}`} style={{
