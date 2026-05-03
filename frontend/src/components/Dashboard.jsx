@@ -278,7 +278,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   const PIE_COLORS = ['var(--accent)', 'var(--cyan)', 'var(--accent2)']
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', color: 'var(--text)', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', color: 'var(--text)', position: 'relative' }}>
       <style>{`
         @media (max-width: 768px) {
           .sidebar { position: fixed !important; left: -220px; z-index: 200; transition: left 0.3s; }
@@ -286,6 +286,8 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
           .sidebar-overlay { display: block !important; }
           .main-content { margin-left: 0 !important; }
           .hamburger-btn { display: flex !important; }
+          main { padding: 16px !important; min-height: 0 !important; }
+          body { overflow: auto !important; }
         }
         .hamburger-btn { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--border); cursor: pointer; color: var(--text); font-size: 18px; }
         .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
@@ -427,7 +429,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         </div>
       )}
 
-      <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '24px 28px' }}>
+      <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '24px 28px', minHeight: 0 }}>
         {/* Mobile hamburger */}
         <button onClick={() => setMobileNav(!mobileNav)} className="mob-menu-btn" style={{ display: 'none', marginBottom: '12px', padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text)', fontSize: '13px' }}>
           ☰ Menu
