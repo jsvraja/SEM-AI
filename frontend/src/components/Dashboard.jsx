@@ -1,4 +1,5 @@
 import AITraffic from './AITraffic'
+import SearchConsole from './SearchConsole'
 import AdCopy from './AdCopy'
 import SiteAudit from './SiteAudit'
 import SocialMedia from './SocialMedia'
@@ -205,6 +206,7 @@ const TABS = [
   { id: 'social', label: 'Social Media', icon: Share2 },
   { id: 'competitor', label: 'Competitors', icon: Target },
   { id: 'workspaces', label: 'Workspaces', icon: Users, flagRequired: 'team_workspaces' },
+  { id: 'search-console', label: 'Search Console', icon: Search },
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {

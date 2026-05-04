@@ -1916,12 +1916,73 @@ async def get_search_console_data(request: Request):
                         "position": round(row.get("position", 0), 1),
                     }
                     for row in rows[:15]
-                ]
+                ],
+                "keywords": [
+                    {
+                        "query": row["keys"][0],
+                        "clicks": row.get("clicks", 0),
+                        "impressions": row.get("impressions", 0),
+                        "ctr": round(row.get("ctr", 0), 4),
+                        "position": round(row.get("position", 0), 1),
+                    }
+                    for row in rows[:50]
+                ],
+                "pages": [
+                    {
+                        "page": row["keys"][0],
+                        "clicks": row.get("clicks", 0),
+                        "impressions": row.get("impressions", 0),
+                        "ctr": round(row.get("ctr", 0), 4),
+                        "position": round(row.get("position", 0), 1),
+                    }
+                    for row in page_rows[:20]
+                ],
+                "summary": {
+                    "clicks": sum(r.get("clicks", 0) for r in rows),
+                    "impressions": sum(r.get("impressions", 0) for r in rows),
+                    "ctr": round(sum(r.get("ctr", 0) for r in rows) / max(len(rows), 1), 4),
+                    "position": round(sum(r.get("position", 0) for r in rows) / max(len(rows), 1), 1),
+                }
             }
     except Exception as e:
         import traceback
         traceback.print_exc()
         return {"error": str(e), "connected": False}
+
+@app.post("/api/search-console/insights")
+async def search_console_insights(request: Request):
+    body = await request.json()
+    data = body.get("data", {})
+    url = body.get("url", "")
+    keywords = data.get("keywords", [])
+    summary = data.get("summary", {})
+    
+    opportunities = [k for k in keywords if 4 <= k.get("position", 0) <= 20 and k.get("impressions", 0) > 10]
+    low_ctr = [k for k in keywords if k.get("ctr", 0) < 0.03 and k.get("impressions", 0) > 50]
+    gaps = [k for k in keywords if k.get("impressions", 0) > 100 and k.get("clicks", 0) < 5]
+    
+    try:
+        import httpx
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        prompt = f"""Analyze this Google Search Console data for {url} and give a 2-3 sentence actionable summary in English:
+- Total clicks: {summary.get("clicks", 0)}, Impressions: {summary.get("impressions", 0)}, CTR: {summary.get("ctr", 0):.2%}, Avg Position: {summary.get("position", 0):.1f}
+- {len(opportunities)} keyword opportunities (position 4-20)
+- {len(low_ctr)} low CTR keywords needing title/meta optimization  
+- {len(gaps)} content gaps with high impressions but low clicks
+Top opportunity keywords: {[k["query"] for k in opportunities[:5]]}
+Give specific actionable advice."""
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                json={"contents": [{"parts": [{"text": prompt}]}]}
+            )
+            result = resp.json()
+            summary_text = result["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+        summary_text = f"Found {len(opportunities)} keyword opportunities and {len(gaps)} content gaps. Focus on optimizing position 4-20 keywords for quick wins."
+    
+    return {"summary": summary_text, "opportunity_count": len(opportunities), "gap_count": len(gaps), "low_ctr_count": len(low_ctr)}
 
 @app.get("/api/agent/status")
 async def agent_status():
