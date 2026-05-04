@@ -1840,14 +1840,7 @@ async def get_search_console_data(request: Request):
                     "startDate": start_date,
                     "endDate": end_date,
                     "dimensions": ["query"],
-                    "dimensionFilterGroups": [{
-                        "filters": [{
-                            "dimension": "page",
-                            "operator": "equals",
-                            "expression": url
-                        }]
-                    }],
-                    "rowLimit": 20,
+                    "rowLimit": 50,
                 }
             )
             
