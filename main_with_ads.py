@@ -1052,12 +1052,20 @@ async def optimise_apply(request: Request):
                     return {"success": True, "message": f"Noted: {action.get('title', '')} - Apply in Google Ads dashboard"}
         else:
             # For keyword and ad copy actions - guide user
-            messages = {
-                "keyword": "Go to Google Ads > Keywords > Add these match types for better targeting",
-                "budget": "Go to Google Ads > Campaigns > Edit budget",
-                "status": "Campaign status updated"
-            }
-            return {"success": True, "message": messages.get(action_type, f"Action noted: {action.get('title', '')}. Apply in Google Ads dashboard.")}
+            title = action.get("title", "").lower()
+            if "ad copy" in title or "headline" in title:
+                msg = "Go to Google Ads > Ads & Extensions > Edit your headline and description"
+            elif "keyword" in title or "match" in title:
+                msg = "Go to Google Ads > Keywords > Select keyword > Change match type to Exact or Phrase"
+            elif "bid" in title or "cpc" in title or "cpa" in title:
+                msg = "Go to Google Ads > Campaigns > Settings > Bidding > Change strategy"
+            elif "budget" in title:
+                msg = "Go to Google Ads > Campaigns > Edit daily budget"
+            elif "extension" in title or "asset" in title:
+                msg = "Go to Google Ads > Ads & Extensions > Extensions > Add sitelinks/callouts"
+            else:
+                msg = f"Go to Google Ads dashboard to apply: {action.get(chr(39) + 'title' + chr(39), '')}"
+            return {"success": True, "message": msg}
     except Exception as e:
         return {"success": True, "message": f"Noted: {action.get('title', '')} - Apply manually in Google Ads dashboard"}
 
