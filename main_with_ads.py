@@ -981,28 +981,33 @@ Return JSON only (no markdown):
   ]
 }}"""
 
+        gemini_payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
-                json={{"contents": [{{"parts": [{{"text": prompt}}]}}]}}
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + gemini_key,
+                json=gemini_payload
             )
             result = resp.json()
             text = result["candidates"][0]["content"]["parts"][0]["text"]
             import re, json
-            match = re.search(r'\{{.*\}}', text, re.DOTALL)
+            clean = re.sub(r"```json|```", "", text).strip()
+            match = re.search(r"{.*}", clean, re.DOTALL)
             if match:
                 data = json.loads(match.group())
                 return data
-            return {{"summary": text[:200], "actions": []}}
+            return {"summary": text[:200], "actions": []}
     except Exception as e:
-        return {{
-            "summary": f"Campaign has {clicks} clicks and {impressions} impressions. {'Low CTR - consider updating ad copy.' if ctr < 2 else 'Performance looks stable.'}",
+        low_ctr_msg = "Low CTR - consider updating ad copy." if ctr < 2 else "Performance looks stable."
+        return {
+            "summary": f"Campaign has {clicks} clicks and {impressions} impressions. " + low_ctr_msg,
             "actions": [
-                {{"title": "Review Ad Copy", "description": "Update headlines to improve CTR", "type": "keyword"}},
-                {{"title": "Check Keyword Match Types", "description": "Use exact match for better targeting", "type": "keyword"}},
-                {{"title": "Adjust Bid Strategy", "description": "Consider Target CPA for better ROI", "type": "bid"}}
+                {"title": "Review Ad Copy", "description": "Update headlines to improve CTR", "type": "keyword"},
+                {"title": "Check Keyword Match Types", "description": "Use exact match for better targeting", "type": "keyword"},
+                {"title": "Adjust Bid Strategy", "description": "Consider Target CPA for better ROI", "type": "bid"}
             ]
-        }}
+        }
 
 @app.post("/api/ads/optimise/apply")
 async def optimise_apply(request: Request):
