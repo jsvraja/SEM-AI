@@ -198,6 +198,7 @@ function AdVariant({ variant, url }) {
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'seo', label: 'SEO Report', icon: FileSearch },
+  { id: 'search-console', label: 'Search Console', icon: LineChart },
   { id: 'ads', label: 'Ad Copy', icon: Megaphone },
   { id: 'sem', label: 'SEM Plan', icon: TrendingUp },
   { id: 'google-ads', label: 'Google Ads', icon: Zap },
@@ -206,7 +207,6 @@ const TABS = [
   { id: 'social', label: 'Social Media', icon: Share2 },
   { id: 'competitor', label: 'Competitors', icon: Target },
   { id: 'workspaces', label: 'Workspaces', icon: Users, flagRequired: 'team_workspaces' },
-  { id: 'search-console', label: 'Search Console', icon: LineChart },
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
