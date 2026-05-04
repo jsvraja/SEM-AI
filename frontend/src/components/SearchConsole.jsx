@@ -18,7 +18,15 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
   const [insights, setInsights] = useState(null)
   const [loadingInsights, setLoadingInsights] = useState(false)
 
-  useEffect(() => { checkStatus() }, [])
+  useEffect(() => {
+    // Check if returning from OAuth redirect
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("gsc_connected") === "1") {
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname)
+    }
+    checkStatus()
+  }, [])
 
   const checkStatus = async () => {
     setLoading(true)
@@ -35,10 +43,11 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
     try {
       const res = await fetch(BASE + "/api/search-console/auth?session_id=" + sessionId)
       const d = await res.json()
-      const popup = window.open(d.auth_url, "gsc_auth", "width=500,height=600")
-      const timer = setInterval(() => {
-        if (popup.closed) { clearInterval(timer); setTimeout(checkStatus, 1000) }
-      }, 500)
+      // Store sessionId so we can restore after redirect
+      localStorage.setItem("gsc_session_id", sessionId)
+      localStorage.setItem("gsc_return_tab", "search-console")
+      // Direct redirect instead of popup (avoids COOP issues)
+      window.location.href = d.auth_url
     } catch(e) { console.error(e) }
   }
 

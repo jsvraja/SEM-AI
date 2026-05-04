@@ -1778,13 +1778,14 @@ async def search_console_callback(code: str, state: str = "default"):
             tokens = resp.json()
             if "access_token" in tokens:
                 save_sc_token(state, tokens)
-                return HTMLResponse("""
+                # Redirect back to dashboard
+                dashboard_url = "https://believable-rebirth-production-7e19.up.railway.app/?gsc_connected=1&session_id=" + state
+                return HTMLResponse(f"""
                 <html><body style="font-family:sans-serif;text-align:center;padding:50px;background:#0f172a;color:white">
-                <h2>✅ Search Console Connected!</h2>
-                <p>You can close this window and return to SEM AI.</p>
+                <h2>Search Console Connected</h2>
+                <p>Redirecting back to SEM AI...</p>
                 <script>
-                  window.opener && window.opener.postMessage({type:'SC_AUTH_SUCCESS'}, '*');
-                  setTimeout(() => window.close(), 2000);
+                  setTimeout(() => window.location.href = "{dashboard_url}", 1000);
                 </script>
                 </body></html>
                 """)
