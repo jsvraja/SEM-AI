@@ -11,7 +11,10 @@ export default function SearchConsole({ sessionId, url }) {
   const [insights, setInsights] = useState(null)
   const [loadingInsights, setLoadingInsights] = useState(false)
 
-  useEffect(() => { checkStatus() }, [])
+  useEffect(() => {
+    console.log("SearchConsole mounted, sessionId:", sessionId, "url:", url)
+    checkStatus()
+  }, [])
 
   const checkStatus = async () => {
     setLoading(true)
