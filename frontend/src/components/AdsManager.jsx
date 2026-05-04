@@ -306,9 +306,9 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
     setLoading(true)
     try {
       const token = localStorage.getItem('sem_token') || ''
-      const res = await fetch(, {
+      const res = await fetch(BASE + '/api/ads/optimise', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization':  },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({
           session_id: sessionId,
           customer_id: '7836650842',
@@ -333,9 +333,9 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
     setApplying(a => ({ ...a, [idx]: true }))
     try {
       const token = localStorage.getItem('sem_token') || ''
-      await fetch(, {
+      await fetch(BASE + '/api/ads/optimise/apply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization':  },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({
           session_id: sessionId,
           customer_id: '7836650842',
@@ -382,7 +382,7 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
           {suggestions.actions.map((action, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
               background: action.applied ? 'rgba(34,197,94,0.05)' : 'var(--bg3)', borderRadius: '8px', padding: '10px 14px',
-              border:  }}>
+              border: '1px solid ' + (action.applied ? 'rgba(34,197,94,0.2)' : 'var(--border)') }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>{action.title}</div>
                 <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{action.description}</div>
