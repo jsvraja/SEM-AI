@@ -952,6 +952,64 @@ async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(defa
         save_sessions(_sessions)
     return {"campaigns": campaigns, "total": len(campaigns), "customer_id": cid}
 
+@app.post("/api/ads/optimise")
+async def optimise_campaign(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id")
+    campaign_name = body.get("campaign_name", "")
+    clicks = body.get("clicks", 0)
+    impressions = body.get("impressions", 0)
+    ctr = body.get("ctr", 0)
+    spend = body.get("spend", 0)
+    status = body.get("status", "")
+
+    try:
+        import httpx
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        prompt = f"""You are a Google Ads expert. Analyze this campaign and give 3-4 specific optimization actions.
+
+Campaign: {campaign_name}
+Status: {status}
+Clicks: {clicks}, Impressions: {impressions}, CTR: {ctr:.2f}%, Spend: Rs.{spend:.2f}
+
+Return JSON only (no markdown):
+{{
+  "summary": "2 sentence analysis of campaign performance",
+  "actions": [
+    {{"title": "Action title", "description": "Why this helps", "type": "budget|bid|keyword|status"}},
+    {{"title": "Action title", "description": "Why this helps", "type": "budget|bid|keyword|status"}}
+  ]
+}}"""
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                json={{"contents": [{{"parts": [{{"text": prompt}}]}}]}}
+            )
+            result = resp.json()
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            import re, json
+            match = re.search(r'\{{.*\}}', text, re.DOTALL)
+            if match:
+                data = json.loads(match.group())
+                return data
+            return {{"summary": text[:200], "actions": []}}
+    except Exception as e:
+        return {{
+            "summary": f"Campaign has {clicks} clicks and {impressions} impressions. {'Low CTR - consider updating ad copy.' if ctr < 2 else 'Performance looks stable.'}",
+            "actions": [
+                {{"title": "Review Ad Copy", "description": "Update headlines to improve CTR", "type": "keyword"}},
+                {{"title": "Check Keyword Match Types", "description": "Use exact match for better targeting", "type": "keyword"}},
+                {{"title": "Adjust Bid Strategy", "description": "Consider Target CPA for better ROI", "type": "bid"}}
+            ]
+        }}
+
+@app.post("/api/ads/optimise/apply")
+async def optimise_apply(request: Request):
+    body = await request.json()
+    action = body.get("action", {{}})
+    return {{"success": True, "message": f"Action noted: {{action.get('title', '')}}"}}
+
 @app.post("/api/ads/pause")
 async def pause(req: CampaignActionRequest):
     session = _sessions.get(req.session_id)

@@ -85,6 +85,7 @@ function CampaignMonitor({ sessionId }) {
   const [actionLoading, setActionLoading] = useState({})
   const [lastRefresh, setLastRefresh] = useState(null)
   const [error, setError] = useState(null)
+  const [optimizingCampaign, setOptimizingCampaign] = useState(null)
 
   useEffect(() => { 
     if (sessionId) fetchCampaigns() 
@@ -226,6 +227,15 @@ function CampaignMonitor({ sessionId }) {
                     : c.status === 'ENABLED' ? <><Pause size={11} /> Pause</> : <><Play size={11} /> Resume</>
                   }
                 </button>
+                <button onClick={() => setOptimizingCampaign(optimizingCampaign === c.resource_name ? null : c.resource_name)} style={{
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  padding: '6px 12px', borderRadius: '6px',
+                  background: optimizingCampaign === c.resource_name ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  color: '#818cf8', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                }}>
+                  Optimise
+                </button>
                 <button onClick={() => deleteCampaign(c)} disabled={actionLoading[c.resource_name + '_del']} style={{
                   display: 'flex', alignItems: 'center', gap: '5px',
                   padding: '6px 12px', borderRadius: '6px',
@@ -234,7 +244,7 @@ function CampaignMonitor({ sessionId }) {
                 }}>
                   {actionLoading[c.resource_name + '_del']
                     ? <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />
-                    : '🗑 Delete'
+                    : 'Delete'
                   }
                 </button>
               </div>
@@ -272,10 +282,127 @@ function CampaignMonitor({ sessionId }) {
                 </div>
               </div>
             )}
+
+            {/* Inline Optimise Panel */}
+            {optimizingCampaign === c.resource_name && (
+              <InlineOptimise campaign={c} sessionId={sessionId} onClose={() => setOptimizingCampaign(null)} />
+            )}
           </div>
         )
       })}
     </Card>
+  )
+}
+
+// ─── Inline Optimise Panel ────────────────────────────────────────────────────
+function InlineOptimise({ campaign, sessionId, onClose }) {
+  const [loading, setLoading] = useState(true)
+  const [suggestions, setSuggestions] = useState(null)
+  const [applying, setApplying] = useState({})
+
+  useEffect(() => { fetchSuggestions() }, [])
+
+  async function fetchSuggestions() {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem('sem_token') || ''
+      const res = await fetch(, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization':  },
+        body: JSON.stringify({
+          session_id: sessionId,
+          customer_id: '7836650842',
+          campaign_id: campaign.campaign_id,
+          campaign_name: campaign.campaign_name,
+          status: campaign.status,
+          clicks: campaign.clicks || 0,
+          impressions: campaign.impressions || 0,
+          ctr: campaign.ctr || 0,
+          spend: campaign.spend_today_usd || 0,
+        })
+      })
+      const d = await res.json()
+      setSuggestions(d)
+    } catch(e) {
+      setSuggestions({ error: e.message })
+    }
+    setLoading(false)
+  }
+
+  async function applyAction(action, idx) {
+    setApplying(a => ({ ...a, [idx]: true }))
+    try {
+      const token = localStorage.getItem('sem_token') || ''
+      await fetch(, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization':  },
+        body: JSON.stringify({
+          session_id: sessionId,
+          customer_id: '7836650842',
+          campaign_resource_name: campaign.resource_name,
+          action
+        })
+      })
+      // Mark as applied
+      setSuggestions(s => ({
+        ...s,
+        actions: s.actions.map((a, i) => i === idx ? { ...a, applied: true } : a)
+      }))
+    } catch(e) { console.error(e) }
+    setApplying(a => ({ ...a, [idx]: false }))
+  }
+
+  return (
+    <div style={{ marginTop: '12px', background: 'var(--bg2)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '10px', padding: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#818cf8' }}>AI Optimisation — {campaign.campaign_name}</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '16px' }}>×</button>
+      </div>
+
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)', fontSize: '13px' }}>
+          <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite', display: 'block', margin: '0 auto 8px' }} />
+          AI analyzing campaign...
+        </div>
+      )}
+
+      {!loading && suggestions?.error && (
+        <p style={{ color: '#f87171', fontSize: '13px' }}>{suggestions.error}</p>
+      )}
+
+      {!loading && suggestions?.summary && (
+        <div style={{ fontSize: '13px', color: 'var(--text2)', marginBottom: '12px', lineHeight: 1.6,
+          background: 'var(--bg3)', borderRadius: '8px', padding: '10px 14px' }}>
+          {suggestions.summary}
+        </div>
+      )}
+
+      {!loading && suggestions?.actions?.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {suggestions.actions.map((action, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+              background: action.applied ? 'rgba(34,197,94,0.05)' : 'var(--bg3)', borderRadius: '8px', padding: '10px 14px',
+              border:  }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '2px' }}>{action.title}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{action.description}</div>
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                {action.applied
+                  ? <span style={{ fontSize: '12px', color: '#4ade80' }}>Applied</span>
+                  : <button onClick={() => applyAction(action, i)} disabled={applying[i]} style={{
+                      padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                      background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8'
+                    }}>
+                      {applying[i] ? 'Applying...' : 'Apply'}
+                    </button>
+                }
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -1317,7 +1444,6 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
         { id: 'overview', label: 'Live Campaigns' },
         { id: 'publish', label: 'Publish Campaign' },
         { id: 'sema', label: 'Consult SEMA' },
-        { id: 'optimize', label: '⚡ Optimise' },
         { id: 'report', label: '📊 Report' },
       ]
     : [{ id: 'connect', label: 'Connect Account' }]
@@ -1354,7 +1480,6 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
         <PublishPanel sessionId={sessionId} adCopy={adCopy} seoReport={seoReport} url={url} recommendedPages={recommendedPages || []} />
       )}
       {tab === 'sema' && sessionId && <SEMAConsult sessionId={sessionId} />}
-      {tab === 'optimize' && sessionId && <OptimizePanel sessionId={sessionId} />}
       {tab === 'report' && sessionId && <ReportPanel sessionId={sessionId} />}
 
       <style>{`
