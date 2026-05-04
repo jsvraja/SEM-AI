@@ -21,7 +21,7 @@ import {
   TrendingUp, DollarSign, Target, FileText, Megaphone, Users,
   ChevronDown, ChevronUp, ChevronRight, Copy, Check, ExternalLink,
   Zap, Search, BarChart3, Share2
-} from 'lucide-react'
+, FileSearch, ClipboardList, Activity, LineChart } from 'lucide-react'
 
 function ScoreRing({ score, label, size = 80 }) {
   const color = score >= 70 ? 'var(--green)' : score >= 40 ? 'var(--yellow)' : 'var(--red)'
@@ -197,16 +197,16 @@ function AdVariant({ variant, url }) {
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
-  { id: 'seo', label: 'SEO Report', icon: Search },
+  { id: 'seo', label: 'SEO Report', icon: FileSearch },
   { id: 'ads', label: 'Ad Copy', icon: Megaphone },
   { id: 'sem', label: 'SEM Plan', icon: TrendingUp },
   { id: 'google-ads', label: 'Google Ads', icon: Zap },
-  { id: 'site-audit', label: 'Site Audit', icon: Globe },
-  { id: 'ai-traffic', label: 'AI Traffic', icon: Globe },
+  { id: 'site-audit', label: 'Site Audit', icon: ClipboardList },
+  { id: 'ai-traffic', label: 'AI Traffic', icon: Activity },
   { id: 'social', label: 'Social Media', icon: Share2 },
   { id: 'competitor', label: 'Competitors', icon: Target },
   { id: 'workspaces', label: 'Workspaces', icon: Users, flagRequired: 'team_workspaces' },
-  { id: 'search-console', label: 'Search Console', icon: Search },
+  { id: 'search-console', label: 'Search Console', icon: LineChart },
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
@@ -2073,6 +2073,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             recommendedPages={recommendedPages}
             onRecommendedPages={setRecommendedPages}
           />
+        )}
+        {tab === 'search-console' && (
+          <SearchConsole sessionId={sessionId} url={data?.url || ''} />
         )}
       </main>
       {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} user={user} token={localStorage.getItem('sem_token')} onPlanChanged={(plan) => window.location.reload()} />}
