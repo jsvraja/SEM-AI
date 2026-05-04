@@ -3,7 +3,14 @@ import { Search, TrendingUp, MousePointer, Eye, ExternalLink, CheckCircle } from
 
 const BASE = "https://sem-ai-production.up.railway.app"
 
-export default function SearchConsole({ sessionId, url }) {
+export default function SearchConsole({ sessionId: propSessionId, url }) {
+  const sessionId = propSessionId || (() => {
+    const stored = localStorage.getItem("gsc_session_id")
+    if (stored) return stored
+    const newId = "gsc_" + Math.random().toString(36).slice(2)
+    localStorage.setItem("gsc_session_id", newId)
+    return newId
+  })()
   const [connected, setConnected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
@@ -11,10 +18,7 @@ export default function SearchConsole({ sessionId, url }) {
   const [insights, setInsights] = useState(null)
   const [loadingInsights, setLoadingInsights] = useState(false)
 
-  useEffect(() => {
-    console.log("SearchConsole mounted, sessionId:", sessionId, "url:", url)
-    checkStatus()
-  }, [])
+  useEffect(() => { checkStatus() }, [])
 
   const checkStatus = async () => {
     setLoading(true)
