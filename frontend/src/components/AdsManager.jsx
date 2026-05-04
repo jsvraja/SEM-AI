@@ -333,7 +333,7 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
     setApplying(a => ({ ...a, [idx]: true }))
     try {
       const token = localStorage.getItem('sem_token') || ''
-      await fetch(BASE + '/api/ads/optimise/apply', {
+      const res = await fetch(BASE + '/api/ads/optimise/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({
@@ -343,10 +343,10 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
           action
         })
       })
-      // Mark as applied
+      const d = await res.json()
       setSuggestions(s => ({
         ...s,
-        actions: s.actions.map((a, i) => i === idx ? { ...a, applied: true } : a)
+        actions: s.actions.map((a, i) => i === idx ? { ...a, applied: true, message: d.message } : a)
       }))
     } catch(e) { console.error(e) }
     setApplying(a => ({ ...a, [idx]: false }))
@@ -389,7 +389,7 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
               </div>
               <div style={{ flexShrink: 0 }}>
                 {action.applied
-                  ? <span style={{ fontSize: '12px', color: '#4ade80' }}>Applied</span>
+                  ? <div><span style={{ fontSize: '12px', color: '#4ade80' }}>Applied</span>{action.message && <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>{action.message}</div>}</div>
                   : <button onClick={() => applyAction(action, i)} disabled={applying[i]} style={{
                       padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
                       background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8'

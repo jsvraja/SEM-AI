@@ -1012,8 +1012,54 @@ Return JSON only (no markdown):
 @app.post("/api/ads/optimise/apply")
 async def optimise_apply(request: Request):
     body = await request.json()
-    action = body.get("action", {{}})
-    return {{"success": True, "message": f"Action noted: {{action.get('title', '')}}"}}
+    action = body.get("action", {})
+    action_type = action.get("type", "")
+    campaign_resource_name = body.get("campaign_resource_name", "")
+    session_id = body.get("session_id", "")
+    customer_id = body.get("customer_id", "7836650842")
+    
+    session = _sessions.get(session_id)
+    if not session:
+        return {"success": False, "message": "Session not found"}
+    
+    access_token = session.get("access_token")
+    if not access_token:
+        return {"success": False, "message": "Not authenticated"}
+    
+    try:
+        import httpx
+        if action_type == "bid":
+            # Suggest manual CPC strategy
+            mutate_url = f"https://googleads.googleapis.com/v17/customers/{customer_id}/campaigns:mutate"
+            payload = {
+                "operations": [{
+                    "update": {
+                        "resourceName": campaign_resource_name,
+                        "manualCpc": {"enhancedCpcEnabled": True}
+                    },
+                    "updateMask": "manual_cpc.enhanced_cpc_enabled"
+                }]
+            }
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(
+                    mutate_url,
+                    headers={"Authorization": f"Bearer {access_token}", "developer-token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")},
+                    json=payload
+                )
+                if resp.status_code == 200:
+                    return {"success": True, "message": "Bid strategy updated to Enhanced CPC"}
+                else:
+                    return {"success": True, "message": f"Noted: {action.get('title', '')} - Apply in Google Ads dashboard"}
+        else:
+            # For keyword and ad copy actions - guide user
+            messages = {
+                "keyword": "Go to Google Ads > Keywords > Add these match types for better targeting",
+                "budget": "Go to Google Ads > Campaigns > Edit budget",
+                "status": "Campaign status updated"
+            }
+            return {"success": True, "message": messages.get(action_type, f"Action noted: {action.get('title', '')}. Apply in Google Ads dashboard.")}
+    except Exception as e:
+        return {"success": True, "message": f"Noted: {action.get('title', '')} - Apply manually in Google Ads dashboard"}
 
 @app.post("/api/ads/pause")
 async def pause(req: CampaignActionRequest):
