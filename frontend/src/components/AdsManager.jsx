@@ -472,6 +472,7 @@ function ABTestPanel({ sessionId }) {
           </div>
         </div>
 
+        <button onClick={generateVariants} disabled={generating || !selectedCampaign} style={{
           width: '100%', padding: '12px', borderRadius: '10px', border: 'none',
           background: generating ? 'var(--bg3)' : 'var(--accent)', color: 'white',
           fontSize: '14px', fontWeight: 600, cursor: generating ? 'not-allowed' : 'pointer',
@@ -488,7 +489,7 @@ function ABTestPanel({ sessionId }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           {['variant_a', 'variant_b'].map((key, idx) => {
             const v = result[key]
-            if (vite v5.4.0 building for production...) return null
+            if (!v) return null
             const color = idx === 0 ? '#818cf8' : '#22c55e'
             const label = idx === 0 ? 'A' : 'B'
             return (
