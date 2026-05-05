@@ -1926,6 +1926,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
         { id: 'publish', label: 'Publish Campaign' },
         { id: 'sema', label: 'Consult SEMA' },
         { id: 'report', label: '📊 Report' },
+        { id: 'abtest', label: 'A/B Test' },
       ]
     : [{ id: 'connect', label: 'Connect Account' }]
 
