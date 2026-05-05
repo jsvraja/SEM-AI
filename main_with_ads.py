@@ -953,6 +953,172 @@ async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(defa
     return {"campaigns": campaigns, "total": len(campaigns), "customer_id": cid}
 
 
+
+@app.post("/api/ads/ab-test/generate")
+async def ab_test_generate(request: Request):
+    import httpx, json, re
+    body = await request.json()
+    session_id = body.get("session_id")
+    campaign_resource_name = body.get("campaign_resource_name", "")
+    campaign_name = body.get("campaign_name", "")
+    url = body.get("url", "")
+    customer_id = body.get("customer_id", "7836650842")
+
+    session = _sessions.get(session_id)
+    if not session:
+        return {"error": "Session not found"}
+
+    # Fetch existing ads
+    existing_ads = []
+    try:
+        access_token = session.get("access_token", "")
+        refresh_token = session.get("refresh_token", "")
+        import httpx as hx
+        async with hx.AsyncClient(timeout=30) as client:
+            tr = await client.post("https://oauth2.googleapis.com/token", data={
+                "refresh_token": refresh_token,
+                "client_id": os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
+                "client_secret": os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
+                "grant_type": "refresh_token"
+            })
+            access_token = tr.json().get("access_token", "")
+            dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
+            headers = {"Authorization": f"Bearer {access_token}", "developer-token": dev_token}
+            ads_resp = await client.post(
+                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                headers=headers,
+                json={"query": f"SELECT ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions, ad_group_ad.resource_name, metrics.clicks, metrics.impressions, metrics.ctr FROM ad_group_ad WHERE campaign.resource_name = '{campaign_resource_name}' LIMIT 3"}
+            )
+            if ads_resp.status_code == 200:
+                for row in ads_resp.json().get("results", []):
+                    ad = row.get("adGroupAd", {}).get("ad", {}).get("responsiveSearchAd", {})
+                    m = row.get("metrics", {})
+                    existing_ads.append({
+                        "headlines": [h.get("text", "") for h in ad.get("headlines", [])[:5]],
+                        "descriptions": [d.get("text", "") for d in ad.get("descriptions", [])[:2]],
+                        "clicks": m.get("clicks", 0),
+                        "ctr": round(float(m.get("ctr", 0)) * 100, 2)
+                    })
+    except Exception as e:
+        print(f"Ads fetch error: {e}")
+
+    # Generate A/B variants with Gemini
+    try:
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        existing_summary = json.dumps(existing_ads) if existing_ads else "No existing ads"
+        prompt = "Generate 2 A/B test ad variants for Google Ads. Campaign: " + campaign_name + ". Website: " + url + ". Existing ads: " + existing_summary + ". Return JSON: {variant_a: {name: string, angle: string, headlines: [5 strings max 30 chars each], descriptions: [2 strings max 90 chars each], rationale: string}, variant_b: {name: string, angle: string, headlines: [5 strings max 30 chars each], descriptions: [2 strings max 90 chars each], rationale: string}, recommendation: string}. Variant A should be emotional/benefit focused. Variant B should be feature/proof focused. Make headlines compelling and specific."
+        async with hx.AsyncClient(timeout=45) as client:
+            resp = await client.post(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + gemini_key,
+                json={"contents": [{"parts": [{"text": prompt}]}]}
+            )
+            result = resp.json()
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            clean = re.sub(r"```json|```", "", text).strip()
+            match = re.search(r"{.*}", clean, re.DOTALL)
+            if match:
+                data = json.loads(match.group())
+                data["existing_ads"] = existing_ads
+                return data
+    except Exception as e:
+        print(f"Gemini error: {e}")
+
+    return {
+        "variant_a": {
+            "name": "Version A - Emotional",
+            "angle": "Benefit focused",
+            "headlines": ["Transform Your SEO Today", "Rank #1 on Google Fast", "AI-Powered SEO Tool", "Get More Traffic Now", "Free SEO Analysis"],
+            "descriptions": ["Boost your website rankings with AI. Get actionable insights in minutes.", "Join 1000+ businesses growing with our AI SEO platform. Try free today."],
+            "rationale": "Focuses on emotional benefits and quick results"
+        },
+        "variant_b": {
+            "name": "Version B - Feature",
+            "angle": "Feature focused",
+            "headlines": ["AI SEO + Google Ads Tool", "Keywords, Ads & Analytics", "Complete SEM Platform", "Real-Time SEO Insights", "Campaign Automation"],
+            "descriptions": ["All-in-one SEM platform with AI analysis, keyword research and campaign management.", "Automate Google Ads campaigns. Track rankings. Optimize CTR. Start free."],
+            "rationale": "Highlights specific features for informed buyers"
+        },
+        "recommendation": "Test both for 14 days. Version A typically wins for awareness campaigns, Version B for bottom-funnel.",
+        "existing_ads": existing_ads
+    }
+
+
+@app.post("/api/ads/ab-test/publish")
+async def ab_test_publish(request: Request):
+    import httpx, json
+    body = await request.json()
+    session_id = body.get("session_id")
+    campaign_resource_name = body.get("campaign_resource_name", "")
+    customer_id = body.get("customer_id", "7836650842")
+    headlines = body.get("headlines", [])
+    descriptions = body.get("descriptions", [])
+    variant_name = body.get("variant_name", "A/B Variant")
+
+    session = _sessions.get(session_id)
+    if not session:
+        return {"success": False, "message": "Session not found"}
+
+    try:
+        refresh_token = session.get("refresh_token", "")
+        async with httpx.AsyncClient(timeout=30) as client:
+            tr = await client.post("https://oauth2.googleapis.com/token", data={
+                "refresh_token": refresh_token,
+                "client_id": os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
+                "client_secret": os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
+                "grant_type": "refresh_token"
+            })
+            access_token = tr.json().get("access_token", "")
+            dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
+            headers_req = {"Authorization": f"Bearer {access_token}", "developer-token": dev_token, "Content-Type": "application/json"}
+
+            # Get ad group for this campaign
+            ag_resp = await client.post(
+                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                headers=headers_req,
+                json={"query": f"SELECT ad_group.resource_name, ad_group.name FROM ad_group WHERE campaign.resource_name = '{campaign_resource_name}' AND ad_group.status = 'ENABLED' LIMIT 1"}
+            )
+            ag_data = ag_resp.json()
+            results = ag_data.get("results", [])
+            if not results:
+                return {"success": False, "message": "No active ad group found"}
+
+            ad_group_resource = results[0]["adGroup"]["resourceName"]
+
+            # Create new RSA ad
+            rsa_headlines = [{"text": h[:30]} for h in headlines[:5]]
+            rsa_descriptions = [{"text": d[:90]} for d in descriptions[:2]]
+
+            ad_payload = {
+                "operations": [{
+                    "create": {
+                        "adGroup": ad_group_resource,
+                        "ad": {
+                            "responsiveSearchAd": {
+                                "headlines": rsa_headlines,
+                                "descriptions": rsa_descriptions
+                            },
+                            "finalUrls": ["https://sakthivelraja.ai"]
+                        },
+                        "status": "PAUSED"
+                    }
+                }]
+            }
+
+            ad_resp = await client.post(
+                f"https://googleads.googleapis.com/v17/customers/{customer_id}/adGroupAds:mutate",
+                headers=headers_req,
+                json=ad_payload
+            )
+
+            if ad_resp.status_code == 200:
+                return {"success": True, "message": f"{variant_name} published as PAUSED ad. Enable in Google Ads to start testing."}
+            else:
+                err = ad_resp.json()
+                return {"success": False, "message": str(err.get("error", {}).get("message", "Failed to publish"))}
+
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
 @app.post("/api/ads/budget-allocator")
 async def budget_allocator(request: Request):
     import httpx, json, re

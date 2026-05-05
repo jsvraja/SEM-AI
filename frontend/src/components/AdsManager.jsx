@@ -374,6 +374,182 @@ function CampaignMonitor({ sessionId }) {
 }
 
 
+
+function ABTestPanel({ sessionId }) {
+  const [campaigns, setCampaigns] = useState([])
+  const [selectedCampaign, setSelectedCampaign] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [result, setResult] = useState(null)
+  const [publishing, setPublishing] = useState({})
+  const [published, setPublished] = useState({})
+
+  useEffect(() => { fetchCampaigns() }, [])
+
+  async function fetchCampaigns() {
+    setLoading(true)
+    try {
+      const res = await fetch(BASE + '/api/ads/campaigns/' + sessionId + '?customer_id=7836650842')
+      const d = await res.json()
+      setCampaigns(d.campaigns || [])
+      if (d.campaigns && d.campaigns.length > 0) setSelectedCampaign(d.campaigns[0])
+    } catch(e) { console.error(e) }
+    setLoading(false)
+  }
+
+  async function generateVariants() {
+    setGenerating(true)
+    setResult(null)
+    try {
+      const token = localStorage.getItem('sem_token') || ''
+      const res = await fetch(BASE + '/api/ads/ab-test/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({
+          session_id: sessionId,
+          campaign_resource_name: selectedCampaign.resource_name,
+          campaign_name: selectedCampaign.campaign_name,
+          url: 'https://sakthivelraja.ai',
+          customer_id: '7836650842'
+        })
+      })
+      const d = await res.json()
+      setResult(d)
+    } catch(e) { console.error(e) }
+    setGenerating(false)
+  }
+
+  async function publishVariant(variant, key) {
+    setPublishing(p => ({ ...p, [key]: true }))
+    try {
+      const token = localStorage.getItem('sem_token') || ''
+      const res = await fetch(BASE + '/api/ads/ab-test/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({
+          session_id: sessionId,
+          campaign_resource_name: selectedCampaign.resource_name,
+          customer_id: '7836650842',
+          headlines: variant.headlines,
+          descriptions: variant.descriptions,
+          variant_name: variant.name
+        })
+      })
+      const d = await res.json()
+      setPublished(p => ({ ...p, [key]: d.success ? 'Published' : d.message || 'Failed' }))
+    } catch(e) {
+      setPublished(p => ({ ...p, [key]: 'Error' }))
+    }
+    setPublishing(p => ({ ...p, [key]: false }))
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <Card>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '18px' }}>AB</span>
+          <div>
+            <h2 style={{ fontSize: '14px', fontWeight: 700 }}>Ad Copy A/B Test</h2>
+            <p style={{ fontSize: '12px', color: 'var(--text3)' }}>Generate 2 ad variants and test which performs better</p>
+          </div>
+        </div>
+
+        {/* Campaign selector */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select Campaign</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {campaigns.map(c => (
+              <div key={c.resource_name} onClick={() => { setSelectedCampaign(c); setResult(null) }} style={{
+                padding: '10px 14px', borderRadius: '8px', cursor: 'pointer',
+                border: '1px solid ' + (selectedCampaign && selectedCampaign.resource_name === c.resource_name ? 'var(--accent)' : 'var(--border)'),
+                background: selectedCampaign && selectedCampaign.resource_name === c.resource_name ? 'var(--accent-bg)' : 'var(--bg3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '13px', fontWeight: 500 }}>{c.campaign_name}</span>
+                <StatusBadge status={c.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+          width: '100%', padding: '12px', borderRadius: '10px', border: 'none',
+          background: generating ? 'var(--bg3)' : 'var(--accent)', color: 'white',
+          fontSize: '14px', fontWeight: 600, cursor: generating ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+        }}>
+          {generating
+            ? <><RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> AI Generating Variants...</>
+            : 'Generate A/B Variants'
+          }
+        </button>
+      </Card>
+
+      {result && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          {['variant_a', 'variant_b'].map((key, idx) => {
+            const v = result[key]
+            if (vite v5.4.0 building for production...) return null
+            const color = idx === 0 ? '#818cf8' : '#22c55e'
+            const label = idx === 0 ? 'A' : 'B'
+            return (
+              <Card key={key}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: color + '22', border: '1px solid ' + color + '44', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color, flexShrink: 0 }}>{label}</div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700 }}>{v.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{v.angle}</div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Headlines</div>
+                  {(v.headlines || []).map((h, i) => (
+                    <div key={i} style={{ fontSize: '12px', padding: '4px 8px', background: 'var(--bg3)', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{h}</span>
+                      <span style={{ color: h.length > 30 ? 'var(--red)' : 'var(--text3)', fontSize: '10px' }}>{h.length}/30</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Descriptions</div>
+                  {(v.descriptions || []).map((d, i) => (
+                    <div key={i} style={{ fontSize: '12px', padding: '6px 8px', background: 'var(--bg3)', borderRadius: '4px', marginBottom: '4px', lineHeight: 1.5, display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                      <span>{d}</span>
+                      <span style={{ color: d.length > 90 ? 'var(--red)' : 'var(--text3)', fontSize: '10px', flexShrink: 0 }}>{d.length}/90</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: '11px', color: 'var(--text3)', fontStyle: 'italic', marginBottom: '12px', padding: '8px', background: 'var(--bg3)', borderRadius: '6px' }}>
+                  {v.rationale}
+                </div>
+
+                {published[key]
+                  ? <div style={{ textAlign: 'center', padding: '10px', background: 'rgba(34,197,94,0.1)', borderRadius: '8px', color: '#4ade80', fontSize: '13px', fontWeight: 600 }}>{published[key]}</div>
+                  : <button onClick={() => publishVariant(v, key)} disabled={publishing[key]} style={{
+                      width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid ' + color + '44',
+                      background: color + '15', color, fontSize: '13px', fontWeight: 600, cursor: publishing[key] ? 'not-allowed' : 'pointer'
+                    }}>
+                      {publishing[key] ? 'Publishing...' : 'Publish Variant ' + label}
+                    </button>
+                }
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {result && result.recommendation && (
+        <Card>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>AI Recommendation</div>
+          <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.6 }}>{result.recommendation}</p>
+        </Card>
+      )}
+    </div>
+  )
+}
+
 // Campaign Doctor Component
 function CampaignDoctor({ campaign, sessionId, onClose }) {
   const [loading, setLoading] = useState(true)
@@ -1785,6 +1961,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
       )}
       {tab === 'sema' && sessionId && <SEMAConsult sessionId={sessionId} />}
       {tab === 'report' && sessionId && <ReportPanel sessionId={sessionId} />}
+      {tab === 'abtest' && sessionId && <ABTestPanel sessionId={sessionId} />}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
