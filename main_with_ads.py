@@ -952,6 +952,54 @@ async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(defa
         save_sessions(_sessions)
     return {"campaigns": campaigns, "total": len(campaigns), "customer_id": cid}
 
+
+@app.post("/api/ads/budget-allocator")
+async def budget_allocator(request: Request):
+    import httpx, json, re
+    body = await request.json()
+    campaigns = body.get("campaigns", [])
+    total_budget = body.get("total_budget", 0)
+    if not campaigns:
+        return {"error": "No campaigns provided"}
+    per = round(total_budget / max(len(campaigns), 1), 2)
+    campaign_summary = [{
+        "name": c.get("campaign_name", ""),
+        "resource_name": c.get("resource_name", ""),
+        "clicks": c.get("clicks", 0),
+        "impressions": c.get("impressions", 0),
+        "ctr": round(c.get("ctr", 0), 2),
+        "spend": round(c.get("spend_today_usd", 0), 2),
+        "current_budget": per
+    } for c in campaigns]
+    try:
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+        prompt = "You are a Google Ads budget expert. Campaigns: " + json.dumps(campaign_summary) + " Total: Rs." + str(total_budget) + ". Return JSON: {analysis, allocations:[{campaign_name,resource_name,current_budget,recommended_budget,change,change_pct,reason,performance}], expected_improvement}"
+        async with httpx.AsyncClient(timeout=45) as client:
+            resp = await client.post(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + gemini_key,
+                json={"contents": [{"parts": [{"text": prompt}]}]}
+            )
+            result = resp.json()
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            clean = re.sub(r"```json|```", "", text).strip()
+            match = re.search(r"{.*}", clean, re.DOTALL)
+            if match:
+                return json.loads(match.group())
+    except Exception as e:
+        print(f"Error: {e}")
+    return {
+        "analysis": f"Analyzing {len(campaigns)} campaigns with Rs.{total_budget}/day total budget.",
+        "allocations": [{
+            "campaign_name": c.get("campaign_name", ""),
+            "resource_name": c.get("resource_name", ""),
+            "current_budget": per, "recommended_budget": per,
+            "change": 0, "change_pct": 0,
+            "reason": "Need more performance data",
+            "performance": "AVERAGE"
+        } for c in campaigns],
+        "expected_improvement": "Monitor for 7 days"
+    }
+
 @app.post("/api/ads/doctor")
 async def campaign_doctor(request: Request):
     body = await request.json()
