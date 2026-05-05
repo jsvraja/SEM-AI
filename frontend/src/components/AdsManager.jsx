@@ -385,6 +385,7 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
           </div>
         )}
 
+        {report && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 
             {/* Health Score */}
@@ -395,12 +396,12 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
                   <circle cx="18" cy="18" r="15.9" fill="none"
                     stroke={getSeverityColor(report?.severity) || "#818cf8"}
                     strokeWidth="3"
-                    strokeDasharray={(report.health_score || 0) + " 100"}
+                    strokeDasharray={((report && report.health_score) || 0) + " 100"}
                     strokeLinecap="round" />
                 </svg>
                 <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: "14px", fontWeight: 700, color: getSeverityColor(report?.severity) || "#818cf8" }}>
-                  {report.health_score}
+                  {report && report.health_score || 0}
                 </div>
               </div>
               <div style={{ flex: 1 }}>
@@ -409,15 +410,15 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
                   <span style={{ fontSize: "11px", fontWeight: 600, padding: "2px 8px", borderRadius: "99px",
                     background: (getSeverityColor(report?.severity) || "#818cf8") + "22",
                     color: getSeverityColor(report?.severity) || "#818cf8" }}>
-                    {report.severity}
+                    {report && report.severity || "UNKNOWN"}
                   </span>
                 </div>
-                <p style={{ fontSize: "13px", color: "var(--text2)", lineHeight: 1.6, margin: 0 }}>{report.diagnosis}</p>
+                <p style={{ fontSize: "13px", color: "var(--text2)", lineHeight: 1.6, margin: 0 }}>{report && report.diagnosis || "Analyzing..."}</p>
               </div>
             </div>
 
             {/* ROI Prediction */}
-            {report.roi_prediction && (
+            {report && report.roi_prediction && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
                 {[
                   { label: "Current Clicks/mo", value: report.roi_prediction.current_monthly_clicks, color: "var(--text3)" },
@@ -435,10 +436,10 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
             {/* Prescriptions */}
             <div>
               <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>
-                Prescriptions ({(report.prescriptions || []).length})
+                Prescriptions ({(report && report.prescriptions || []).length})
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {(report.prescriptions || []).map((rx, i) => {
+                {(report && report.prescriptions || []).map((rx, i) => {
                   const colors = priorityColor[rx.priority] || priorityColor.MEDIUM
                   const isApplied = applied[i]
                   return (
@@ -481,7 +482,7 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
             </div>
 
             {/* Keywords found */}
-            {report.keywords && report.keywords.length > 0 && (
+            {report && report.keywords && report.keywords.length > 0 && (
               <div>
                 <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "8px" }}>
                   Keywords ({report.keywords.length})
@@ -512,6 +513,7 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
             )}
 
           </div>
+        )}
         )}
       </div>
     </div>
