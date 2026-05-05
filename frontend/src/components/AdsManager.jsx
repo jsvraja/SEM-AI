@@ -354,6 +354,7 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
     WARNING: "#f59e0b",
     HEALTHY: "#22c55e"
   }
+  const getSeverityColor = (s) => severityColor[s] || '#818cf8'
 
   const priorityColor = {
     CRITICAL: { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", text: "#f87171" },
@@ -392,13 +393,13 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
                 <svg viewBox="0 0 36 36" style={{ width: "64px", height: "64px", transform: "rotate(-90deg)" }}>
                   <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="3" />
                   <circle cx="18" cy="18" r="15.9" fill="none"
-                    stroke={severityColor[report.severity] || "#818cf8"}
+                    stroke={getSeverityColor(report?.severity) || "#818cf8"}
                     strokeWidth="3"
                     strokeDasharray={(report.health_score || 0) + " 100"}
                     strokeLinecap="round" />
                 </svg>
                 <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "14px", fontWeight: 700, color: severityColor[report.severity] || "#818cf8" }}>
+                  fontSize: "14px", fontWeight: 700, color: getSeverityColor(report?.severity) || "#818cf8" }}>
                   {report.health_score}
                 </div>
               </div>
@@ -406,8 +407,8 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
                   <span style={{ fontSize: "15px", fontWeight: 700 }}>Campaign Health</span>
                   <span style={{ fontSize: "11px", fontWeight: 600, padding: "2px 8px", borderRadius: "99px",
-                    background: (severityColor[report.severity] || "#818cf8") + "22",
-                    color: severityColor[report.severity] || "#818cf8" }}>
+                    background: (getSeverityColor(report?.severity) || "#818cf8") + "22",
+                    color: getSeverityColor(report?.severity) || "#818cf8" }}>
                     {report.severity}
                   </span>
                 </div>
