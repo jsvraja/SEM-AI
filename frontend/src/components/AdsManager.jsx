@@ -176,7 +176,7 @@ function CampaignMonitor({ sessionId }) {
               const token = localStorage.getItem('sem_token') || ''
               const res = await fetch(BASE + '/api/ads/budget-allocator', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
                 body: JSON.stringify({ session_id: sessionId, campaigns, total_budget: campaigns.reduce((sum, c) => sum + (c.daily_budget_inr || 500), 0), customer_id: '7836650842' })
               })
               const d = await res.json()
@@ -404,7 +404,7 @@ function ABTestPanel({ sessionId }) {
       const token = localStorage.getItem('sem_token') || ''
       const res = await fetch(BASE + '/api/ads/ab-test/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
         body: JSON.stringify({
           session_id: sessionId,
           campaign_resource_name: selectedCampaign.resource_name,
@@ -425,7 +425,7 @@ function ABTestPanel({ sessionId }) {
       const token = localStorage.getItem('sem_token') || ''
       const res = await fetch(BASE + '/api/ads/ab-test/publish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
         body: JSON.stringify({
           session_id: sessionId,
           campaign_resource_name: selectedCampaign.resource_name,
@@ -789,7 +789,7 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
       const token = localStorage.getItem('sem_token') || ''
       const res = await fetch(BASE + '/api/ads/optimise', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
         body: JSON.stringify({
           session_id: sessionId,
           customer_id: '7836650842',
@@ -816,7 +816,7 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
       const token = localStorage.getItem('sem_token') || ''
       const res = await fetch(BASE + '/api/ads/optimise/apply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
         body: JSON.stringify({
           session_id: sessionId,
           customer_id: '7836650842',
