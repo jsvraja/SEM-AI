@@ -234,7 +234,7 @@ function CampaignMonitor({ sessionId }) {
                   border: '1px solid rgba(99,102,241,0.3)',
                   color: '#818cf8', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
                 }}>
-                  Optimise
+                  Diagnose
                 </button>
                 <button onClick={() => deleteCampaign(c)} disabled={actionLoading[c.resource_name + '_del']} style={{
                   display: 'flex', alignItems: 'center', gap: '5px',
@@ -285,12 +285,235 @@ function CampaignMonitor({ sessionId }) {
 
             {/* Inline Optimise Panel */}
             {optimizingCampaign === c.resource_name && (
-              <InlineOptimise campaign={c} sessionId={sessionId} onClose={() => setOptimizingCampaign(null)} />
+              <CampaignDoctor campaign={c} sessionId={sessionId} onClose={() => setOptimizingCampaign(null)} />
             )}
           </div>
         )
       })}
     </Card>
+  )
+}
+
+
+// Campaign Doctor Component
+function CampaignDoctor({ campaign, sessionId, onClose }) {
+  const [loading, setLoading] = useState(true)
+  const [report, setReport] = useState(null)
+  const [applying, setApplying] = useState({})
+  const [applied, setApplied] = useState({})
+
+  useEffect(() => { fetchDiagnosis() }, [])
+
+  async function fetchDiagnosis() {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem("sem_token") || ""
+      const res = await fetch(BASE + "/api/ads/doctor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({
+          session_id: sessionId,
+          campaign_resource_name: campaign.resource_name,
+          campaign_name: campaign.campaign_name,
+          clicks: campaign.clicks || 0,
+          impressions: campaign.impressions || 0,
+          ctr: campaign.ctr || 0,
+          spend: campaign.spend_today_usd || 0,
+          status: campaign.status,
+          customer_id: "7836650842"
+        })
+      })
+      const d = await res.json()
+      setReport(d)
+    } catch(e) { console.error(e) }
+    setLoading(false)
+  }
+
+  async function applyPrescription(rx, idx) {
+    setApplying(a => ({ ...a, [idx]: true }))
+    try {
+      const token = localStorage.getItem("sem_token") || ""
+      const res = await fetch(BASE + "/api/ads/optimise/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({
+          session_id: sessionId,
+          customer_id: "7836650842",
+          campaign_resource_name: campaign.resource_name,
+          action: { title: rx.title, type: rx.type }
+        })
+      })
+      const d = await res.json()
+      setApplied(a => ({ ...a, [idx]: d.message || "Applied" }))
+    } catch(e) { console.error(e) }
+    setApplying(a => ({ ...a, [idx]: false }))
+  }
+
+  const severityColor = {
+    CRITICAL: "#ef4444",
+    WARNING: "#f59e0b",
+    HEALTHY: "#22c55e"
+  }
+
+  const priorityColor = {
+    CRITICAL: { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", text: "#f87171" },
+    HIGH: { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", text: "#fbbf24" },
+    MEDIUM: { bg: "rgba(99,102,241,0.08)", border: "rgba(99,102,241,0.2)", text: "#818cf8" }
+  }
+
+  return (
+    <div style={{ marginTop: "12px", background: "var(--bg2)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: "12px", overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ padding: "14px 18px", background: "rgba(99,102,241,0.08)", borderBottom: "1px solid rgba(99,102,241,0.2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "20px" }}>stethoscope</span>
+          <div>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#818cf8" }}>Campaign Doctor</div>
+            <div style={{ fontSize: "11px", color: "var(--text3)" }}>{campaign.campaign_name}</div>
+          </div>
+        </div>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: "18px" }}>x</button>
+      </div>
+
+      <div style={{ padding: "16px 18px" }}>
+        {loading && (
+          <div style={{ textAlign: "center", padding: "32px", color: "var(--text3)" }}>
+            <RefreshCw size={20} style={{ animation: "spin 1s linear infinite", display: "block", margin: "0 auto 12px" }} />
+            <div style={{ fontSize: "14px", fontWeight: 500 }}>Diagnosing campaign...</div>
+            <div style={{ fontSize: "12px", marginTop: "4px" }}>Analyzing keywords, ads, and performance data</div>
+          </div>
+        )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+            {/* Health Score */}
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", background: "var(--bg3)", borderRadius: "10px", padding: "14px 16px" }}>
+              <div style={{ position: "relative", width: "64px", height: "64px", flexShrink: 0 }}>
+                <svg viewBox="0 0 36 36" style={{ width: "64px", height: "64px", transform: "rotate(-90deg)" }}>
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="3" />
+                  <circle cx="18" cy="18" r="15.9" fill="none"
+                    stroke={severityColor[report.severity] || "#818cf8"}
+                    strokeWidth="3"
+                    strokeDasharray={(report.health_score || 0) + " 100"}
+                    strokeLinecap="round" />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "14px", fontWeight: 700, color: severityColor[report.severity] || "#818cf8" }}>
+                  {report.health_score}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "15px", fontWeight: 700 }}>Campaign Health</span>
+                  <span style={{ fontSize: "11px", fontWeight: 600, padding: "2px 8px", borderRadius: "99px",
+                    background: (severityColor[report.severity] || "#818cf8") + "22",
+                    color: severityColor[report.severity] || "#818cf8" }}>
+                    {report.severity}
+                  </span>
+                </div>
+                <p style={{ fontSize: "13px", color: "var(--text2)", lineHeight: 1.6, margin: 0 }}>{report.diagnosis}</p>
+              </div>
+            </div>
+
+            {/* ROI Prediction */}
+            {report.roi_prediction && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                {[
+                  { label: "Current Clicks/mo", value: report.roi_prediction.current_monthly_clicks, color: "var(--text3)" },
+                  { label: "Predicted Clicks/mo", value: report.roi_prediction.predicted_monthly_clicks, color: "#22c55e" },
+                  { label: "Improvement", value: "+" + report.roi_prediction.improvement_pct + "%", color: "#818cf8" },
+                ].map(m => (
+                  <div key={m.label} style={{ background: "var(--bg3)", borderRadius: "8px", padding: "12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "20px", fontWeight: 700, color: m.color }}>{m.value}</div>
+                    <div style={{ fontSize: "10px", color: "var(--text3)", marginTop: "4px" }}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Prescriptions */}
+            <div>
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "10px" }}>
+                Prescriptions ({(report.prescriptions || []).length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {(report.prescriptions || []).map((rx, i) => {
+                  const colors = priorityColor[rx.priority] || priorityColor.MEDIUM
+                  const isApplied = applied[i]
+                  return (
+                    <div key={i} style={{ borderRadius: "10px", border: "1px solid " + (isApplied ? "rgba(34,197,94,0.3)" : colors.border),
+                      background: isApplied ? "rgba(34,197,94,0.05)" : colors.bg, overflow: "hidden" }}>
+                      <div style={{ padding: "12px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                              <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "4px",
+                                background: colors.bg, color: colors.text, border: "1px solid " + colors.border }}>
+                                {rx.priority}
+                              </span>
+                              <span style={{ fontSize: "13px", fontWeight: 600 }}>{rx.title}</span>
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#f87171", marginBottom: "4px" }}>Problem: {rx.problem}</div>
+                            <div style={{ fontSize: "12px", color: "var(--text2)", marginBottom: "4px" }}>Fix: {rx.fix}</div>
+                            <div style={{ fontSize: "12px", color: "#22c55e" }}>Expected: {rx.impact}</div>
+                            {isApplied && <div style={{ fontSize: "11px", color: "#4ade80", marginTop: "6px", fontStyle: "italic" }}>{isApplied}</div>}
+                          </div>
+                          <div style={{ flexShrink: 0 }}>
+                            {isApplied
+                              ? <span style={{ fontSize: "20px" }}>checkmark</span>
+                              : <button onClick={() => applyPrescription(rx, i)} disabled={applying[i]} style={{
+                                  padding: "8px 16px", borderRadius: "8px", border: "1px solid " + colors.border,
+                                  background: colors.bg, color: colors.text,
+                                  fontSize: "12px", fontWeight: 600, cursor: applying[i] ? "not-allowed" : "pointer",
+                                  whiteSpace: "nowrap"
+                                }}>
+                                  {applying[i] ? "Applying..." : "Apply"}
+                                </button>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Keywords found */}
+            {report.keywords && report.keywords.length > 0 && (
+              <div>
+                <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "8px" }}>
+                  Keywords ({report.keywords.length})
+                </div>
+                <div style={{ background: "var(--bg3)", borderRadius: "8px", overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "var(--bg4)" }}>
+                        {["Keyword", "Match", "Clicks", "CTR", "CPC"].map(h => (
+                          <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: "10px", color: "var(--text3)", fontWeight: 600, textTransform: "uppercase" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {report.keywords.map((kw, i) => (
+                        <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
+                          <td style={{ padding: "8px 12px", fontSize: "12px", fontWeight: 500 }}>{kw.text}</td>
+                          <td style={{ padding: "8px 12px", fontSize: "11px", color: "var(--text3)" }}>{kw.match_type}</td>
+                          <td style={{ padding: "8px 12px", fontSize: "12px" }}>{kw.clicks}</td>
+                          <td style={{ padding: "8px 12px", fontSize: "12px" }}>{kw.ctr}%</td>
+                          <td style={{ padding: "8px 12px", fontSize: "12px" }}>Rs.{kw.avg_cpc}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

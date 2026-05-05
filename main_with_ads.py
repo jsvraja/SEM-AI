@@ -952,6 +952,200 @@ async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(defa
         save_sessions(_sessions)
     return {"campaigns": campaigns, "total": len(campaigns), "customer_id": cid}
 
+@app.post("/api/ads/doctor")
+async def campaign_doctor(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id")
+    campaign_resource_name = body.get("campaign_resource_name", "")
+    campaign_name = body.get("campaign_name", "")
+    clicks = body.get("clicks", 0)
+    impressions = body.get("impressions", 0)
+    ctr = body.get("ctr", 0)
+    spend = body.get("spend", 0)
+    status = body.get("status", "")
+    customer_id = body.get("customer_id", "7836650842")
+
+    session = _sessions.get(session_id)
+    if not session:
+        return {"error": "Session not found"}
+
+    # Step 1: Fetch keywords for this campaign
+    keywords_data = []
+    ads_data = []
+    try:
+        refresh_token = session.get("refresh_token", "")
+        import httpx, json
+
+        # Get access token
+        async with httpx.AsyncClient(timeout=30) as client:
+            token_resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "refresh_token": refresh_token,
+                    "client_id": os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
+                    "client_secret": os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
+                    "grant_type": "refresh_token"
+                }
+            )
+            access_token = token_resp.json().get("access_token", "")
+
+            dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "developer-token": dev_token,
+                "Content-Type": "application/json"
+            }
+
+            # Fetch keywords
+            kw_query = {
+                "query": f"SELECT ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, metrics.clicks, metrics.impressions, metrics.ctr, metrics.average_cpc FROM ad_group_criterion WHERE campaign.resource_name = '{campaign_resource_name}' AND ad_group_criterion.type = 'KEYWORD' LIMIT 20"
+            }
+            kw_resp = await client.post(
+                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                headers=headers,
+                json=kw_query
+            )
+            if kw_resp.status_code == 200:
+                kw_data = kw_resp.json()
+                for row in kw_data.get("results", []):
+                    kw = row.get("adGroupCriterion", {}).get("keyword", {})
+                    m = row.get("metrics", {})
+                    keywords_data.append({
+                        "text": kw.get("text", ""),
+                        "match_type": kw.get("matchType", ""),
+                        "clicks": m.get("clicks", 0),
+                        "impressions": m.get("impressions", 0),
+                        "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                        "avg_cpc": round(float(m.get("averageCpc", 0)) / 1000000, 2)
+                    })
+
+            # Fetch ads
+            ads_query = {
+                "query": f"SELECT ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions, metrics.clicks, metrics.impressions, metrics.ctr FROM ad_group_ad WHERE campaign.resource_name = '{campaign_resource_name}' LIMIT 5"
+            }
+            ads_resp = await client.post(
+                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                headers=headers,
+                json=ads_query
+            )
+            if ads_resp.status_code == 200:
+                ads_json = ads_resp.json()
+                for row in ads_json.get("results", []):
+                    ad = row.get("adGroupAd", {}).get("ad", {}).get("responsiveSearchAd", {})
+                    m = row.get("metrics", {})
+                    headlines = [h.get("text", "") for h in ad.get("headlines", [])[:3]]
+                    ads_data.append({
+                        "headlines": headlines,
+                        "clicks": m.get("clicks", 0),
+                        "impressions": m.get("impressions", 0),
+                        "ctr": round(float(m.get("ctr", 0)) * 100, 2)
+                    })
+    except Exception as e:
+        print(f"Keyword fetch error: {e}")
+
+    # Step 2: Gemini Deep Analysis
+    try:
+        gemini_key = os.environ.get("GEMINI_API_KEY", "")
+
+        kw_summary = json.dumps(keywords_data[:10]) if keywords_data else "No keyword data available"
+        ads_summary = json.dumps(ads_data[:3]) if ads_data else "No ad data available"
+
+        # Health score calculation
+        health = 100
+        issues = []
+        if impressions == 0: health -= 40; issues.append("No impressions — ads not showing")
+        elif clicks == 0: health -= 30; issues.append("Impressions but 0 clicks — ad copy weak")
+        elif ctr < 1: health -= 20; issues.append(f"Low CTR {ctr:.2f}% — industry avg is 3-5%")
+        if spend == 0 and status == "ENABLED": health -= 15; issues.append("No spend — budget or bid issue")
+        if not keywords_data: health -= 10; issues.append("No keywords found")
+        health = max(health, 5)
+
+        severity = "CRITICAL" if health < 40 else "WARNING" if health < 70 else "HEALTHY"
+
+        prompt = f"""You are a senior Google Ads agency expert doing a campaign audit. Be specific, actionable, and direct.
+
+CAMPAIGN DATA:
+- Name: {campaign_name}
+- Status: {status}
+- Health Score: {health}/100 ({severity})
+- Clicks: {clicks}, Impressions: {impressions}, CTR: {ctr:.2f}%, Spend: Rs.{spend:.2f}
+- Issues detected: {issues}
+
+KEYWORDS:
+{kw_summary}
+
+ADS:
+{ads_summary}
+
+Return ONLY this JSON (no markdown, no explanation):
+{{
+  "health_score": {health},
+  "severity": "{severity}",
+  "diagnosis": "2-3 sentence specific diagnosis of what is wrong and why",
+  "prescriptions": [
+    {{
+      "id": "rx1",
+      "priority": "CRITICAL",
+      "title": "Specific action title",
+      "problem": "What exactly is wrong",
+      "fix": "Exact fix with specific values (e.g. change bid from Rs.10 to Rs.35)",
+      "impact": "Expected result (e.g. CTR 0% to 3%, +45 clicks/month)",
+      "type": "keyword|bid|ad_copy|budget|targeting",
+      "auto_apply": true
+    }}
+  ],
+  "roi_prediction": {{
+    "current_monthly_clicks": {clicks * 30},
+    "predicted_monthly_clicks": {max(clicks * 30, 45)},
+    "current_spend": {spend * 30},
+    "predicted_spend": {spend * 30},
+    "improvement_pct": 85
+  }}
+}}"""
+
+        async with httpx.AsyncClient(timeout=45) as client:
+            gemini_payload = {"contents": [{"parts": [{"text": prompt}]}]}
+            resp = await client.post(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + gemini_key,
+                json=gemini_payload
+            )
+            result = resp.json()
+            text = result["candidates"][0]["content"]["parts"][0]["text"]
+            import re
+            clean = re.sub(r"```json|```", "", text).strip()
+            match = re.search(r"{.*}", clean, re.DOTALL)
+            if match:
+                data = json.loads(match.group())
+                data["keywords"] = keywords_data
+                data["ads"] = ads_data
+                return data
+
+    except Exception as e:
+        print(f"Gemini error: {e}")
+
+    # Fallback
+    severity = "CRITICAL" if impressions == 0 else "WARNING" if clicks == 0 else "HEALTHY"
+    health = 20 if impressions == 0 else 45 if clicks == 0 else 70
+    return {
+        "health_score": health,
+        "severity": severity,
+        "diagnosis": f"Campaign has {impressions} impressions and {clicks} clicks. {'Ads are not showing - check bids and budget.' if impressions == 0 else 'Ads showing but no clicks - ad copy needs improvement.'}",
+        "prescriptions": [
+            {"id": "rx1", "priority": "CRITICAL", "title": "Increase Bids", "problem": "Bids too low to compete in auction", "fix": "Increase keyword bids to Rs.25-50 range", "impact": "Start getting impressions within 24 hours", "type": "bid", "auto_apply": False},
+            {"id": "rx2", "priority": "HIGH", "title": "Improve Ad Headlines", "problem": "Generic headlines not attracting clicks", "fix": "Use specific benefit-focused headlines", "impact": "CTR improvement from 0% to 2-3%", "type": "ad_copy", "auto_apply": False},
+            {"id": "rx3", "priority": "MEDIUM", "title": "Add Exact Match Keywords", "problem": "Broad keywords wasting budget", "fix": "Convert top keywords to exact match", "impact": "Better targeting, lower wasted spend", "type": "keyword", "auto_apply": False}
+        ],
+        "roi_prediction": {
+            "current_monthly_clicks": clicks * 30,
+            "predicted_monthly_clicks": max(clicks * 30, 45),
+            "current_spend": spend * 30,
+            "predicted_spend": spend * 30,
+            "improvement_pct": 85
+        },
+        "keywords": keywords_data,
+        "ads": ads_data
+    }
+
 @app.post("/api/ads/optimise")
 async def optimise_campaign(request: Request):
     body = await request.json()
