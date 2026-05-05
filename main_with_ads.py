@@ -1075,7 +1075,9 @@ async def ab_test_publish(request: Request):
             dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
             if isinstance(dev_token, bytes):
                 dev_token = dev_token.decode("utf-8")
-            headers_req = {"Authorization": f"Bearer {access_token}", "developer-token": dev_token, "Content-Type": "application/json"}
+            access_token = str(access_token).strip()
+            dev_token = str(dev_token).strip() if dev_token else ""
+            headers_req = {"Authorization": "Bearer " + access_token, "developer-token": dev_token, "Content-Type": "application/json"}
 
             # Get ad group for this campaign
             ag_resp = await client.post(
