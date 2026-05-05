@@ -987,6 +987,15 @@ async def budget_allocator(request: Request):
                 return json.loads(match.group())
     except Exception as e:
         print(f"Error: {e}")
+    # Check if any campaign has real data
+    has_data = any(c.get("clicks", 0) > 0 or c.get("impressions", 0) > 0 for c in campaigns)
+    if not has_data:
+        return {
+            "analysis": f"Your {len(campaigns)} campaigns need more data. Run them for 7+ days to enable AI budget optimization.",
+            "no_data": True,
+            "allocations": [],
+            "expected_improvement": "Once campaigns get clicks and impressions, AI will recommend optimal budget splits to maximize ROI."
+        }
     return {
         "analysis": f"Analyzing {len(campaigns)} campaigns with Rs.{total_budget}/day total budget.",
         "allocations": [{
