@@ -384,7 +384,7 @@ function ABTestPanel({ sessionId }) {
   const [publishing, setPublishing] = useState({})
   const [published, setPublished] = useState({})
 
-  useEffect(() => { fetchCampaigns() }, [])
+  useEffect(() => { console.log("ABTest sessionId:", sessionId); fetchCampaigns() }, [])
 
   async function fetchCampaigns() {
     setLoading(true)
