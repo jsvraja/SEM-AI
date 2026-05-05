@@ -367,7 +367,7 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
       {/* Header */}
       <div style={{ padding: "14px 18px", background: "rgba(99,102,241,0.08)", borderBottom: "1px solid rgba(99,102,241,0.2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontSize: "20px" }}>stethoscope</span>
+          <span style={{ fontSize: "20px" }}>🩺</span>
           <div>
             <div style={{ fontSize: "13px", fontWeight: 700, color: "#818cf8" }}>Campaign Doctor</div>
             <div style={{ fontSize: "11px", color: "var(--text3)" }}>{campaign.campaign_name}</div>
@@ -513,7 +513,6 @@ function CampaignDoctor({ campaign, sessionId, onClose }) {
             )}
 
           </div>
-        )}
         )}
       </div>
     </div>
