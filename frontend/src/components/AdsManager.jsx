@@ -86,6 +86,9 @@ function CampaignMonitor({ sessionId }) {
   const [lastRefresh, setLastRefresh] = useState(null)
   const [error, setError] = useState(null)
   const [optimizingCampaign, setOptimizingCampaign] = useState(null)
+  const [showAllocator, setShowAllocator] = useState(false)
+  const [allocatorData, setAllocatorData] = useState(null)
+  const [allocatorLoading, setAllocatorLoading] = useState(false)
 
   useEffect(() => { 
     if (sessionId) fetchCampaigns() 
@@ -165,6 +168,29 @@ function CampaignMonitor({ sessionId }) {
           Live Campaigns
         </h2>
         {lastRefresh && <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Updated {lastRefresh}</span>}
+        <button onClick={async () => {
+          setShowAllocator(!showAllocator)
+          if (!showAllocator) {
+            setAllocatorLoading(true)
+            try {
+              const token = localStorage.getItem('sem_token') || ''
+              const res = await fetch(BASE + '/api/ads/budget-allocator', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ session_id: sessionId, campaigns, total_budget: 1000, customer_id: '7836650842' })
+              })
+              const d = await res.json()
+              setAllocatorData(d)
+            } catch(e) { console.error(e) }
+            setAllocatorLoading(false)
+          }
+        }} style={{
+          background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)',
+          borderRadius: '6px', padding: '4px 10px', color: '#818cf8',
+          cursor: 'pointer', fontSize: '12px', fontWeight: 500
+        }}>
+          Smart Allocator
+        </button>
         <button onClick={fetchCampaigns} disabled={loading} style={{
           background: 'none', border: '1px solid var(--border)', borderRadius: '6px',
           padding: '4px 8px', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px',
@@ -195,6 +221,59 @@ function CampaignMonitor({ sessionId }) {
         </div>
       )}
 
+      {showAllocator && (
+        <div style={{ background: 'var(--bg3)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '10px', padding: '16px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#818cf8' }}>Smart Budget Allocator</div>
+            <button onClick={() => setShowAllocator(false)} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '16px' }}>x</button>
+          </div>
+          {allocatorLoading && (
+            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text3)', fontSize: '13px' }}>
+              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite', display: 'block', margin: '0 auto 8px' }} />
+              AI analyzing budget distribution...
+            </div>
+          )}
+          {allocatorData && !allocatorLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6, background: 'var(--bg2)', borderRadius: '8px', padding: '10px 14px' }}>
+                {allocatorData.analysis}
+              </div>
+              {(allocatorData.allocations || []).map((a, i) => {
+                const perfColor = a.performance === 'WINNING' ? '#22c55e' : a.performance === 'LOSING' ? '#ef4444' : '#f59e0b'
+                const isIncrease = a.change > 0
+                return (
+                  <div key={i} style={{ background: 'var(--bg2)', borderRadius: '8px', padding: '12px 14px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>{a.campaign_name}</div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '99px', background: perfColor + '22', color: perfColor }}>{a.performance}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Current</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700 }}>Rs.{a.current_budget}</div>
+                      </div>
+                      <div style={{ fontSize: '18px' }}>{isIncrease ? 'to' : 'to'}</div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Recommended</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: isIncrease ? '#22c55e' : '#ef4444' }}>Rs.{a.recommended_budget}</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'right' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: isIncrease ? '#22c55e' : '#ef4444' }}>{isIncrease ? '+' : ''}{a.change_pct}%</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{a.reason}</div>
+                  </div>
+                )
+              })}
+              {allocatorData.expected_improvement && (
+                <div style={{ fontSize: '12px', color: '#818cf8', background: 'rgba(99,102,241,0.08)', borderRadius: '8px', padding: '10px 14px', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  Expected: {allocatorData.expected_improvement}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       {campaigns.map(c => {
         const monitor = c.budget_monitoring
         const spendPct = monitor
