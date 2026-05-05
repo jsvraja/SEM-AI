@@ -1060,6 +1060,8 @@ async def ab_test_publish(request: Request):
 
     try:
         refresh_token = session.get("refresh_token", "")
+        if isinstance(refresh_token, bytes):
+            refresh_token = refresh_token.decode("utf-8")
         async with httpx.AsyncClient(timeout=30) as client:
             tr = await client.post("https://oauth2.googleapis.com/token", data={
                 "refresh_token": refresh_token,
@@ -1068,7 +1070,11 @@ async def ab_test_publish(request: Request):
                 "grant_type": "refresh_token"
             })
             access_token = tr.json().get("access_token", "")
+            if isinstance(access_token, bytes):
+                access_token = access_token.decode("utf-8")
             dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
+            if isinstance(dev_token, bytes):
+                dev_token = dev_token.decode("utf-8")
             headers_req = {"Authorization": f"Bearer {access_token}", "developer-token": dev_token, "Content-Type": "application/json"}
 
             # Get ad group for this campaign
