@@ -400,6 +400,8 @@ function ABTestPanel({ sessionId }) {
   async function generateVariants() {
     setGenerating(true)
     setResult(null)
+    setPublished({})
+    setPublishing({})
     try {
       const token = localStorage.getItem('sem_token') || ''
       const res = await fetch(BASE + '/api/ads/ab-test/generate', {
