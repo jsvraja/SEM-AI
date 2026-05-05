@@ -177,7 +177,7 @@ function CampaignMonitor({ sessionId }) {
               const res = await fetch(BASE + '/api/ads/budget-allocator', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ session_id: sessionId, campaigns, total_budget: 1000, customer_id: '7836650842' })
+                body: JSON.stringify({ session_id: sessionId, campaigns, total_budget: campaigns.reduce((sum, c) => sum + (c.daily_budget_inr || 500), 0), customer_id: '7836650842' })
               })
               const d = await res.json()
               setAllocatorData(d)

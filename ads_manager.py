@@ -265,6 +265,7 @@ def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
     cid = customer_id.replace("-", "")
     query = """
         SELECT campaign.id, campaign.name, campaign.status, campaign.resource_name,
+               campaign_budget.amount_micros,
                metrics.cost_micros, metrics.clicks, metrics.impressions,
                metrics.ctr, metrics.conversions
         FROM campaign
@@ -288,6 +289,7 @@ def get_all_campaigns_spend(customer_id: str, refresh_token: str) -> list:
                 "impressions": int(metrics.get("impressions", 0)),
                 "ctr": round(float(metrics.get("ctr", 0)) * 100, 2),
                 "conversions": float(metrics.get("conversions", 0)),
+                "daily_budget_inr": round(int(row.get("campaignBudget", {}).get("amountMicros", 0)) / 1_000_000, 2),
             })
         return campaigns
     except Exception as e:
