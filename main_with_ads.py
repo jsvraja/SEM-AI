@@ -971,8 +971,8 @@ async def ab_test_generate(request: Request):
     # Fetch existing ads
     existing_ads = []
     try:
-        access_token = session.get("access_token", "")
         refresh_token = session.get("refresh_token", "")
+        if isinstance(refresh_token, bytes): refresh_token = refresh_token.decode("utf-8")
         import httpx as hx
         async with hx.AsyncClient(timeout=30) as client:
             tr = await client.post("https://oauth2.googleapis.com/token", data={
@@ -981,9 +981,9 @@ async def ab_test_generate(request: Request):
                 "client_secret": os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
                 "grant_type": "refresh_token"
             })
-            access_token = tr.json().get("access_token", "")
-            dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
-            headers = {"Authorization": f"Bearer {access_token}", "developer-token": dev_token}
+            access_token = str(tr.json().get("access_token", "")).strip()
+            dev_token = str(os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")).strip()
+            headers = {"Authorization": "Bearer " + access_token, "developer-token": dev_token}
             ads_resp = await client.post(
                 f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
                 headers=headers,
