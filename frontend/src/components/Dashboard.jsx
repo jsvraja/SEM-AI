@@ -207,7 +207,7 @@ const TABS = [
   { id: 'ai-traffic', label: 'AI Traffic', icon: Activity },
   { id: 'social', label: 'Social Media', icon: Share2 },
   { id: 'competitor', label: 'Competitors', icon: Target },
-  { id: 'autopilot', label: 'Auto-Pilot 🤖', icon: Zap },
+
   { id: 'workspaces', label: 'Workspaces', icon: Users, flagRequired: 'team_workspaces' },
 ]
 
@@ -2054,7 +2054,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
               </div>
         )}
 
-        {tab === 'autopilot' && sessionId && <AutoPilot sessionId={sessionId} />}
+        
         {tab === 'competitor' && (
           url 
             ? <Competitor url={url} seoReport={seo} />

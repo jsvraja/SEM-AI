@@ -1,4 +1,5 @@
 import { BASE } from '../api_config'
+import AutoPilot from './AutoPilot'
 import { useState, useEffect, useRef , useCallback } from 'react'
 import {
   Play, Pause, BarChart3, RefreshCw, Zap, Target,
@@ -1930,6 +1931,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
         { id: 'sema', label: 'Consult SEMA' },
         { id: 'report', label: '📊 Report' },
         { id: 'abtest', label: 'A/B Test' },
+        { id: 'autopilot', label: '🤖 Auto-Pilot' },
       ]
     : [{ id: 'connect', label: 'Connect Account' }]
 
@@ -1967,6 +1969,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
       {tab === 'sema' && sessionId && <SEMAConsult sessionId={sessionId} />}
       {tab === 'report' && sessionId && <ReportPanel sessionId={sessionId} />}
       {tab === 'abtest' && sessionId && <ABTestPanel sessionId={sessionId} />}
+      {tab === 'autopilot' && sessionId && <AutoPilot sessionId={sessionId} />}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
