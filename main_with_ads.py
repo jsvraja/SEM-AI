@@ -1104,9 +1104,11 @@ async def ab_test_publish(request: Request):
 
             ad_group_resource = results[0]["adGroup"]["resourceName"]
 
-            # Create new RSA ad
-            rsa_headlines = [{"text": h[:30]} for h in headlines[:5]]
-            rsa_descriptions = [{"text": d[:90]} for d in descriptions[:2]]
+            # Create new RSA ad - minimum 3 headlines, 2 descriptions
+            all_headlines = headlines if len(headlines) >= 3 else headlines + ["Try Free Today", "AI SEO Platform", "Rank Higher Now"]
+            all_descriptions = descriptions if len(descriptions) >= 2 else descriptions + ["Boost your website rankings with AI-powered SEO tools."]
+            rsa_headlines = [{"text": h[:30]} for h in all_headlines[:5]]
+            rsa_descriptions = [{"text": d[:90]} for d in all_descriptions[:2]]
 
             ad_payload = {
                 "operations": [{
@@ -1115,7 +1117,9 @@ async def ab_test_publish(request: Request):
                         "ad": {
                             "responsiveSearchAd": {
                                 "headlines": rsa_headlines,
-                                "descriptions": rsa_descriptions
+                                "descriptions": rsa_descriptions,
+                                "path1": "ai-seo",
+                                "path2": "free-trial"
                             },
                             "finalUrls": ["https://sakthivelraja.ai"]
                         },
