@@ -4752,11 +4752,13 @@ async def login(req: LoginRequest):
         return {"error": "DB connection failed"}
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, email, name, password_hash, plan, avatar FROM users WHERE email = %s", (req.email,))
+        cur.execute("SELECT id, email, name, password_hash, plan, avatar, is_active FROM users WHERE email = %s", (req.email,))
         user = cur.fetchone()
         cur.close(); conn.close()
         if not user or not pwd_context.verify(req.password[:72], user[3]):
             return {"error": "Invalid email or password"}
+        if user[6] is False:
+            return {"error": "Your account has been disabled. Please contact support."}
         token = create_access_token({"sub": str(user[0]), "email": user[1]})
         return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[4], "avatar": user[5]}}
     except Exception as e:
@@ -4805,17 +4807,19 @@ async def google_login_auth(request: Request):
     try:
         cur = conn.cursor()
         # Upsert user
-        cur.execute("SELECT id, email, name, plan FROM users WHERE email = %s", (email,))
+        cur.execute("SELECT id, email, name, plan, is_active FROM users WHERE email = %s", (email,))
         user = cur.fetchone()
         if not user:
             name = session.get("name", email.split("@")[0])
             cur.execute(
-                "INSERT INTO users (email, name, google_id) VALUES (%s, %s, %s) RETURNING id, email, name, plan",
+                "INSERT INTO users (email, name, google_id) VALUES (%s, %s, %s) RETURNING id, email, name, plan, TRUE",
                 (email, name, session.get("google_id", ""))
             )
             user = cur.fetchone()
         conn.commit()
         cur.close(); conn.close()
+        if len(user) > 4 and user[4] is False:
+            return {"error": "Your account has been disabled. Please contact support."}
         token = create_access_token({"sub": str(user[0]), "email": user[1]})
         return {"token": token, "user": {"id": user[0], "email": user[1], "name": user[2], "plan": user[3]}}
     except Exception as e:
