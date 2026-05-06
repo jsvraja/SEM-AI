@@ -1056,7 +1056,10 @@ async def ab_test_publish(request: Request):
 
     session = _sessions.get(session_id)
     if not session:
-        return {"success": False, "message": "Session not found"}
+        fresh = load_sessions()
+        session = fresh.get(session_id)
+    if not session:
+        return {"success": False, "message": "Session not found - please reconnect Google Ads"}
 
     try:
         refresh_token = session.get("refresh_token", "")
