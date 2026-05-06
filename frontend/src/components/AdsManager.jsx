@@ -394,7 +394,7 @@ function ABTestPanel({ sessionId: propSessionId }) {
       const res = await fetch(BASE + '/api/ads/campaigns/' + sessionId + '?customer_id=7836650842')
       const d = await res.json()
       setCampaigns(d.campaigns || [])
-      if (d.campaigns && d.campaigns.length > 0) setSelectedCampaign(d.campaigns[0])
+      if (d.campaigns && d.campaigns.length > 0) { setSelectedCampaign(d.campaigns[0]); checkRunningTest(d.campaigns[0]); }
     } catch(e) { console.error(e) }
     setLoading(false)
   }
