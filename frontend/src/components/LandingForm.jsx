@@ -83,7 +83,7 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
       </header>
 
       {/* Main */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 24px', overflow: 'auto' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '10px 24px', paddingTop: '20px', overflow: 'auto' }}>
         <div style={{ width: '100%', maxWidth: '1100px' }}>
 
           {/* Heading */}
