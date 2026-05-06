@@ -5330,3 +5330,182 @@ async def change_subscription(req: ChangeSubscriptionRequest, request: Request):
         return {"success": True, "plan": req.plan}
     except Exception as e:
         return {"error": str(e)}
+
+# ─── Auto-Pilot Mode ──────────────────────────────────────────────────────────
+
+@app.post("/api/ads/autopilot/status")
+async def get_autopilot_status(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id")
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS autopilot_settings (
+                    session_id TEXT PRIMARY KEY,
+                    enabled BOOLEAN DEFAULT FALSE,
+                    last_run TIMESTAMP,
+                    actions_taken JSONB DEFAULT '[]'::jsonb,
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            conn.commit()
+            cur.execute("SELECT enabled, last_run, actions_taken FROM autopilot_settings WHERE session_id = %s", (session_id,))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                return {"enabled": row[0], "last_run": str(row[1]) if row[1] else None, "actions": row[2] or []}
+    except Exception as e:
+        print(f"Autopilot status error: {e}")
+    return {"enabled": False, "last_run": None, "actions": []}
+
+@app.post("/api/ads/autopilot/toggle")
+async def toggle_autopilot(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id")
+    enabled = body.get("enabled", False)
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO autopilot_settings (session_id, enabled, updated_at)
+                VALUES (%s, %s, NOW())
+                ON CONFLICT (session_id) DO UPDATE SET enabled = %s, updated_at = NOW()
+            """, (session_id, enabled, enabled))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return {"success": True, "enabled": enabled}
+    except Exception as e:
+        print(f"Autopilot toggle error: {e}")
+    return {"success": False}
+
+@app.post("/api/ads/autopilot/run")
+async def run_autopilot(request: Request):
+    import httpx
+    body = await request.json()
+    session_id = body.get("session_id")
+    customer_id = body.get("customer_id", "7836650842")
+    
+    session = _sessions.get(session_id)
+    if not session:
+        fresh = load_sessions()
+        session = fresh.get(session_id)
+    if not session:
+        return {"success": False, "message": "Session not found"}
+    
+    actions = []
+    try:
+        refresh_token = session.get("refresh_token", "")
+        if isinstance(refresh_token, bytes): refresh_token = refresh_token.decode("utf-8")
+        
+        import httpx as _hx
+        tr = _hx.post("https://oauth2.googleapis.com/token", data={
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        })
+        access_token = str(tr.json().get("access_token", "")).strip()
+        dev_token = str(os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")).strip()
+        manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+        headers = {
+            "Authorization": "Bearer " + access_token,
+            "developer-token": dev_token,
+            "Content-Type": "application/json"
+        }
+        if manager_id:
+            headers["login-customer-id"] = manager_id
+
+        async with _hx.AsyncClient(timeout=30) as client:
+            # Fetch campaigns
+            resp = await client.post(
+                f"https://googleads.googleapis.com/v23/customers/{customer_id}/googleAds:search",
+                headers=headers,
+                json={"query": "SELECT campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.impressions, metrics.ctr, metrics.cost_micros FROM campaign WHERE campaign.status = 'ENABLED' DURING LAST_30_DAYS"}
+            )
+            
+            if resp.status_code == 200:
+                results = resp.json().get("results", [])
+                for row in results:
+                    m = row.get("metrics", {})
+                    clicks = int(m.get("clicks", 0))
+                    impressions = int(m.get("impressions", 0))
+                    ctr = float(m.get("ctr", 0))
+                    campaign_name = row.get("campaign", {}).get("name", "")
+                    
+                    # Low CTR detection
+                    if impressions > 100 and ctr < 0.01:
+                        actions.append({
+                            "type": "warning",
+                            "campaign": campaign_name,
+                            "action": f"Low CTR detected ({round(ctr*100, 2)}%) — Consider pausing or improving ads",
+                            "severity": "high"
+                        })
+                    elif impressions > 50 and clicks == 0:
+                        actions.append({
+                            "type": "warning", 
+                            "campaign": campaign_name,
+                            "action": "0 clicks with impressions — Ad copy needs improvement",
+                            "severity": "medium"
+                        })
+                    else:
+                        actions.append({
+                            "type": "info",
+                            "campaign": campaign_name,
+                            "action": f"Campaign healthy — {clicks} clicks, CTR {round(ctr*100,2)}%",
+                            "severity": "low"
+                        })
+
+        # Use Gemini for recommendations
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        actions_summary = "\n".join([f"- {a['campaign']}: {a['action']}" for a in actions])
+        prompt = f"""You are a Google Ads Auto-Pilot AI. Based on these campaign insights:
+{actions_summary}
+
+Give 3 specific auto-pilot recommendations in JSON:
+{{"recommendations": [{{"action": "...", "reason": "...", "priority": "high/medium/low"}}]}}"""
+        
+        try:
+            resp_ai = model.generate_content(prompt)
+            import json, re
+            match = re.search(r'\{.*\}', resp_ai.text, re.DOTALL)
+            if match:
+                ai_data = json.loads(match.group())
+                for rec in ai_data.get("recommendations", []):
+                    actions.append({
+                        "type": "ai_recommendation",
+                        "action": rec.get("action", ""),
+                        "reason": rec.get("reason", ""),
+                        "severity": rec.get("priority", "medium")
+                    })
+        except:
+            pass
+
+        # Save to DB
+        try:
+            conn = get_db_connection()
+            if conn:
+                cur = conn.cursor()
+                import json
+                cur.execute("""
+                    INSERT INTO autopilot_settings (session_id, enabled, last_run, actions_taken, updated_at)
+                    VALUES (%s, TRUE, NOW(), %s, NOW())
+                    ON CONFLICT (session_id) DO UPDATE SET last_run = NOW(), actions_taken = %s, updated_at = NOW()
+                """, (session_id, json.dumps(actions), json.dumps(actions)))
+                conn.commit()
+                cur.close()
+                conn.close()
+        except Exception as e:
+            print(f"DB save error: {e}")
+
+        return {"success": True, "actions": actions, "total": len(actions)}
+
+    except Exception as e:
+        return {"success": False, "message": str(e), "actions": []}
