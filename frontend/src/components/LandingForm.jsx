@@ -83,11 +83,11 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
       </header>
 
       {/* Main */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 24px', overflow: 'auto' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 24px', overflow: 'auto' }}>
         <div style={{ width: '100%', maxWidth: '1100px' }}>
 
           {/* Heading */}
-          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, marginBottom: '12px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
               AI-Powered Marketing Platform
@@ -146,7 +146,7 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
                     onBlur={e => e.target.style.borderColor = 'var(--border)'} />
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: '24px' }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text2)', marginBottom: '6px' }}>Target Keywords <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(comma separated)</span></label>
                   <input type="text" value={keywords} onChange={e => setKeywords(e.target.value)}
                     placeholder="AI automation, machine learning, data science"
