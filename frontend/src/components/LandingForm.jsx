@@ -99,19 +99,38 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
       </header>
 
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div style={{ width: '100%', maxWidth: '520px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, marginBottom: '16px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
-              AI-Powered Marketing Platform
+        <div style={{ width: '100%', maxWidth: '1100px', display: 'grid', gridTemplateColumns: '1fr 480px 1fr', gap: '40px', alignItems: 'center' }}>
+
+          {/* Left Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, marginBottom: '12px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
+                AI-Powered Marketing Platform
+              </div>
+              <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.3, marginBottom: '8px' }}>
+                Analyse your website.<br />Launch better campaigns.
+              </h1>
+              <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6 }}>
+                AI handles SEO, ads, content and monitoring — all in one platform.
+              </p>
             </div>
-            <h1 style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: '10px', lineHeight: 1.3 }}>
-              Analyse your website.<br />Launch better campaigns.
-            </h1>
-            <p style={{ fontSize: '14px', color: 'var(--text2)', lineHeight: 1.6 }}>
-              Enter your URL and let AI handle SEO analysis, ad copy, campaign publishing, and performance monitoring.
-            </p>
+            {features.slice(0, 3).map((f, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <f.icon size={15} color='var(--accent)' />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{f.label}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text3)', lineHeight: 1.4 }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {/* Center Form */}
+          <div style={{ width: '100%' }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
 
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '14px', padding: '24px' }}>
             <form onSubmit={handleSubmit}>
@@ -187,22 +206,32 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
             </form>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '20px' }}>
-            {features.map((f, i) => {
-              const Icon = f.icon
-              return (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', padding: '10px 12px', borderRadius: 'var(--radius)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
-                  <div style={{ width: '26px', height: '26px', borderRadius: '6px', flexShrink: 0, background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={13} color="var(--accent)" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text)', marginBottom: '1px' }}>{f.label}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text3)', lineHeight: 1.4 }}>{f.desc}</div>
-                  </div>
-                </div>
-              )
-            })}
           </div>
+          </div>
+
+          {/* Right Features */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>Everything you need</div>
+              <div style={{ fontSize: '12px', color: 'var(--text3)' }}>One platform to rule your marketing</div>
+            </div>
+            {features.slice(3).map((f, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <f.icon size={15} color='var(--accent)' />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{f.label}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text3)', lineHeight: 1.4 }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{ padding: '12px', background: 'linear-gradient(135deg, var(--accent-bg), var(--bg2))', border: '1px solid var(--accent-border)', borderRadius: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)', marginBottom: '4px' }}>9 users already onboard</div>
+              <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Join the AI marketing revolution</div>
+            </div>
+          </div>
+
         </div>
       </main>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
