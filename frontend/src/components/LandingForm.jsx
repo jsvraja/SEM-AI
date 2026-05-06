@@ -45,6 +45,7 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
 
   const leftFeatures = [
     { icon: Search, label: 'SEO Analysis', desc: 'Full site audit with AI recommendations' },
+    { icon: Shield, label: 'Site Audit', desc: 'Technical SEO, speed & performance checks' },
     { icon: Zap, label: 'Google Ads', desc: 'Publish & optimise campaigns automatically' },
     { icon: TrendingUp, label: 'AI Traffic', desc: 'Track visitors from ChatGPT, Perplexity & more' },
   ]
@@ -86,7 +87,7 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
         <div style={{ width: '100%', maxWidth: '1100px' }}>
 
           {/* Heading */}
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, marginBottom: '12px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
               AI-Powered Marketing Platform
