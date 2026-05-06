@@ -5512,3 +5512,77 @@ Give 3 specific auto-pilot recommendations in JSON:
 
     except Exception as e:
         return {"success": False, "message": str(e), "actions": []}
+
+# ─── AB Test State ────────────────────────────────────────────────────────────
+
+@app.post("/api/ads/ab-test/save-state")
+async def save_ab_state(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id")
+    campaign_resource = body.get("campaign_resource_name")
+    variant_a = body.get("variant_a")
+    variant_b = body.get("variant_b")
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS ab_test_state (
+                    id SERIAL PRIMARY KEY,
+                    session_id TEXT,
+                    campaign_resource TEXT,
+                    variant_a JSONB,
+                    variant_b JSONB,
+                    status TEXT DEFAULT 'running',
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            conn.commit()
+            cur.execute("""
+                INSERT INTO ab_test_state (session_id, campaign_resource, variant_a, variant_b, status)
+                VALUES (%s, %s, %s, %s, 'running')
+                ON CONFLICT DO NOTHING
+            """, (session_id, campaign_resource, json.dumps(variant_a), json.dumps(variant_b)))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return {"success": True}
+    except Exception as e:
+        print(f"AB state save error: {e}")
+    return {"success": False}
+
+@app.post("/api/ads/ab-test/get-state")
+async def get_ab_state(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id")
+    campaign_resource = body.get("campaign_resource_name")
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS ab_test_state (
+                    id SERIAL PRIMARY KEY,
+                    session_id TEXT,
+                    campaign_resource TEXT,
+                    variant_a JSONB,
+                    variant_b JSONB,
+                    status TEXT DEFAULT 'running',
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            conn.commit()
+            cur.execute("""
+                SELECT variant_a, variant_b, status, created_at 
+                FROM ab_test_state 
+                WHERE session_id = %s AND campaign_resource = %s
+                ORDER BY created_at DESC LIMIT 1
+            """, (session_id, campaign_resource))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row:
+                return {"running": True, "variant_a": row[0], "variant_b": row[1], "status": row[2], "created_at": str(row[3])}
+    except Exception as e:
+        print(f"AB state get error: {e}")
+    return {"running": False}

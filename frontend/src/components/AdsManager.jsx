@@ -399,6 +399,21 @@ function ABTestPanel({ sessionId: propSessionId }) {
     setLoading(false)
   }
 
+  async function checkRunningTest(campaign) {
+    try {
+      const res = await fetch(BASE + '/api/ads/ab-test/get-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, campaign_resource_name: campaign.resource_name })
+      })
+      const d = await res.json()
+      if (d.running && d.variant_a && d.variant_b) {
+        setResult({ variant_a: d.variant_a, variant_b: d.variant_b, recommendation: 'A/B Test already running for this campaign.' })
+        setPublished({ variant_a: 'Already Running ✓', variant_b: 'Already Running ✓' })
+      }
+    } catch(e) {}
+  }
+
   async function generateVariants() {
     setGenerating(true)
     setResult(null)
@@ -441,6 +456,19 @@ function ABTestPanel({ sessionId: propSessionId }) {
       })
       const d = await res.json()
       setPublished(p => ({ ...p, [key]: d.success ? 'Published' : d.message || 'Failed' }))
+      if (d.success && result) {
+        // Save AB test state to DB
+        fetch(BASE + '/api/ads/ab-test/save-state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            campaign_resource_name: selectedCampaign?.resource_name,
+            variant_a: result.variant_a,
+            variant_b: result.variant_b
+          })
+        }).catch(() => {})
+      }
     } catch(e) {
       setPublished(p => ({ ...p, [key]: 'Error' }))
     }
@@ -463,7 +491,8 @@ function ABTestPanel({ sessionId: propSessionId }) {
           <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select Campaign</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {campaigns.map(c => (
-              <div key={c.resource_name} onClick={() => { setSelectedCampaign(c); setResult(null) }} style={{
+              <div key={c.resource_name} onClick={() => { setSelectedCampaign(c)
+      checkRunningTest(c); setResult(null) }} style={{
                 padding: '10px 14px', borderRadius: '8px', cursor: 'pointer',
                 border: '1px solid ' + (selectedCampaign && selectedCampaign.resource_name === c.resource_name ? 'var(--accent)' : 'var(--border)'),
                 background: selectedCampaign && selectedCampaign.resource_name === c.resource_name ? 'var(--accent-bg)' : 'var(--bg3)',
