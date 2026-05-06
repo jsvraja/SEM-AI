@@ -1081,6 +1081,9 @@ async def ab_test_publish(request: Request):
             "developer-token": str(_dev_token),
             "Content-Type": "application/json"
         }
+        manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
+        if manager_id:
+            headers_req["login-customer-id"] = manager_id
         async with httpx.AsyncClient(timeout=30) as client:
 
             # Get ad group for this campaign
@@ -1089,6 +1092,10 @@ async def ab_test_publish(request: Request):
                 headers=headers_req,
                 json={"query": f"SELECT ad_group.resource_name, ad_group.name FROM ad_group WHERE campaign.resource_name = '{campaign_resource_name}' AND ad_group.status = 'ENABLED' LIMIT 1"}
             )
+            print(f"Ad group response status: {ag_resp.status_code}")
+            print(f"Ad group response: {ag_resp.text[:200]}")
+            if ag_resp.status_code != 200:
+                return {"success": False, "message": f"Google Ads API error: {ag_resp.text[:200]}"}
             ag_data = ag_resp.json()
             results = ag_data.get("results", [])
             if not results:
