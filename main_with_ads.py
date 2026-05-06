@@ -977,8 +977,8 @@ async def ab_test_generate(request: Request):
         async with hx.AsyncClient(timeout=30) as client:
             tr = await client.post("https://oauth2.googleapis.com/token", data={
                 "refresh_token": refresh_token,
-                "client_id": os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
-                "client_secret": os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
+                "client_id": os.environ.get("GOOGLE_CLIENT_ID") or os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
+                "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET") or os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
                 "grant_type": "refresh_token"
             })
             access_token = str(tr.json().get("access_token", "")).strip()
@@ -1067,12 +1067,14 @@ async def ab_test_publish(request: Request):
         # Use correct env var names for token refresh
         import httpx as _hx
         _tr = _hx.post("https://oauth2.googleapis.com/token", data={
-            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
-            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID") or os.environ.get("GOOGLE_CLIENT_ID") or os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET") or os.environ.get("GOOGLE_CLIENT_SECRET") or os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
             "refresh_token": refresh_token,
             "grant_type": "refresh_token",
         })
-        _access_token = _tr.json().get("access_token", "")
+        _tr_data = _tr.json()
+        print(f"Token refresh response: {list(_tr_data.keys())}")
+        _access_token = _tr_data.get("access_token", "")
         _dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
         headers_req = {
             "Authorization": "Bearer " + str(_access_token),
@@ -1215,8 +1217,8 @@ async def campaign_doctor(request: Request):
                 "https://oauth2.googleapis.com/token",
                 data={
                     "refresh_token": refresh_token,
-                    "client_id": os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
-                    "client_secret": os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
+                    "client_id": os.environ.get("GOOGLE_CLIENT_ID") or os.environ.get("GOOGLE_ADS_CLIENT_ID", ""),
+                    "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET") or os.environ.get("GOOGLE_ADS_CLIENT_SECRET", ""),
                     "grant_type": "refresh_token"
                 }
             )
