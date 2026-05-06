@@ -61,10 +61,11 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
   }
 
   async function toggleUser(userId, isActive) {
+    const _tok = localStorage.getItem("sem_token") || ""
     try {
       await fetch(`${API}/api/admin/users/${userId}/toggle`, {
-        method: 'POST',
-        headers,
+        method: "POST",
+        headers: { Authorization: "Bearer " + _tok, "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: isActive })
       })
       setUsers(users.map(u => u.id === userId ? { ...u, is_active: isActive } : u))
