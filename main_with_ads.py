@@ -5425,7 +5425,7 @@ async def run_autopilot(request: Request):
             resp = await client.post(
                 f"https://googleads.googleapis.com/v23/customers/{customer_id}/googleAds:search",
                 headers=headers,
-                json={"query": "SELECT campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.impressions, metrics.ctr, metrics.cost_micros FROM campaign WHERE campaign.status = 'ENABLED' DURING LAST_30_DAYS"}
+                json={"query": "SELECT campaign.id, campaign.name, campaign.status, metrics.clicks, metrics.impressions, metrics.ctr, metrics.cost_micros FROM campaign WHERE campaign.status = 'ENABLED'"}
             )
             
             if resp.status_code == 200:
