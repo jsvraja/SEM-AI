@@ -1067,8 +1067,8 @@ async def ab_test_publish(request: Request):
         # Use correct env var names for token refresh
         import httpx as _hx
         _tr = _hx.post("https://oauth2.googleapis.com/token", data={
-            "client_id": os.environ.get("GOOGLE_ADS_CLIENT_ID") or os.environ.get("GOOGLE_CLIENT_ID", ""),
-            "client_secret": os.environ.get("GOOGLE_ADS_CLIENT_SECRET") or os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
             "refresh_token": refresh_token,
             "grant_type": "refresh_token",
         })
