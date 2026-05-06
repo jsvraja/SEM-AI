@@ -375,7 +375,8 @@ function CampaignMonitor({ sessionId }) {
 
 
 
-function ABTestPanel({ sessionId }) {
+function ABTestPanel({ sessionId: propSessionId }) {
+  const sessionId = propSessionId || sessionStorage.getItem('sem_session_id') || 
   const [campaigns, setCampaigns] = useState([])
   const [selectedCampaign, setSelectedCampaign] = useState(null)
   const [loading, setLoading] = useState(false)
