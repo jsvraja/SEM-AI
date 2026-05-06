@@ -985,7 +985,7 @@ async def ab_test_generate(request: Request):
             dev_token = str(os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")).strip()
             headers = {"Authorization": "Bearer " + access_token, "developer-token": dev_token}
             ads_resp = await client.post(
-                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                f"https://googleads.googleapis.com/v23/customers/{customer_id}/googleAds:search",
                 headers=headers,
                 json={"query": f"SELECT ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions, ad_group_ad.resource_name, metrics.clicks, metrics.impressions, metrics.ctr FROM ad_group_ad WHERE campaign.resource_name = '{campaign_resource_name}' LIMIT 3"}
             )
@@ -1085,7 +1085,6 @@ async def ab_test_publish(request: Request):
         manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
         if manager_id:
             headers_req["login-customer-id"] = manager_id
-        return {"success": True, "message": f"{variant_name} saved! Go to Google Ads > Ads to review and enable the new ad variant."}
         async with httpx.AsyncClient(timeout=30) as client:
 
             # Get ad group for this campaign
@@ -1126,7 +1125,7 @@ async def ab_test_publish(request: Request):
             }
 
             ad_resp = await client.post(
-                f"https://googleads.googleapis.com/v17/customers/{customer_id}/adGroupAds:mutate",
+                f"https://googleads.googleapis.com/v23/customers/{customer_id}/adGroupAds:mutate",
                 headers=headers_req,
                 json=ad_payload
             )
@@ -1245,7 +1244,7 @@ async def campaign_doctor(request: Request):
                 "query": f"SELECT ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, metrics.clicks, metrics.impressions, metrics.ctr, metrics.average_cpc FROM ad_group_criterion WHERE campaign.resource_name = '{campaign_resource_name}' AND ad_group_criterion.type = 'KEYWORD' LIMIT 20"
             }
             kw_resp = await client.post(
-                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                f"https://googleads.googleapis.com/v23/customers/{customer_id}/googleAds:search",
                 headers=headers,
                 json=kw_query
             )
@@ -1268,7 +1267,7 @@ async def campaign_doctor(request: Request):
                 "query": f"SELECT ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions, metrics.clicks, metrics.impressions, metrics.ctr FROM ad_group_ad WHERE campaign.resource_name = '{campaign_resource_name}' LIMIT 5"
             }
             ads_resp = await client.post(
-                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                f"https://googleads.googleapis.com/v23/customers/{customer_id}/googleAds:search",
                 headers=headers,
                 json=ads_query
             )
@@ -1468,7 +1467,7 @@ async def optimise_apply(request: Request):
         import httpx
         if action_type == "bid":
             # Suggest manual CPC strategy
-            mutate_url = f"https://googleads.googleapis.com/v17/customers/{customer_id}/campaigns:mutate"
+            mutate_url = f"https://googleads.googleapis.com/v23/customers/{customer_id}/campaigns:mutate"
             payload = {
                 "operations": [{
                     "update": {
