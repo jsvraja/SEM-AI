@@ -192,11 +192,17 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           {u.email !== 'jsvking@gmail.com' && (
-                            <button onClick={() => deleteUser(u.id, u.email)} disabled={updatingId === u.id}
-                              style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', background: 'var(--red-bg)', border: '1px solid rgba(162,45,45,0.2)', borderRadius: '6px', color: 'var(--red)', fontSize: '11px', cursor: 'pointer' }}>
-                              {updatingId === u.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={11} />}
-                              Delete
-                            </button>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={() => toggleUser(u.id, u.is_active === false)}
+                                style={{ padding: '5px 10px', borderRadius: '6px', border: u.is_active === false ? '1px solid #4ade80' : '1px solid #f87171', background: 'transparent', color: u.is_active === false ? '#4ade80' : '#f87171', fontSize: '11px', cursor: 'pointer' }}>
+                                {u.is_active === false ? 'Enable' : 'Disable'}
+                              </button>
+                              <button onClick={() => deleteUser(u.id, u.email)} disabled={updatingId === u.id}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', background: 'var(--red-bg)', border: '1px solid rgba(162,45,45,0.2)', borderRadius: '6px', color: 'var(--red)', fontSize: '11px', cursor: 'pointer' }}>
+                                {updatingId === u.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={11} />}
+                                Delete
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
