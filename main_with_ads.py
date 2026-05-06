@@ -5591,3 +5591,24 @@ async def get_ab_state(request: Request):
     except Exception as e:
         print(f"AB state get error: {e}")
     return {"running": False}
+
+@app.post("/api/admin/users/{user_id}/toggle")
+async def admin_toggle_user(user_id: int, request: Request):
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
+        return {"error": "Unauthorized"}
+    body = await request.json()
+    is_active = body.get("is_active", True)
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    try:
+        cur = conn.cursor()
+        # Add column if not exists
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
+        conn.commit()
+        cur.execute("UPDATE users SET is_active = %s WHERE id = %s", (is_active, user_id))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True, "is_active": is_active}
+    except Exception as e:
+        return {"error": str(e)}

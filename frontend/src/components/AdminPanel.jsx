@@ -60,6 +60,17 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
     }
   }
 
+  async function toggleUser(userId, isActive) {
+    try {
+      await fetch(`${API}/api/admin/users/${userId}/toggle`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ is_active: isActive })
+      })
+      setUsers(users.map(u => u.id === userId ? { ...u, is_active: isActive } : u))
+    } catch(e) { alert('Error toggling user') }
+  }
+
   async function deleteUser(userId, email) {
     if (!confirm(`Delete user ${email}?`)) return
     setUpdatingId(userId)
