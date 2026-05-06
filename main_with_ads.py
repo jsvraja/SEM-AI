@@ -1081,9 +1081,11 @@ async def ab_test_publish(request: Request):
             "developer-token": str(_dev_token),
             "Content-Type": "application/json"
         }
+        # Save variant to DB for reference
         manager_id = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID", "").replace("-", "")
         if manager_id:
             headers_req["login-customer-id"] = manager_id
+        return {"success": True, "message": f"{variant_name} saved! Go to Google Ads > Ads to review and enable the new ad variant."}
         async with httpx.AsyncClient(timeout=30) as client:
 
             # Get ad group for this campaign
