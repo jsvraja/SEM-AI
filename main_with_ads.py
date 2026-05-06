@@ -1078,8 +1078,8 @@ async def ab_test_publish(request: Request):
             dev_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN", "")
             if isinstance(dev_token, bytes):
                 dev_token = dev_token.decode("utf-8")
-            access_token = str(access_token).strip().strip("b'"")
-            dev_token = str(dev_token).strip().strip("b'"") if dev_token else ""
+            access_token = str(access_token).strip()
+            dev_token = str(dev_token).strip() if dev_token else ""
             auth_header = "Bearer " + access_token
             headers_req = {"Authorization": auth_header, "developer-token": dev_token, "Content-Type": "application/json"}
             print(f"Auth header: {auth_header[:30]}...")
