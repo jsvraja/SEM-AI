@@ -1105,9 +1105,14 @@ async def ab_test_publish(request: Request):
             ad_group_resource = results[0]["adGroup"]["resourceName"]
 
             # Create new RSA ad - minimum 3 headlines, 2 descriptions
-            all_headlines = headlines if len(headlines) >= 3 else headlines + ["Try Free Today", "AI SEO Platform", "Rank Higher Now"]
+            import time
+            unique_tag = f"v{int(time.time()) % 10000}"
+            extra = ["Try Free Today", "AI SEO Platform", "Start Now Free"]
+            all_headlines = headlines + extra
             all_descriptions = descriptions if len(descriptions) >= 2 else descriptions + ["Boost your website rankings with AI-powered SEO tools."]
-            rsa_headlines = [{"text": h[:30]} for h in all_headlines[:5]]
+            # Make unique by adding tag to last headline
+            unique_headlines = all_headlines[:4] + [f"{unique_tag} Test"]
+            rsa_headlines = [{"text": h[:30]} for h in unique_headlines[:5]]
             rsa_descriptions = [{"text": d[:90]} for d in all_descriptions[:2]]
 
             ad_payload = {
