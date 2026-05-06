@@ -99,22 +99,27 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
       </header>
 
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 24px', marginTop: '-40px' }}>
-        <div style={{ width: '100%', maxWidth: '1100px', display: 'grid', gridTemplateColumns: '1fr 480px 1fr', gap: '40px', alignItems: 'center' }}>
+        <div style={{ width: '100%', maxWidth: '1100px' }}>
+          {/* Top Heading */}
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, marginBottom: '12px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
+              AI-Powered Marketing Platform
+            </div>
+            <h1 style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.3, marginBottom: '10px' }}>
+              Analyse your website. Launch better campaigns.
+            </h1>
+            <p style={{ fontSize: '14px', color: 'var(--text2)', lineHeight: 1.6 }}>
+              AI handles SEO, ads, content and monitoring — all in one platform.
+            </p>
+          </div>
+
+          {/* 3 Columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 480px 1fr', gap: '32px', alignItems: 'start' }}>
 
           {/* Left Features */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '20px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, marginBottom: '12px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--green)' }} />
-                AI-Powered Marketing Platform
-              </div>
-              <h1 style={{ fontSize: '26px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.3, marginBottom: '8px' }}>
-                Analyse your website.<br />Launch better campaigns.
-              </h1>
-              <p style={{ fontSize: '13px', color: 'var(--text2)', lineHeight: 1.6 }}>
-                AI handles SEO, ads, content and monitoring — all in one platform.
-              </p>
-            </div>
+            <div style={{ marginBottom: '4px' }}>
             {features.slice(0, 3).map((f, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
