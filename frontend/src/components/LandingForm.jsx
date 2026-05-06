@@ -98,7 +98,7 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
         </div>
       </header>
 
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 24px', marginTop: '-40px' }}>
         <div style={{ width: '100%', maxWidth: '1100px', display: 'grid', gridTemplateColumns: '1fr 480px 1fr', gap: '40px', alignItems: 'center' }}>
 
           {/* Left Features */}
