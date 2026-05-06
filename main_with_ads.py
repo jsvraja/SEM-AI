@@ -1088,7 +1088,7 @@ async def ab_test_publish(request: Request):
 
             # Get ad group for this campaign
             ag_resp = await client.post(
-                f"https://googleads.googleapis.com/v17/customers/{customer_id}/googleAds:search",
+                f"https://googleads.googleapis.com/v23/customers/{customer_id}/googleAds:search",
                 headers=headers_req,
                 json={"query": f"SELECT ad_group.resource_name, ad_group.name FROM ad_group WHERE campaign.resource_name = '{campaign_resource_name}' AND ad_group.status = 'ENABLED' LIMIT 1"}
             )
