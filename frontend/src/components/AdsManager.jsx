@@ -1059,7 +1059,12 @@ Respond ONLY with this JSON (no other text):
       if (data.success === false) throw new Error((data.errors || []).join(', ') || 'Publish failed')
       setResult(data)
     } catch (e) {
-      setError(e.message)
+      const msg = e.message || ''
+      if (msg.includes('PERMISSION_DENIED') || msg.includes('login-customer-id') || msg.includes('manager')) {
+        setError('MCC_REQUIRED')
+      } else {
+        setError(msg)
+      }
     } finally {
       setPublishing(false)
     }
@@ -1238,8 +1243,24 @@ Respond ONLY with this JSON (no other text):
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '7px', padding: '10px 12px', marginBottom: '12px', fontSize: '13px', color: '#f87171', lineHeight: 1.5 }}>
-            ⚠ {error}
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '7px', padding: '12px 14px', marginBottom: '12px', fontSize: '13px', color: '#f87171', lineHeight: 1.6 }}>
+            {error === 'MCC_REQUIRED' ? (
+              <div>
+                <div style={{ fontWeight: 700, marginBottom: '8px' }}>⚠️ Manager Account (MCC) Required</div>
+                <div style={{ color: '#fca5a5', marginBottom: '10px' }}>Your Google Ads account needs MCC access to publish campaigns via API.</div>
+                <div style={{ fontWeight: 600, marginBottom: '6px', color: '#f87171' }}>Fix in 3 steps:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div>1️⃣ Go to <a href="https://ads.google.com/home/tools/manager-accounts/" target="_blank" style={{ color: '#93c5fd' }}>ads.google.com/home/tools/manager-accounts</a></div>
+                  <div>2️⃣ Create a new <strong>Manager Account</strong> (free, takes 2 min)</div>
+                  <div>3️⃣ Link your current account → <em>Manager Account &gt; Sub-accounts &gt; Add account</em></div>
+                </div>
+                <div style={{ marginTop: '10px', padding: '8px', background: 'rgba(239,68,68,0.08)', borderRadius: '6px', fontSize: '12px', color: '#fca5a5' }}>
+                  After linking, click <strong>Reconnect Google Ads</strong> and login with your Manager Account email.
+                </div>
+              </div>
+            ) : (
+              <span>⚠ {error}</span>
+            )}
           </div>
         )}
 
