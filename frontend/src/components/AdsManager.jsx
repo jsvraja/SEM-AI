@@ -1966,7 +1966,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
 
   return (
     <div>
-      {sessionId && (
+      {sessionId && campaigns && campaigns.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem',
           padding: '8px 12px', background: 'rgba(34,197,94,0.06)',
@@ -1975,6 +1975,17 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
         }}>
           <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80' }} />
           Google Ads connected · Budget monitor active · Auto-pauses at limit
+        </div>
+      )}
+      {sessionId && campaigns && campaigns.length === 0 && tab !== 'connect' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem',
+          padding: '8px 12px', background: 'rgba(251,191,36,0.06)',
+          border: '1px solid rgba(251,191,36,0.2)', borderRadius: '8px',
+          fontSize: '12px', color: '#fbbf24',
+        }}>
+          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fbbf24' }} />
+          No Google Ads account connected. Please connect your Google Ads account to continue.
         </div>
       )}
 
