@@ -221,10 +221,10 @@ function CampaignMonitor({ sessionId, onCampaignsLoaded }) {
           <BarChart3 size={36} style={{ margin: '0 auto 12px', display: 'block', opacity: 0.2 }} />
           <p style={{ fontSize: '14px', color: 'var(--text2)', marginBottom: '6px' }}>No Google Ads account connected</p>
           <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '16px' }}>Connect your Google Ads account to manage campaigns</p>
-          <a href={"https://sem-ai-production.up.railway.app/api/ads/auth?redirect=" + encodeURIComponent(window.location.origin)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--accent)', color: 'white', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
+          <button onClick={() => window.location.href = 'https://sem-ai-production.up.railway.app/api/ads/auth?redirect=' + encodeURIComponent(window.location.origin)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--accent)', color: 'white', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', border: 'none' }}>
             🔗 Connect Google Ads Account
-          </a>
+          </button>
         </div>
       )}
 
