@@ -24,6 +24,7 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
   }
 
   function isValidUrl(u) {
+    if (!u || typeof u !== 'string') return false
     try {
       const parsed = new URL(u.startsWith('http') ? u : 'https://' + u)
       return parsed.hostname.includes('.')
