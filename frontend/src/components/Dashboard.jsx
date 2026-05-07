@@ -212,6 +212,16 @@ const TABS = [
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
+  // Capture Google Ads session_id from OAuth callback URL
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const sid = params.get('session_id')
+    if (sid) {
+      localStorage.setItem('sem_session_id', sid)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
   const [showPricing, setShowPricing] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
