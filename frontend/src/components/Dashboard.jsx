@@ -97,7 +97,7 @@ function CopyButton({ text }) {
 
 function AdVariant({ variant, url }) {
   const [open, setOpen] = useState(true)
-  const domain = url.replace(/https?:\/\//, '').split('/')[0]
+  const domain = (url || '').replace(/https?:\/\//, '').split('/')[0]
   const colors = ['var(--accent)', 'var(--cyan)', 'var(--accent2)']
   const idx = ['Value-Led','Feature-Led','Social Proof'].indexOf(variant.variant_name)
   const color = colors[idx] ?? colors[0]
@@ -267,7 +267,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   })()
   
   const urlType = seo?.url_type || ((() => {
-    const path = url.replace(/https?:\/\//, '').split('?')[0]
+    const path = (url || '').replace(/https?:\/\//, '').split('?')[0]
     const exts = ['.html', '.htm', '.php', '.aspx', '.asp']
     if (exts.some(e => path.endsWith(e))) return 'single_page'
     const segs = path.split('/').filter(s => s)
@@ -276,7 +276,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   })())
   const isWholeSite = urlType === 'whole_site'
 
-  const domain = url.replace(/https?:\/\//, '').split('/')[0]
+  const domain = (url || '').replace(/https?:\/\//, '').split('/')[0]
 
   const keywordChartData = (seo.keyword_suggestions || []).slice(0, 8).map(k => ({
     name: k.keyword.length > 18 ? k.keyword.slice(0, 18) + '…' : k.keyword,
