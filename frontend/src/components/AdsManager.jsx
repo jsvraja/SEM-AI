@@ -100,7 +100,7 @@ function CampaignMonitor({ sessionId }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=7836650842`)
+      const res = await fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=`)
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.detail || 'Failed to fetch campaigns')
@@ -124,7 +124,7 @@ function CampaignMonitor({ sessionId }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
-          customer_id: '7836650842',
+          customer_id: '',
           campaign_resource_name: campaign.resource_name,
         }),
       })
@@ -178,7 +178,7 @@ function CampaignMonitor({ sessionId }) {
               const res = await fetch(BASE + '/api/ads/budget-allocator', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
-                body: JSON.stringify({ session_id: sessionId, campaigns, total_budget: campaigns.reduce((sum, c) => sum + (c.daily_budget_inr || 500), 0), customer_id: '7836650842' })
+                body: JSON.stringify({ session_id: sessionId, campaigns, total_budget: campaigns.reduce((sum, c) => sum + (c.daily_budget_inr || 500), 0), customer_id: '' })
               })
               const d = await res.json()
               setAllocatorData(d)
@@ -391,7 +391,7 @@ function ABTestPanel({ sessionId: propSessionId }) {
   async function fetchCampaigns() {
     setLoading(true)
     try {
-      const res = await fetch(BASE + '/api/ads/campaigns/' + sessionId + '?customer_id=7836650842')
+      const res = await fetch(BASE + '/api/ads/campaigns/' + sessionId + '?customer_id=')
       const d = await res.json()
       setCampaigns(d.campaigns || [])
       if (d.campaigns && d.campaigns.length > 0) { setSelectedCampaign(d.campaigns[0]); checkRunningTest(d.campaigns[0]); }
@@ -429,7 +429,7 @@ function ABTestPanel({ sessionId: propSessionId }) {
           campaign_resource_name: selectedCampaign.resource_name,
           campaign_name: selectedCampaign.campaign_name,
           url: 'https://sakthivelraja.ai',
-          customer_id: '7836650842'
+          customer_id: ''
         })
       })
       const d = await res.json()
@@ -448,7 +448,7 @@ function ABTestPanel({ sessionId: propSessionId }) {
         body: JSON.stringify({
           session_id: sessionId,
           campaign_resource_name: selectedCampaign.resource_name,
-          customer_id: '7836650842',
+          customer_id: '',
           headlines: variant.headlines,
           descriptions: variant.descriptions,
           variant_name: variant.name
@@ -825,7 +825,7 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
         headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
         body: JSON.stringify({
           session_id: sessionId,
-          customer_id: '7836650842',
+          customer_id: '',
           campaign_id: campaign.campaign_id,
           campaign_name: campaign.campaign_name,
           status: campaign.status,
@@ -852,7 +852,7 @@ function InlineOptimise({ campaign, sessionId, onClose }) {
         headers: { 'Content-Type': 'application/json', 'Authorization': token ? 'Bearer ' + token : '' },
         body: JSON.stringify({
           session_id: sessionId,
-          customer_id: '7836650842',
+          customer_id: '',
           campaign_resource_name: campaign.resource_name,
           action
         })
@@ -957,7 +957,7 @@ URL: ${url}
 Respond ONLY with this JSON (no other text):
 {"recommended_variant": 0, "variant_reason": "why this variant", "daily_budget": 1500, "monthly_budget": 40000, "budget_reason": "why this budget", "top_keywords": ["kw1","kw2","kw3"], "strategy": "2 sentence campaign strategy"}`,
           session_id: sessionId,
-          customer_id: '7836650842',
+          customer_id: '',
         }),
       })
       const data = await res.json()
@@ -1280,7 +1280,7 @@ function SEMAConsult({ sessionId }) {
       const res = await fetch(`${BASE}/api/agent/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, session_id: sessionId, customer_id: '7836650842' }),
+        body: JSON.stringify({ message: msg, session_id: sessionId, customer_id: '' }),
       })
       const data = await res.json()
       setChat(c => [...c, { role: 'sema', text: data.response }])
