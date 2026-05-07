@@ -116,7 +116,12 @@ export default function App() {
     setState('loading')
     setError(null)
     try {
-      const report = await runFullReport(data)
+      // Normalize field names
+      const normalizedData = {
+        ...data,
+        businessDescription: data.businessDescription || data.description || '',
+      }
+      const report = await runFullReport(normalizedData)
       setResult(report)
       setState('done')
     } catch (e) {
