@@ -874,16 +874,26 @@ async def google_callback(code: str = Query(...)):
         raise HTTPException(status_code=400, detail=f"OAuth error: {tokens['error']}")
     user_info = await get_user_info(tokens["access_token"])
     session_id = f"sess_{user_info.get('id', 'unknown')}"
+    # Auto-detect user's own Google Ads customer_id
+    detected_customer_id = DEFAULT_CUSTOMER_ID
+    try:
+        from ads_manager import get_accessible_accounts
+        accounts = get_accessible_accounts(tokens.get("refresh_token"))
+        if accounts:
+            detected_customer_id = accounts[0].get("customer_id", DEFAULT_CUSTOMER_ID)
+    except Exception as e:
+        print(f"Could not auto-detect customer_id: {e}")
+
     _sessions[session_id] = {
         "email": user_info.get("email"),
         "access_token": tokens.get("access_token"),
         "refresh_token": tokens.get("refresh_token"),
-        "customer_id": DEFAULT_CUSTOMER_ID,
+        "customer_id": detected_customer_id,
     }
     save_sessions(_sessions)
-    print(f"Session saved: {session_id} ({user_info.get('email')})")
+    print(f"Session saved: {session_id} ({user_info.get('email')}) customer_id={detected_customer_id}")
     frontend_url = os.environ.get("FRONTEND_URL", "https://believable-rebirth-production-7e19.up.railway.app")
-    return RedirectResponse(url=f"{frontend_url}?session_id={session_id}&email={user_info.get('email')}&customer_id={DEFAULT_CUSTOMER_ID}")
+    return RedirectResponse(url=f"{frontend_url}?session_id={session_id}&email={user_info.get('email')}&customer_id={detected_customer_id}")
 
 @app.get("/auth/status/{session_id}")
 async def auth_status(session_id: str):

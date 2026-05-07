@@ -407,3 +407,24 @@ def add_negative_keywords(customer_id: str, refresh_token: str, campaign_resourc
         return {"success": True, "added": len(keywords), "message": f"Added {len(keywords)} negative keywords"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+def get_accessible_accounts(refresh_token: str) -> list:
+    """Get all Google Ads accounts accessible by this refresh token."""
+    try:
+        headers = get_headers(refresh_token)
+        url = "https://googleads.googleapis.com/v17/customers:listAccessibleCustomers"
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            resource_names = data.get("resourceNames", [])
+            accounts = []
+            for rn in resource_names:
+                cid = rn.replace("customers/", "").replace("-", "")
+                accounts.append({"customer_id": cid})
+            return accounts
+        else:
+            print(f"listAccessibleCustomers error: {resp.status_code} {resp.text[:200]}")
+            return []
+    except Exception as e:
+        print(f"get_accessible_accounts error: {e}")
+        return []
