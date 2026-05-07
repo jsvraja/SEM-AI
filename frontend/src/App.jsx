@@ -39,7 +39,7 @@ export default function App() {
     try { return localStorage.getItem('sem_token') || null } catch { return null }
   })
   const [sessionId, setSessionId] = useState(() => {
-    try { return sessionStorage.getItem('sem_session_id') || null } catch { return null }
+    try { return localStorage.getItem('sem_session_id') || sessionStorage.getItem('sem_session_id') || null } catch { return null }
   })
   const [googleEmail, setGoogleEmail] = useState(() => {
     try { return sessionStorage.getItem('sem_google_email') || null } catch { return null }
@@ -63,7 +63,7 @@ export default function App() {
       setSessionId(sid)
       setGoogleEmail(email)
       try {
-        sessionStorage.setItem('sem_session_id', sid)
+        localStorage.setItem('sem_session_id', sid); sessionStorage.setItem('sem_session_id', sid)
         if (email) sessionStorage.setItem('sem_google_email', email)
       } catch {}
       // Auto-login via Google session
