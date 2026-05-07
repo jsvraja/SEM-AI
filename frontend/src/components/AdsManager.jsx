@@ -80,7 +80,7 @@ function ConnectPanel() {
 }
 
 // ─── Live Campaigns ───────────────────────────────────────────────────────────
-function CampaignMonitor({ sessionId }) {
+function CampaignMonitor({ sessionId, onCampaignsLoaded }) {
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
@@ -106,7 +106,9 @@ function CampaignMonitor({ sessionId }) {
         throw new Error(err.detail || 'Failed to fetch campaigns')
       }
       const data = await res.json()
-      setCampaigns(data.campaigns || [])
+      const c = data.campaigns || []
+      setCampaigns(c)
+      if (onCampaignsLoaded) onCampaignsLoaded(c)
       setLastRefresh(new Date().toLocaleTimeString())
     } catch (e) {
       setError(e.message)
@@ -1948,6 +1950,7 @@ function ReportPanel({ sessionId }) {
 
 export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages }) {
   const [tab, setTab] = useState(sessionId ? 'overview' : 'connect')
+  const [adsConnected, setAdsConnected] = useState(false)
 
   useEffect(() => {
     setTab(sessionId ? 'overview' : 'connect')
@@ -1966,7 +1969,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
 
   return (
     <div>
-      {sessionId && (
+      {sessionId && adsConnected && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem',
           padding: '8px 12px', background: 'rgba(34,197,94,0.06)',
@@ -2002,7 +2005,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
       </div>
 
       {tab === 'connect' && <ConnectPanel />}
-      {tab === 'overview' && sessionId && <CampaignMonitor sessionId={sessionId} />}
+      {tab === 'overview' && sessionId && <CampaignMonitor sessionId={sessionId} onCampaignsLoaded={c => setAdsConnected(c.length > 0)} />}
       {tab === 'publish' && sessionId && (
         <PublishPanel sessionId={sessionId} adCopy={adCopy} seoReport={seoReport} url={url} recommendedPages={recommendedPages || []} />
       )}
