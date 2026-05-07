@@ -8,6 +8,8 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
   const [keywords, setKeywords] = useState('')
   const [aiDetecting, setAiDetecting] = useState(false)
   const [aiDetected, setAiDetected] = useState(false)
+  const [urlError, setUrlError] = useState('')
+  const [aiError, setAiError] = useState('')
   const debounceRef = useRef(null)
 
   function detectUrlType(u) {
@@ -21,26 +23,52 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
     return 'whole_site'
   }
 
-  async function handleUrlBlur() {
-    if (!url.trim() || aiDetected) return
-    setAiDetecting(true)
+  function isValidUrl(u) {
     try {
+      const parsed = new URL(u.startsWith('http') ? u : 'https://' + u)
+      return parsed.hostname.includes('.')
+    } catch { return false }
+  }
+
+  async function handleUrlBlur() {
+    if (!url.trim()) return
+    if (!isValidUrl(url.trim())) {
+      setUrlError('Please enter a valid website URL (e.g. example.com)')
+      return
+    }
+    setUrlError('')
+    if (aiDetected) return
+    setAiDetecting(true)
+    setAiError('')
+    try {
+      const fullUrl = url.trim().startsWith('http') ? url.trim() : 'https://' + url.trim()
       const res = await fetch('https://sem-ai-production.up.railway.app/api/detect-business', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() })
+        body: JSON.stringify({ url: fullUrl })
       })
       const d = await res.json()
-      if (d.description && !desc) setDesc(d.description)
-      if (d.keywords && !keywords) setKeywords(d.keywords)
-      setAiDetected(true)
-    } catch(e) {}
+      if (d.error) { setAiError('AI could not detect business info. Please fill manually.') }
+      else {
+        if (d.description && !desc) setDesc(d.description)
+        if (d.keywords && !keywords) setKeywords(Array.isArray(d.keywords) ? d.keywords.join(', ') : d.keywords)
+        setAiDetected(true)
+      }
+    } catch(e) {
+      setAiError('AI detection failed. Please fill manually.')
+    }
     setAiDetecting(false)
   }
 
   function handleSubmit(e) {
     e.preventDefault()
-    const urlType = detectUrlType(url)
-    onSubmit({ url: url.trim(), description: desc.trim(), targetKeywords: keywords.split(',').map(k => k.trim()).filter(Boolean), urlType })
+    if (!isValidUrl(url.trim())) {
+      setUrlError('Please enter a valid website URL (e.g. example.com)')
+      return
+    }
+    setUrlError('')
+    const fullUrl = url.trim().startsWith('http') ? url.trim() : 'https://' + url.trim()
+    const urlType = detectUrlType(fullUrl)
+    onSubmit({ url: fullUrl, description: desc.trim(), targetKeywords: keywords.split(',').map(k => k.trim()).filter(Boolean), urlType })
   }
 
   const leftFeatures = [
@@ -129,15 +157,17 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
                       placeholder="https://yourwebsite.com" required
                       style={{ width: '100%', padding: '10px 12px 10px 32px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                       onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-                      onBlur={e => { e.target.style.borderColor = 'var(--border)'; handleUrlBlur() }} />
+                      onBlur={e => { e.target.style.borderColor = urlError ? '#f87171' : 'var(--border)'; handleUrlBlur() }} />
                   </div>
+                  {urlError && <div style={{ marginTop: '6px', fontSize: '12px', color: '#f87171', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> {urlError}</div>}
+                  {aiError && <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={12} /> {aiError}</div>}
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text2)', marginBottom: '6px' }}>
                     Business Description
-                    {aiDetecting && <span style={{ marginLeft: '8px', color: 'var(--accent)', fontSize: '11px' }}>AI detecting...</span>}
-                    {aiDetected && <span style={{ marginLeft: '8px', color: 'var(--green)', fontSize: '11px' }}>✓ AI detected</span>}
+                    {aiDetecting && <span style={{ marginLeft: '8px', color: 'var(--accent)', fontSize: '11px' }}>⚡ AI detecting...</span>}
+                    {aiDetected && <span style={{ marginLeft: '8px', color: 'var(--green)', fontSize: '11px' }}>✓ AI filled</span>}
                   </label>
                   <input type="text" value={desc} onChange={e => setDesc(e.target.value)}
                     placeholder="e.g. AI automation services for Indian SMEs"
