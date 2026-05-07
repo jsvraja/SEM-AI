@@ -1966,7 +1966,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
 
   return (
     <div>
-      {sessionId && campaigns && campaigns.length > 0 && (
+      {sessionId && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem',
           padding: '8px 12px', background: 'rgba(34,197,94,0.06)',
@@ -1977,7 +1977,7 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
           Google Ads connected · Budget monitor active · Auto-pauses at limit
         </div>
       )}
-      {sessionId && campaigns && campaigns.length === 0 && tab !== 'connect' && (
+      {false && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem',
           padding: '8px 12px', background: 'rgba(251,191,36,0.06)',
