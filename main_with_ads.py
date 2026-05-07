@@ -882,7 +882,7 @@ async def google_callback(code: str = Query(...)):
     }
     save_sessions(_sessions)
     print(f"Session saved: {session_id} ({user_info.get('email')})")
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+    frontend_url = os.environ.get("FRONTEND_URL", "https://believable-rebirth-production-7e19.up.railway.app")
     return RedirectResponse(url=f"{frontend_url}?session_id={session_id}&email={user_info.get('email')}&customer_id={DEFAULT_CUSTOMER_ID}")
 
 @app.get("/auth/status/{session_id}")
