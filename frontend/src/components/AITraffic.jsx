@@ -161,7 +161,7 @@ function GA4ConnectCard({ sessionId, onConnected, onGA4Data, days }) {
   )
 }
 
-export default function AITraffic({ sessionId }) {
+export default function AITraffic({ sessionId, url }) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(14)
@@ -187,7 +187,7 @@ export default function AITraffic({ sessionId }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${BASE}/api/ai-traffic?days=${days}`)
+      const res = await fetch(`${BASE}/api/ai-traffic?days=${days}${url ? '&site_url=' + encodeURIComponent(url) : ''}`)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
       setStats(data)
@@ -227,6 +227,9 @@ export default function AITraffic({ sessionId }) {
       </div>
     </Card>
   )
+
+  const scriptInstalled = stats?.script_installed !== false
+  const analysedDomain = stats?.analysed_domain || ''
 
   const isEmpty = !ga4Data && (!stats || stats.total_visits === 0)
   
@@ -324,6 +327,11 @@ export default function AITraffic({ sessionId }) {
           </div>
 
           <div style={{ borderTop: '1px solid var(--border)', padding: '1rem 0.5rem 0.5rem' }}>
+            {url && (
+              <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '12px', color: '#fbbf24' }}>
+                ⚠️ Add this script to <strong>{url}</strong> to track AI visits. Without it, only GA4 data will be shown.
+              </div>
+            )}
             <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '8px' }}>Also add our custom tracking snippet to capture real-time AI visits:</p>
 
             {/* Tracking snippet */}
@@ -390,6 +398,17 @@ export default function AITraffic({ sessionId }) {
           📊 Showing real GA4 data · {displayData.total_visits} AI visits in last {days} days
         </div>
       )}
+      {/* Script not installed warning */}
+      {url && !scriptInstalled && stats && (
+        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#fbbf24' }}>
+          <div style={{ fontWeight: 700, marginBottom: '4px' }}>⚠️ Tracking script not detected on {analysedDomain}</div>
+          <div style={{ color: '#fde68a', lineHeight: 1.6 }}>
+            Add the tracking snippet below to your website to capture real-time AI visits. 
+            Without it, only GA4 data will be shown — and GA4 may not detect all AI traffic sources.
+          </div>
+        </div>
+      )}
+
       {!isEmpty && displayData && (
         <>
           {/* KPI Cards */}

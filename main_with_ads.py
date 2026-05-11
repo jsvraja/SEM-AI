@@ -1569,9 +1569,21 @@ async def track_visit(request: Request):
 
 
 @app.get("/api/ai-traffic")
-async def get_ai_traffic(days: int = 30):
+async def get_ai_traffic(days: int = 30, site_url: Optional[str] = Query(default="")):
     """Get AI traffic statistics."""
     stats = get_traffic_stats(days)
+    # If site_url provided, check if script is installed by looking for visits from that domain
+    if site_url:
+        try:
+            from urllib.parse import urlparse
+            domain = urlparse(site_url).netloc or site_url
+            visits = stats.get("visits", [])
+            domain_visits = [v for v in visits if domain in v.get("page", "")]
+            stats["script_installed"] = len(domain_visits) > 0
+            stats["analysed_domain"] = domain
+        except Exception:
+            stats["script_installed"] = False
+            stats["analysed_domain"] = ""
     return stats
 
 
