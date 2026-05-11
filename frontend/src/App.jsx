@@ -182,6 +182,7 @@ export default function App() {
       onSubmit={handleSubmit}
       loading={state === 'loading'}
       error={error}
+      onClearError={() => setError(null)}
       sessionId={sessionId}
       googleEmail={googleEmail}
       user={user}

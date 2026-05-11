@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Globe, Zap, BarChart3, Target, Search, TrendingUp, Share2, ChevronRight, Loader2, AlertCircle, Bot, Shield } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 
-export default function LandingForm({ onSubmit, loading, error, user, onLogout, onAdmin }) {
+export default function LandingForm({ onSubmit, loading, error, onClearError, user, onLogout, onAdmin }) {
   const [url, setUrl] = useState('')
   const [desc, setDesc] = useState('')
   const [keywords, setKeywords] = useState('')
@@ -156,7 +156,7 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text2)', marginBottom: '6px' }}>Website URL</label>
                   <div style={{ position: 'relative' }}>
                     <Globe size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)' }} />
-                    <input type="text" value={url} onChange={e => { setUrl(e.target.value); setAiDetected(false); setDesc(''); setKeywords(''); setAiError(''); setUrlError('') }}
+                    <input type="text" value={url} onChange={e => { setUrl(e.target.value); setAiDetected(false); setDesc(''); setKeywords(''); setAiError(''); setUrlError(''); if (onClearError) onClearError() }}
                       placeholder="https://yourwebsite.com" required
                       style={{ width: '100%', padding: '10px 12px 10px 32px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                       onFocus={e => e.target.style.borderColor = 'var(--accent)'}
