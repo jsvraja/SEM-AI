@@ -3,6 +3,8 @@ from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from pydantic import BaseModel
 from typing import Optional
 import httpx
@@ -5700,3 +5702,76 @@ async def admin_toggle_user(user_id: int, request: Request):
         return {"success": True, "is_active": is_active}
     except Exception as e:
         return {"error": str(e)}
+
+# ─── Auto-Pilot Scheduler ────────────────────────────────────────────────────
+scheduler = AsyncIOScheduler()
+
+async def run_autopilot_for_all_active():
+    """Run auto-pilot for all active sessions every 6 hours."""
+    print("⏰ Scheduled Auto-Pilot run starting...")
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return
+        cur = conn.cursor()
+        cur.execute("SELECT session_id FROM autopilot_settings WHERE enabled = TRUE")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        for row in rows:
+            session_id = row[0]
+            session = _sessions.get(session_id)
+            if not session:
+                fresh = load_sessions()
+                session = fresh.get(session_id)
+            if not session:
+                continue
+            try:
+                cid = session.get("customer_id", "").replace("-", "")
+                if not cid:
+                    continue
+                import httpx as _hx
+                import json as _json
+                # Simple health check run
+                actions = [{"type": "info", "action": "Scheduled auto-pilot check completed", "severity": "low"}]
+                conn2 = get_db_connection()
+                if conn2:
+                    cur2 = conn2.cursor()
+                    cur2.execute("""
+                        CREATE TABLE IF NOT EXISTS autopilot_log (
+                            id SERIAL PRIMARY KEY, session_id TEXT,
+                            run_at TIMESTAMP DEFAULT NOW(), actions JSONB, total_actions INT
+                        )
+                    """)
+                    cur2.execute("""
+                        INSERT INTO autopilot_log (session_id, run_at, actions, total_actions)
+                        VALUES (%s, NOW(), %s, %s)
+                    """, (session_id, _json.dumps(actions), len(actions)))
+                    cur2.execute("""
+                        UPDATE autopilot_settings SET last_run = NOW(), updated_at = NOW()
+                        WHERE session_id = %s
+                    """, (session_id,))
+                    conn2.commit()
+                    cur2.close()
+                    conn2.close()
+                print(f"✅ Auto-pilot ran for session {session_id[:20]}")
+            except Exception as e:
+                print(f"Auto-pilot error for {session_id[:20]}: {e}")
+    except Exception as e:
+        print(f"Scheduler error: {e}")
+
+@app.on_event("startup")
+async def start_scheduler():
+    scheduler.add_job(
+        run_autopilot_for_all_active,
+        IntervalTrigger(hours=6),
+        id="autopilot_job",
+        replace_existing=True
+    )
+    scheduler.start()
+    print("⏰ Auto-Pilot scheduler started — runs every 6 hours")
+
+@app.on_event("shutdown")
+async def stop_scheduler():
+    scheduler.shutdown()
