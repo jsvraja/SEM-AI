@@ -945,6 +945,28 @@ function PublishPanel({ sessionId, adCopy, seoReport, url, recommendedPages }) {
   const [aiRec, setAiRec] = useState(null)
   const [loadingRec, setLoadingRec] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(0)
+  const [importedVariants, setImportedVariants] = useState(null)
+
+  function importFromAdCopy() {
+    try {
+      const saved = sessionStorage.getItem('adcopy_recommendations')
+      if (saved) {
+        const data = JSON.parse(saved)
+        const variants = data?.ad_variants || data?.recommended_pages?.[0]?.ad_variants || []
+        if (variants.length > 0) {
+          setImportedVariants(variants)
+          setSelectedVariant(0)
+          alert(`✅ Imported ${variants.length} variants from Ad Copy!`)
+        } else {
+          alert('No variants found. Please generate Ad Copy first.')
+        }
+      } else {
+        alert('No saved Ad Copy found. Please go to Ad Copy tab and generate first.')
+      }
+    } catch(e) {
+      alert('Failed to import Ad Copy.')
+    }
+  }
   const [selectedPage, setSelectedPage] = useState(null)
   const [dailyBudget, setDailyBudget] = useState('15')
   const [monthlyBudget, setMonthlyBudget] = useState('400')
@@ -1008,7 +1030,7 @@ Respond ONLY with this JSON (no other text):
     }
   }
 
-  const variants = adCopy?.ad_variants || []
+  const variants = importedVariants || adCopy?.ad_variants || []
   const keywords = seoReport?.keyword_suggestions?.map(k => k.keyword) || []
   const targetCountries = seoReport?.sem_recommendations?.target_countries || ['IN', 'US']
   const domain = (() => { try { return new URL(url).hostname } catch { return url } })()
@@ -1106,9 +1128,18 @@ Respond ONLY with this JSON (no other text):
             Step 1 — Choose Ad Variant
           </h2>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '12px' }}>
-          Select which AI-generated copy to publish. All 3 options come from your Ad Copy analysis.
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--text3)', margin: 0 }}>
+            {importedVariants ? `✅ Using ${importedVariants.length} imported variants from Ad Copy` : 'Select which AI-generated copy to publish. All 3 options come from your Ad Copy analysis.'}
+          </p>
+          <button onClick={importFromAdCopy} style={{
+            fontSize: '11px', padding: '5px 10px', background: 'var(--accent-bg)',
+            border: '1px solid var(--accent-border)', borderRadius: '6px',
+            color: 'var(--accent)', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap'
+          }}>
+            📥 Import from Ad Copy
+          </button>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {variants.map((v, i) => {
