@@ -82,6 +82,7 @@ function ConnectPanel() {
 // ─── Live Campaigns ───────────────────────────────────────────────────────────
 function CampaignMonitor({ sessionId, onCampaignsLoaded }) {
   const [campaigns, setCampaigns] = useState([])
+  const [currency, setCurrency] = useState('USD')
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
   const [lastRefresh, setLastRefresh] = useState(null)
@@ -108,6 +109,7 @@ function CampaignMonitor({ sessionId, onCampaignsLoaded }) {
       const data = await res.json()
       const c = data.campaigns || []
       setCampaigns(c)
+      if (data.currency) setCurrency(data.currency)
       if (onCampaignsLoaded) onCampaignsLoaded(c)
       setLastRefresh(new Date().toLocaleTimeString())
     } catch (e) {
@@ -351,7 +353,7 @@ function CampaignMonitor({ sessionId, onCampaignsLoaded }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px', marginBottom: monitor ? '10px' : '0' }}>
               {[
-                { label: 'Spend Today', value: `₹${(c.spend_today_usd||0).toFixed(2)}`, color: 'var(--cyan)' },
+                { label: 'Spend Today', value: `${currency === 'INR' ? '₹' : '$'}${(c.spend_today_usd||0).toFixed(2)}`, color: 'var(--cyan)' },
                 { label: 'Clicks',      value: (c.clicks||0).toLocaleString(),           color: 'var(--text)' },
                 { label: 'Impressions', value: (c.impressions||0).toLocaleString(),      color: 'var(--text)' },
                 { label: 'CTR',         value: `${(c.ctr||0).toFixed(2)}%`,              color: 'var(--green)' },
@@ -946,6 +948,17 @@ function PublishPanel({ sessionId, adCopy, seoReport, url, recommendedPages }) {
   const [loadingRec, setLoadingRec] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(0)
   const [importedVariants, setImportedVariants] = useState(null)
+  const [currency, setCurrency] = useState('USD')
+
+  useEffect(() => {
+    if (!sessionId) return
+    fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=`)
+      .then(r => r.json())
+      .then(d => { if (d.currency) setCurrency(d.currency) })
+      .catch(() => {})
+  }, [sessionId])
+
+  const currencySymbol = currency === 'INR' ? '₹' : '$'
 
   function importFromAdCopy() {
     try {
@@ -1259,7 +1272,7 @@ Respond ONLY with this JSON (no other text):
           </div>
           <div style={{ gridColumn: '1 / -1', height: '1px', background: 'var(--border)' }} />
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Daily Budget (USD)</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{currency === 'INR' ? 'Daily Budget (INR)' : 'Daily Budget (USD)'}</label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>$</span>
               <input value={dailyBudget} onChange={e => setDailyBudget(e.target.value)} type="number" min="1"
@@ -1273,7 +1286,7 @@ Respond ONLY with this JSON (no other text):
             )}
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Monthly Budget (USD)</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--text2)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{currency === 'INR' ? 'Monthly Budget (INR)' : 'Monthly Budget (USD)'}</label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '13px' }}>$</span>
               <input value={monthlyBudget} onChange={e => setMonthlyBudget(e.target.value)} type="number" min="1"
@@ -1288,7 +1301,7 @@ Respond ONLY with this JSON (no other text):
         {/* Summary */}
         <div style={{ background: 'var(--bg3)', borderRadius: '7px', padding: '10px 12px', marginBottom: '12px', fontSize: '12px', color: 'var(--text3)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <span style={{ color: parseFloat(dailyBudget) >= 1 ? '#4ade80' : '#f87171' }}>
-            {parseFloat(dailyBudget) >= 1 ? '✓' : '✗'} Daily budget: ₹{dailyBudget}/day
+            {parseFloat(dailyBudget) >= 1 ? '✓' : '✗'} Daily budget: {currencySymbol}{dailyBudget}/day
           </span>
           <span>✓ {Math.min(keywords.length, 15)} keywords from SEO analysis</span>
           <span>✓ Target countries: {targetCountries.join(', ')}</span>
