@@ -105,11 +105,12 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
       </div>
 
       {/* Status Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '1.5rem' }}>
         {[
           { label: 'Status', value: enabled ? 'Running' : 'Paused', color: enabled ? '#4ade80' : '#f87171' },
           { label: 'Last Run', value: lastRun ? new Date(lastRun).toLocaleTimeString() : 'Never' },
-          { label: 'Actions Found', value: actions.length }
+          { label: 'Actions Found', value: actions.length },
+          { label: 'Next Scheduled', value: enabled ? (() => { const next = new Date(); next.setHours(next.getHours() + 6); return next.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) })() : '—', color: '#6366f1' }
         ].map((card, i) => (
           <div key={i} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
             <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '4px' }}>{card.label}</div>
