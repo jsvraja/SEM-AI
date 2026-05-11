@@ -170,7 +170,7 @@ export default function LandingForm({ onSubmit, loading, error, onClearError, us
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: 'var(--text2)', marginBottom: '6px' }}>
                     Business Description
                     {aiDetecting && <span style={{ marginLeft: '8px', color: 'var(--accent)', fontSize: '11px' }}>⚡ AI detecting...</span>}
-                    {aiDetected && <span style={{ marginLeft: '8px', color: 'var(--green)', fontSize: '11px' }}>✓ AI filled</span>}
+                    {aiDetected && desc && <span style={{ marginLeft: '8px', color: 'var(--green)', fontSize: '11px' }}>✓ AI filled</span>}
                   </label>
                   <input type="text" value={desc} onChange={e => setDesc(e.target.value)}
                     placeholder="e.g. AI automation services for Indian SMEs"
