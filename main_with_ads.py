@@ -5401,6 +5401,47 @@ async def get_autopilot_status(request: Request):
         print(f"Autopilot status error: {e}")
     return {"enabled": False, "last_run": None, "actions": []}
 
+@app.post("/api/ads/autopilot/history")
+async def get_autopilot_history(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id")
+    limit = body.get("limit", 10)
+    try:
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS autopilot_log (
+                    id SERIAL PRIMARY KEY,
+                    session_id TEXT,
+                    run_at TIMESTAMP DEFAULT NOW(),
+                    actions JSONB,
+                    total_actions INT
+                )
+            """)
+            cur.execute("""
+                SELECT id, run_at, actions, total_actions 
+                FROM autopilot_log 
+                WHERE session_id = %s 
+                ORDER BY run_at DESC 
+                LIMIT %s
+            """, (session_id, limit))
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            history = []
+            for row in rows:
+                import json
+                history.append({
+                    "id": row[0],
+                    "run_at": row[1].strftime("%Y-%m-%d %H:%M:%S") if row[1] else "",
+                    "actions": row[2] if isinstance(row[2], list) else json.loads(row[2]) if row[2] else [],
+                    "total_actions": row[3] or 0
+                })
+            return {"history": history, "total": len(history)}
+    except Exception as e:
+        return {"history": [], "total": 0, "error": str(e)}
+
 @app.post("/api/ads/autopilot/toggle")
 async def toggle_autopilot(request: Request):
     body = await request.json()
@@ -5534,11 +5575,26 @@ Give 3 specific auto-pilot recommendations in JSON:
             if conn:
                 cur = conn.cursor()
                 import json
+                # Update settings
                 cur.execute("""
                     INSERT INTO autopilot_settings (session_id, enabled, last_run, actions_taken, updated_at)
                     VALUES (%s, TRUE, NOW(), %s, NOW())
                     ON CONFLICT (session_id) DO UPDATE SET last_run = NOW(), actions_taken = %s, updated_at = NOW()
                 """, (session_id, json.dumps(actions), json.dumps(actions)))
+                # Save to activity log
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS autopilot_log (
+                        id SERIAL PRIMARY KEY,
+                        session_id TEXT,
+                        run_at TIMESTAMP DEFAULT NOW(),
+                        actions JSONB,
+                        total_actions INT
+                    )
+                """)
+                cur.execute("""
+                    INSERT INTO autopilot_log (session_id, run_at, actions, total_actions)
+                    VALUES (%s, NOW(), %s, %s)
+                """, (session_id, json.dumps(actions), len(actions)))
                 conn.commit()
                 cur.close()
                 conn.close()
