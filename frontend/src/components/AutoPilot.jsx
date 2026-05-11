@@ -8,10 +8,28 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
   const [running, setRunning] = useState(false)
   const [actions, setActions] = useState([])
   const [lastRun, setLastRun] = useState(null)
+  const [history, setHistory] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   useEffect(() => {
     fetchStatus()
   }, [])
+
+  async function fetchHistory() {
+    setHistoryLoading(true)
+    try {
+      const res = await fetch(BASE + '/api/ads/autopilot/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, limit: 10 })
+      })
+      const d = await res.json()
+      setHistory(d.history || [])
+      setShowHistory(true)
+    } catch(e) {}
+    setHistoryLoading(false)
+  }
 
   async function fetchStatus() {
     try {
@@ -130,6 +148,49 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
           })}
         </div>
       )}
+      {/* Activity History */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <button onClick={showHistory ? () => setShowHistory(false) : fetchHistory}
+          style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          {historyLoading ? '⏳ Loading...' : showHistory ? '▲ Hide Activity Log' : '📜 View Activity Log'}
+        </button>
+
+        {showHistory && (
+          <div style={{ marginTop: '12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)', display: 'flex', justifyContent: 'space-between' }}>
+              <span>📜 Activity Log</span>
+              <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Last {history.length} runs</span>
+            </div>
+            {history.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '13px' }}>
+                No history yet. Run Auto-Pilot to start tracking.
+              </div>
+            ) : history.map((run, i) => (
+              <div key={i} style={{ padding: '12px 16px', borderBottom: i < history.length-1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>🤖 Run #{history.length - i}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{run.run_at}</div>
+                  <div style={{ fontSize: '11px', color: '#6366f1', background: '#6366f120', padding: '2px 8px', borderRadius: '12px' }}>{run.total_actions} actions</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {(run.actions || []).slice(0, 3).map((a, j) => {
+                    const color = { high: '#f87171', medium: '#fbbf24', low: '#4ade80', info: '#60a5fa' }[a.severity] || '#60a5fa'
+                    return (
+                      <div key={j} style={{ fontSize: '12px', color: 'var(--text2)', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                        <span style={{ color, flexShrink: 0 }}>●</span>
+                        <span>{a.action}</span>
+                      </div>
+                    )
+                  })}
+                  {(run.actions || []).length > 3 && (
+                    <div style={{ fontSize: '11px', color: 'var(--text3)' }}>+{run.actions.length - 3} more actions</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
