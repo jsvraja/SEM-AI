@@ -50,8 +50,10 @@ export default function LandingForm({ onSubmit, loading, error, user, onLogout, 
       const d = await res.json()
       if (d.error) { setAiError('AI could not detect business info. Please fill manually.') }
       else {
-        if (d.description && !desc) setDesc(d.description)
-        if (d.keywords && !keywords) setKeywords(Array.isArray(d.keywords) ? d.keywords.join(', ') : d.keywords)
+        const descVal = d.business_description || d.description || ''
+        const kwVal = d.target_keywords || d.keywords || []
+        if (descVal && !desc) setDesc(descVal)
+        if (kwVal.length && !keywords) setKeywords(Array.isArray(kwVal) ? kwVal.join(', ') : kwVal)
         setAiDetected(true)
       }
     } catch(e) {
