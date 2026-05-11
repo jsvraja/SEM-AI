@@ -380,7 +380,7 @@ export default function AITraffic({ sessionId, url }) {
               <button onClick={() => {
                 const domain = (url||'').replace(/https?:\/\//, '').split('/')[0]
                 localStorage.setItem('sem_script_installed_' + domain, 'true')
-                window.location.reload()
+                fetchStats()
               }} style={{
                 padding: '8px 16px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
                 borderRadius: '7px', color: '#4ade80', fontSize: '12px', fontWeight: 600, cursor: 'pointer'
