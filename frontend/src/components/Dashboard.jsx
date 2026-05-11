@@ -1048,7 +1048,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             {/* Charts row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <Card>
-                <SectionTitle icon={Search}>Keyword Difficulty</SectionTitle>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <SectionTitle icon={Search}>Keyword Difficulty</SectionTitle>
+                  <span style={{ fontSize: '10px', color: 'var(--text3)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: '10px', border: '1px solid var(--border)' }}>🤖 AI Estimate</span>
+                </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={keywordChartData} layout="vertical" margin={{ left: 10, right: 20 }}>
                     <XAxis type="number" domain={[0, 100]} tick={{ fill: 'var(--text3)', fontSize: 11 }} />
@@ -1063,7 +1066,10 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
               </Card>
 
               <Card>
-                <SectionTitle icon={DollarSign}>Budget Allocation</SectionTitle>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <SectionTitle icon={DollarSign}>Budget Allocation</SectionTitle>
+                  <span style={{ fontSize: '10px', color: 'var(--text3)', background: 'var(--bg3)', padding: '2px 8px', borderRadius: '10px', border: '1px solid var(--border)' }}>🤖 AI Estimate</span>
+                </div>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie data={budgetData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
