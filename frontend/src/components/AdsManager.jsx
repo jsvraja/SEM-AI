@@ -953,13 +953,29 @@ function PublishPanel({ sessionId, adCopy, seoReport, url, recommendedPages }) {
       if (saved) {
         const data = JSON.parse(saved)
         const keys = Object.keys(data)
-        // recommended_pages structure: [{url, ad_copy: {ad_variants: []}}]
+        // Convert recommended_pages ad_copy format to ad_variants format
         const recPages = data?.recommended_pages || []
-        const variants = data?.ad_variants 
-          || recPages?.[0]?.ad_copy?.ad_variants
-          || recPages?.[0]?.ad_variants
-          || data?.adCopy?.ad_variants
-          || []
+        let variants = data?.ad_variants || []
+        if (variants.length === 0 && recPages.length > 0) {
+          // Build variants from each recommended page's ad_copy
+          variants = recPages.slice(0, 3).map((page, i) => {
+            const ac = page.ad_copy || {}
+            const names = ['Value-Led', 'Feature-Led', 'Social Proof']
+            return {
+              variant_name: names[i] || ('Option ' + (i+1)),
+              headlines: [
+                { text: ac.headline_1 || '', char_count: (ac.headline_1||'').length },
+                { text: ac.headline_2 || '', char_count: (ac.headline_2||'').length },
+                { text: ac.headline_3 || '', char_count: (ac.headline_3||'').length },
+              ].filter(h => h.text),
+              descriptions: [
+                { text: ac.description_1 || '', char_count: (ac.description_1||'').length },
+                { text: ac.description_2 || '', char_count: (ac.description_2||'').length },
+              ].filter(d => d.text),
+              final_url: page.url || '',
+            }
+          }).filter(v => v.headlines.length > 0)
+        }
         if (variants.length > 0) {
           setImportedVariants(variants)
           setSelectedVariant(0)
