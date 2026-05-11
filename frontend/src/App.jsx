@@ -122,6 +122,10 @@ export default function App() {
         businessDescription: data.businessDescription || data.description || '',
       }
       const report = await runFullReport(normalizedData)
+      // Normalize seo_report -> seo
+      if (report && report.seo_report && !report.seo) {
+        report.seo = report.seo_report
+      }
       // Validate report has required fields
       if (!report || report.error || !report.seo) {
         throw new Error(report?.error || report?.message || 'Could not analyse this website. Please check the URL and try again.')
