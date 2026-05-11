@@ -228,7 +228,7 @@ export default function AITraffic({ sessionId, url }) {
     </Card>
   )
 
-  const scriptInstalled = stats?.script_installed !== false
+  const scriptInstalled = stats?.script_installed === true || localStorage.getItem('sem_script_installed_' + (url||'').replace(/https?:\/\//, '').split('/')[0]) === 'true'
   const analysedDomain = stats?.analysed_domain || ''
 
   const isEmpty = !ga4Data && (!stats || stats.total_visits === 0)
@@ -371,6 +371,26 @@ export default function AITraffic({ sessionId, url }) {
 </script>`}</pre>
             </div>
 
+            {/* Mark script as installed */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <button onClick={() => {
+                const domain = (url||'').replace(/https?:\/\//, '').split('/')[0]
+                localStorage.setItem('sem_script_installed_' + domain, 'true')
+                window.location.reload()
+              }} style={{
+                padding: '8px 16px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                borderRadius: '7px', color: '#4ade80', fontSize: '12px', fontWeight: 600, cursor: 'pointer'
+              }}>✅ I've Added This Script to My Site</button>
+              <button onClick={() => {
+                const script = document.querySelector('pre')?.innerText || ''
+                navigator.clipboard.writeText(script)
+                alert('Script copied!')
+              }} style={{
+                padding: '8px 16px', background: 'var(--bg3)', border: '1px solid var(--border)',
+                borderRadius: '7px', color: 'var(--text2)', fontSize: '12px', cursor: 'pointer'
+              }}>📋 Copy Script</button>
+            </div>
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={loadDemo} disabled={loadingDemo} style={{
                 padding: '10px 20px', background: 'var(--accent)', border: 'none',
@@ -400,9 +420,9 @@ export default function AITraffic({ sessionId, url }) {
       )}
       {/* Script not installed warning */}
       {url && !scriptInstalled && stats && (
-        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#fbbf24' }}>
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#f87171' }}>
           <div style={{ fontWeight: 700, marginBottom: '4px' }}>⚠️ Tracking script not detected on {analysedDomain}</div>
-          <div style={{ color: '#fde68a', lineHeight: 1.6 }}>
+          <div style={{ color: '#fca5a5', lineHeight: 1.6 }}>
             Add the tracking snippet below to your website to capture real-time AI visits. 
             Without it, only GA4 data will be shown — and GA4 may not detect all AI traffic sources.
           </div>
