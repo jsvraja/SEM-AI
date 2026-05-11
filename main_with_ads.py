@@ -960,7 +960,13 @@ async def get_campaigns(session_id: str, customer_id: Optional[str] = Query(defa
     if cid and not session.get("customer_id"):
         _sessions[session_id]["customer_id"] = cid
         save_sessions(_sessions)
-    return {"campaigns": campaigns, "total": len(campaigns), "customer_id": cid}
+    # Get currency
+    try:
+        from ads_manager import get_customer_currency
+        currency = get_customer_currency(cid, session["refresh_token"])
+    except Exception:
+        currency = "USD"
+    return {"campaigns": campaigns, "total": len(campaigns), "customer_id": cid, "currency": currency}
 
 
 

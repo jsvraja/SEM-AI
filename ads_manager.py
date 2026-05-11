@@ -428,3 +428,15 @@ def get_accessible_accounts(refresh_token: str) -> list:
     except Exception as e:
         print(f"get_accessible_accounts error: {e}")
         return []
+
+def get_customer_currency(customer_id: str, refresh_token: str) -> str:
+    """Get currency code for a Google Ads customer account."""
+    try:
+        query = "SELECT customer.currency_code FROM customer LIMIT 1"
+        results = gaql_search(customer_id, refresh_token, query)
+        if results:
+            return results[0].get("customer", {}).get("currencyCode", "USD")
+        return "USD"
+    except Exception as e:
+        print(f"get_customer_currency error: {e}")
+        return "USD"
