@@ -348,22 +348,26 @@ export default function AITraffic({ sessionId, url }) {
               }}>{`<script>
 (function() {
   var ref = document.referrer;
+  var params = new URLSearchParams(window.location.search);
+  var utm_source = params.get('utm_source') || '';
+  var utm_term = params.get('utm_term') || params.get('q') || '';
   var aiDomains = [
-    'chat.openai.com','chatgpt.com',
-    'perplexity.ai','claude.ai',
-    'gemini.google.com','copilot.microsoft.com',
-    'grok.x.ai','you.com','meta.ai'
+    'chat.openai.com','chatgpt.com','perplexity.ai','claude.ai',
+    'gemini.google.com','copilot.microsoft.com','grok.com',
+    'grok.x.ai','x.ai','you.com','meta.ai'
   ];
-  var isAI = aiDomains.some(function(d) {
-    return ref.indexOf(d) > -1;
-  });
-  if (isAI) {
+  var aiUtmSources = ['chatgpt','perplexity','claude','gemini','copilot','grok','meta','you'];
+  var isAI = aiDomains.some(function(d) { return ref.indexOf(d) > -1; });
+  var isUTM = aiUtmSources.some(function(p) { return utm_source.toLowerCase().indexOf(p) > -1; });
+  if (isAI || isUTM) {
     fetch('https://sem-ai-production.up.railway.app/api/track', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        referrer: ref,
-        page: window.location.pathname
+        referrer: ref || ('https://' + utm_source),
+        page: window.location.pathname,
+        utm_source: utm_source,
+        utm_term: utm_term
       })
     });
   }
