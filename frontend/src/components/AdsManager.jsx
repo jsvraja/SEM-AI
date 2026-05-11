@@ -953,8 +953,11 @@ function PublishPanel({ sessionId, adCopy, seoReport, url, recommendedPages }) {
       if (saved) {
         const data = JSON.parse(saved)
         const keys = Object.keys(data)
+        // recommended_pages structure: [{url, ad_copy: {ad_variants: []}}]
+        const recPages = data?.recommended_pages || []
         const variants = data?.ad_variants 
-          || data?.recommended_pages?.[0]?.ad_variants 
+          || recPages?.[0]?.ad_copy?.ad_variants
+          || recPages?.[0]?.ad_variants
           || data?.adCopy?.ad_variants
           || []
         if (variants.length > 0) {
