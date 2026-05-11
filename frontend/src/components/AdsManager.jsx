@@ -952,19 +952,23 @@ function PublishPanel({ sessionId, adCopy, seoReport, url, recommendedPages }) {
       const saved = sessionStorage.getItem('adcopy_recommendations')
       if (saved) {
         const data = JSON.parse(saved)
-        const variants = data?.ad_variants || data?.recommended_pages?.[0]?.ad_variants || []
+        const keys = Object.keys(data)
+        const variants = data?.ad_variants 
+          || data?.recommended_pages?.[0]?.ad_variants 
+          || data?.adCopy?.ad_variants
+          || []
         if (variants.length > 0) {
           setImportedVariants(variants)
           setSelectedVariant(0)
-          alert(`✅ Imported ${variants.length} variants from Ad Copy!`)
+          alert('✅ Imported ' + variants.length + ' variants from Ad Copy!')
         } else {
-          alert('No variants found. Please generate Ad Copy first.')
+          alert('No variants found. Data keys: ' + keys.join(', '))
         }
       } else {
         alert('No saved Ad Copy found. Please go to Ad Copy tab and generate first.')
       }
     } catch(e) {
-      alert('Failed to import Ad Copy.')
+      alert('Failed to import Ad Copy: ' + e.message)
     }
   }
   const [selectedPage, setSelectedPage] = useState(null)
