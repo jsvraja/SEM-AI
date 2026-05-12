@@ -5775,3 +5775,100 @@ async def start_scheduler():
 @app.on_event("shutdown")
 async def stop_scheduler():
     scheduler.shutdown()
+
+# ─── User Tab Activity Tracking ──────────────────────────────────────────────
+@app.post("/api/track/tab")
+async def track_tab_visit(request: Request):
+    """Track user tab visits and time spent."""
+    try:
+        body = await request.json()
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        user_id = None
+        email = None
+        try:
+            import jwt
+            SECRET_KEY = os.environ.get("JWT_SECRET", "sem-ai-secret-2024")
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            user_id = str(payload.get("sub", ""))
+            email = payload.get("email", "")
+        except:
+            pass
+        tab = body.get("tab", "")
+        url = body.get("url", "")
+        time_spent = int(body.get("time_spent", 0))
+        action = body.get("action", "visit")
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS user_activity (
+                    id SERIAL PRIMARY KEY, user_id TEXT, email TEXT,
+                    tab TEXT, url TEXT, time_spent INT DEFAULT 0,
+                    action TEXT, visited_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                INSERT INTO user_activity (user_id, email, tab, url, time_spent, action, visited_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+            """, (user_id, email, tab, url, time_spent, action))
+            conn.commit()
+            cur.close()
+            conn.close()
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/admin/user-activity")
+async def get_user_activity(request: Request):
+    """Get user activity for admin panel."""
+    try:
+        body = await request.json()
+        token = body.get("token", "")
+        try:
+            import jwt
+            SECRET_KEY = os.environ.get("JWT_SECRET", "sem-ai-secret-2024")
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            email = payload.get("email", "")
+            if email != "jsvking@gmail.com":
+                return {"error": "Unauthorized"}
+        except:
+            return {"error": "Invalid token"}
+        conn = get_db_connection()
+        if not conn:
+            return {"activity": []}
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_activity (
+                id SERIAL PRIMARY KEY, user_id TEXT, email TEXT,
+                tab TEXT, url TEXT, time_spent INT DEFAULT 0,
+                action TEXT, visited_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            SELECT email, tab, url,
+                SUM(time_spent) as total_time,
+                COUNT(*) as visit_count,
+                MAX(visited_at) as last_visit
+            FROM user_activity
+            WHERE visited_at > NOW() - INTERVAL '30 days'
+            GROUP BY email, tab, url
+            ORDER BY last_visit DESC
+            LIMIT 100
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        activity = []
+        for row in rows:
+            activity.append({
+                "email": row[0] or "anonymous",
+                "tab": row[1],
+                "url": row[2],
+                "total_time_seconds": int(row[3] or 0),
+                "total_time_formatted": f"{int((row[3] or 0)//60)}m {int((row[3] or 0)%60)}s",
+                "visit_count": row[4],
+                "last_visit": row[5].strftime("%Y-%m-%d %H:%M") if row[5] else ""
+            })
+        return {"activity": activity, "total": len(activity)}
+    except Exception as e:
+        return {"activity": [], "error": str(e)}

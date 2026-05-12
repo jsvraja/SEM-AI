@@ -247,7 +247,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
         )}
       </div>
       {/* Feature Flags */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginTop: '24px' }}>
+      {adminTab === 'flags' && <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginTop: '24px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Feature Flags</h2>
           <p style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '2px' }}>Enable or disable features for all users</p>
@@ -279,7 +279,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Activity Tab */}
       {adminTab === 'activity' && (
