@@ -228,6 +228,26 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   const [showSubscription, setShowSubscription] = useState(false)
   const [tab, setTab] = useState('overview')
+  const tabStartRef = React.useRef(Date.now())
+  const prevTabRef = React.useRef('overview')
+
+  React.useEffect(() => {
+    const token = localStorage.getItem('sem_token') || ''
+    if (!token) return
+    // Track tab visit
+    fetch('https://sem-ai-production.up.railway.app/api/track/tab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ 
+        tab: tab, 
+        url: data?.url || '', 
+        time_spent: Math.round((Date.now() - tabStartRef.current) / 1000),
+        action: 'visit' 
+      })
+    }).catch(() => {})
+    tabStartRef.current = Date.now()
+    prevTabRef.current = tab
+  }, [tab])
   const [recommendedPages, setRecommendedPages] = useState([])
   const [pageSpeed, setPageSpeed] = useState(null)
   const [sendingReport, setSendingReport] = useState(false)
