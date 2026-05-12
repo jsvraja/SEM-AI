@@ -1,5 +1,4 @@
 import AITraffic from './AITraffic'
-import OnboardingChecklist from './OnboardingChecklist'
 import SearchConsole from './SearchConsole'
 import AdCopy from './AdCopy'
 import SiteAudit from './SiteAudit'
@@ -369,11 +368,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             )
           })}
         </nav>
-
-        {/* Onboarding Checklist */}
-        <div style={{ padding: '8px 10px' }}>
-          <OnboardingChecklist currentTab={tab} hasAnalysed={true} googleConnected={!!sessionId} />
-        </div>
 
         {/* Bottom - Google status + theme */}
         <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
