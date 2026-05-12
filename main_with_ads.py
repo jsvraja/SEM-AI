@@ -5786,11 +5786,13 @@ async def track_tab_visit(request: Request):
         user_id = None
         email = None
         try:
-            import jwt
-            SECRET_KEY = os.environ.get("JWT_SECRET", "sem-ai-secret-2024")
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_id = str(payload.get("sub", ""))
-            email = payload.get("email", "")
+            import base64 as _b64, json as _j
+            parts = token.split('.')
+            if len(parts) == 3:
+                padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+                payload = _j.loads(_b64.b64decode(padded))
+                user_id = str(payload.get("sub", ""))
+                email = payload.get("email", "")
         except:
             pass
         tab = body.get("tab", "")
