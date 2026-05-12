@@ -10,7 +10,7 @@ const ITEMS = [
   { id: 'aitraffic', label: 'Set up AI Traffic tracker', tab: 'ai-traffic' },
 ]
 
-export default function OnboardingChecklist({ currentTab, hasAnalysed }) {
+export default function OnboardingChecklist({ currentTab, hasAnalysed, googleConnected }) {
   const [checked, setChecked] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sem_checklist') || '{}') } catch { return {} }
   })
@@ -21,7 +21,8 @@ export default function OnboardingChecklist({ currentTab, hasAnalysed }) {
     if (hasAnalysed) next['analyse'] = true
     if (currentTab === 'seo' && hasAnalysed) next['seo'] = true
     if (currentTab === 'ad-copy' && hasAnalysed) next['adcopy'] = true
-    if (currentTab === 'ads') next['ads'] = true
+    if (googleConnected) next['ads'] = true
+    if (googleConnected && localStorage.getItem('sem_autopilot_enabled') === 'true') next['autopilot'] = true
     if (currentTab === 'ai-traffic') next['aitraffic'] = true
     localStorage.setItem('sem_checklist', JSON.stringify(next))
     setChecked(next)

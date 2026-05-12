@@ -54,7 +54,10 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
         body: JSON.stringify({ session_id: sessionId, enabled: !enabled })
       })
       const d = await res.json()
-      if (d.success) setEnabled(!enabled)
+      if (d.success) {
+        setEnabled(!enabled)
+        localStorage.setItem('sem_autopilot_enabled', (!enabled).toString())
+      }
     } catch(e) {}
     setLoading(false)
   }

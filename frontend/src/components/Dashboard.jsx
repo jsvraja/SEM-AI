@@ -372,7 +372,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
 
         {/* Onboarding Checklist */}
         <div style={{ padding: '8px 10px' }}>
-          <OnboardingChecklist currentTab={tab} hasAnalysed={true} />
+          <OnboardingChecklist currentTab={tab} hasAnalysed={true} googleConnected={!!sessionId} />
         </div>
 
         {/* Bottom - Google status + theme */}
