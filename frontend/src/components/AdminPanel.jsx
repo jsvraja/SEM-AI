@@ -182,7 +182,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
             )}
 
             {/* Users Table */}
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+            {adminTab === 'users' && <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
               <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>All Users ({users.length})</h2>
                 <button onClick={fetchData} style={{ fontSize: '12px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Refresh</button>
@@ -242,7 +242,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </div>}
           </>
         )}
       </div>
