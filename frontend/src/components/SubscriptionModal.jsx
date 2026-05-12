@@ -19,17 +19,66 @@ export default function SubscriptionModal({ onClose, user, token, onPlanChanged 
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API}/api/subscription/change`, {
+      // Free/downgrade — no payment needed
+      const plan = plans.find(p => p.key === newPlan)
+      if (!plan || plan.price === 0 || plan.price < (plans.find(p => p.key === (user?.plan || 'free'))?.price || 0)) {
+        const res = await fetch(`${API}/api/subscription/change`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ plan: newPlan }),
+        })
+        const data = await res.json()
+        if (data.error) { setError(data.error); return }
+        setSuccess(`Plan changed to ${newPlan}`)
+        setConfirm(null)
+        if (onPlanChanged) onPlanChanged(newPlan)
+        setTimeout(() => { onClose(); window.location.reload() }, 1500)
+        return
+      }
+
+      // Paid upgrade — Razorpay payment
+      const orderRes = await fetch(`${API}/api/payment/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ plan: newPlan }),
+        body: JSON.stringify({ plan: newPlan, user_id: user?.id }),
       })
-      const data = await res.json()
-      if (data.error) { setError(data.error); return }
-      setSuccess(`Plan changed to ${newPlan} successfully`)
-      setConfirm(null)
-      if (onPlanChanged) onPlanChanged(newPlan)
-      setTimeout(() => { onClose(); window.location.reload() }, 1500)
+      const orderData = await orderRes.json()
+      if (orderData.error) { setError(orderData.error); return }
+
+      // Load Razorpay
+      const rzp = new window.Razorpay({
+        key: orderData.key_id,
+        amount: orderData.amount,
+        currency: 'INR',
+        name: 'SEM AI',
+        description: `${orderData.name} Plan`,
+        order_id: orderData.order_id,
+        handler: async function(response) {
+          // Verify payment
+          const verifyRes = await fetch(`${API}/api/payment/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              plan: newPlan,
+              user_id: user?.id,
+            }),
+          })
+          const verifyData = await verifyRes.json()
+          if (verifyData.success) {
+            setSuccess(`Successfully upgraded to ${newPlan} plan!`)
+            if (onPlanChanged) onPlanChanged(newPlan)
+            setTimeout(() => { onClose(); window.location.reload() }, 1500)
+          } else {
+            setError('Payment verification failed. Contact support.')
+          }
+        },
+        prefill: { email: user?.email || '' },
+        theme: { color: '#6366f1' },
+      })
+      rzp.open()
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
