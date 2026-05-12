@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { runFullReport } from './api'
 import PricingModal from './components/PricingModal'
 import LandingForm from './components/LandingForm'
+import OnboardingModal from './components/OnboardingModal'
 import Dashboard from './components/Dashboard'
 import AuthPage from './components/AuthPage'
 import AdminPanel from './components/AdminPanel'
@@ -23,6 +24,9 @@ export default function App() {
   const [error, setError] = useState(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('sem_onboarded')
+  })
   const [featureFlags, setFeatureFlags] = useState({})
 
   useEffect(() => {
@@ -178,7 +182,9 @@ export default function App() {
   }
 
   return (
-    <LandingForm
+    <>
+      {showOnboarding && user && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
+      <LandingForm
       onSubmit={handleSubmit}
       loading={state === 'loading'}
       error={error}
@@ -190,5 +196,6 @@ export default function App() {
       onAdmin={user.email === 'jsvking@gmail.com' ? () => setShowAdmin(true) : null}
       featureFlags={featureFlags}
     />
+    </>
   )
 }// Sun May  3 00:47:40 IST 2026
