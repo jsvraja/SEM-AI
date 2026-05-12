@@ -11,10 +11,27 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
   const [error, setError] = useState('')
   const [updatingId, setUpdatingId] = useState(null)
   const [flags, setFlags] = useState({})
+  const [activity, setActivity] = useState([])
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [adminTab, setAdminTab] = useState('users')
 
   useEffect(() => {
     fetchData()
   }, [])
+
+  async function fetchActivity() {
+    setActivityLoading(true)
+    try {
+      const res = await fetch(`${API}/api/admin/user-activity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      })
+      const d = await res.json()
+      setActivity(d.activity || [])
+    } catch(e) {}
+    setActivityLoading(false)
+  }
 
   async function fetchData() {
     setLoading(true)
@@ -130,6 +147,20 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
           </div>
         ) : (
           <>
+            {/* Admin Tabs */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              {[
+                { id: 'users', label: '👥 Users' },
+                { id: 'activity', label: '📊 User Activity' },
+                { id: 'flags', label: '🚩 Feature Flags' },
+              ].map(t => (
+                <button key={t.id} onClick={() => { setAdminTab(t.id); if (t.id === 'activity') fetchActivity() }}
+                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', background: adminTab === t.id ? 'var(--accent)' : 'var(--bg2)', color: adminTab === t.id ? 'white' : 'var(--text2)' }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             {/* Stats */}
             {stats && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '28px' }}>
@@ -249,6 +280,49 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
           ))}
         </div>
       </div>
+
+      {/* Activity Tab */}
+      {adminTab === 'activity' && (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginTop: '20px' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>📊 User Activity (Last 30 days)</h2>
+            <button onClick={fetchActivity} style={{ fontSize: '12px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Refresh</button>
+          </div>
+          {activityLoading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text3)' }}>Loading...</div>
+          ) : activity.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text3)', fontSize: '13px' }}>
+              No activity recorded yet. Users need to visit tabs to generate data.
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg3)' }}>
+                    {['User', 'Tab', 'Website', 'Time Spent', 'Visits', 'Last Visit'].map(h => (
+                      <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activity.map((a, i) => (
+                    <tr key={i} style={{ borderTop: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}>
+                      <td style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--text2)' }}>{a.email}</td>
+                      <td style={{ padding: '10px 16px' }}>
+                        <span style={{ fontSize: '12px', background: 'var(--accent-bg)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '10px' }}>{a.tab}</span>
+                      </td>
+                      <td style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--text3)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.url || '—'}</td>
+                      <td style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--cyan)', fontWeight: 600 }}>{a.total_time_formatted}</td>
+                      <td style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--text2)' }}>{a.visit_count}x</td>
+                      <td style={{ padding: '10px 16px', fontSize: '11px', color: 'var(--text3)' }}>{a.last_visit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

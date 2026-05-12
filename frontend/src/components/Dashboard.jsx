@@ -329,7 +329,13 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             const Icon = t.icon
             const isActive = tab === t.id
             return (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
+              <button key={t.id} onClick={() => { 
+                trackTabVisit(tab, 'leave')
+                tabStartTime.current = Date.now()
+                currentTabRef.current = t.id
+                setTab(t.id)
+                trackTabVisit(t.id, 'visit')
+              }} style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
                 padding: '8px 14px', border: 'none', borderRadius: '0',
                 background: isActive ? 'var(--accent-bg)' : 'transparent',
@@ -453,7 +459,13 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             {/* Hamburger - mobile only */}
             <button className="hamburger-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
             {TABS.filter(t => !t.flagRequired || featureFlags[t.flagRequired]).map(t => (
-              <button key={t.id} onClick={() => { setTab(t.id); setMobileNav(false) }} style={{ width: '100%', padding: '8px 12px', background: tab === t.id ? 'var(--accent-bg)' : 'none', border: 'none', borderRadius: '6px', color: tab === t.id ? 'var(--accent)' : 'var(--text2)', fontSize: '13px', cursor: 'pointer', textAlign: 'left' }}>
+              <button key={t.id} onClick={() => { 
+                trackTabVisit(tab, 'leave')
+                tabStartTime.current = Date.now()
+                setTab(t.id)
+                trackTabVisit(t.id, 'visit')
+                setMobileNav(false) 
+              }} style={{ width: '100%', padding: '8px 12px', background: tab === t.id ? 'var(--accent-bg)' : 'none', border: 'none', borderRadius: '6px', color: tab === t.id ? 'var(--accent)' : 'var(--text2)', fontSize: '13px', cursor: 'pointer', textAlign: 'left' }}>
                 {t.label}
               </button>
             ))}
