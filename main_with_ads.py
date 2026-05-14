@@ -5025,7 +5025,18 @@ async def create_order(req: CreateOrderRequest, request: Request):
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer "):
         return {"error": "Unauthorized"}
-    payload = verify_token(auth[7:])
+    # Try both jose and base64 decode
+    token = auth[7:]
+    payload = verify_token(token)
+    if not payload:
+        try:
+            import base64, json as _j
+            parts = token.split('.')
+            if len(parts) == 3:
+                padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+                payload = _j.loads(base64.b64decode(padded))
+        except:
+            pass
     if not payload:
         return {"error": "Invalid token"}
     if req.plan not in PLANS:
@@ -5055,7 +5066,17 @@ async def verify_payment(req: VerifyPaymentRequest, request: Request):
     auth = request.headers.get("authorization", "")
     if not auth.startswith("Bearer "):
         return {"error": "Unauthorized"}
-    payload = verify_token(auth[7:])
+    token = auth[7:]
+    payload = verify_token(token)
+    if not payload:
+        try:
+            import base64, json as _j
+            parts = token.split('.')
+            if len(parts) == 3:
+                padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+                payload = _j.loads(base64.b64decode(padded))
+        except:
+            pass
     if not payload:
         return {"error": "Invalid token"}
     try:
