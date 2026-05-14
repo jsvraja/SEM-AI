@@ -11,10 +11,36 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
   const [history, setHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [pendingApprovals, setPendingApprovals] = useState([])
+  const [autonomousRunning, setAutonomousRunning] = useState(false)
+  const [autonomousResult, setAutonomousResult] = useState(null)
 
   useEffect(() => {
     fetchStatus()
   }, [])
+
+  async function fetchPending() {
+    try {
+      const res = await fetch(BASE + '/api/ads/autonomous/pending/' + sessionId)
+      const d = await res.json()
+      setPendingApprovals(d.pending || [])
+    } catch(e) {}
+  }
+
+  async function runAutonomous() {
+    setAutonomousRunning(true)
+    try {
+      const res = await fetch(BASE + '/api/ads/autonomous/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, customer_id: '' })
+      })
+      const d = await res.json()
+      setAutonomousResult(d)
+      if (d.success) fetchPending()
+    } catch(e) {}
+    setAutonomousRunning(false)
+  }
 
   async function fetchHistory() {
     setHistoryLoading(true)
@@ -128,6 +154,71 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
         <Play size={16} />
         {running ? 'Analyzing Campaigns...' : 'Run Auto-Pilot Now'}
       </button>
+
+      {/* Autonomous Engine Section */}
+      <div style={{ background: 'var(--bg2)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>🤖 Autonomous Engine</div>
+            <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '2px' }}>AI analyses campaigns and auto-fixes small issues</div>
+          </div>
+          <button onClick={runAutonomous} disabled={autonomousRunning} style={{
+            padding: '8px 16px', background: autonomousRunning ? 'var(--bg3)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+            border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px',
+            fontWeight: 600, cursor: autonomousRunning ? 'not-allowed' : 'pointer',
+          }}>
+            {autonomousRunning ? '⏳ Analysing...' : '▶ Run Now'}
+          </button>
+        </div>
+
+        {/* Trust levels */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', padding: '8px 12px' }}>
+            <div style={{ fontSize: '11px', color: '#4ade80', fontWeight: 600, marginBottom: '4px' }}>✅ AUTO-APPLY</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Bid ±10%, Pause low CTR, Ad copy test</div>
+          </div>
+          <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '8px', padding: '8px 12px' }}>
+            <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 600, marginBottom: '4px' }}>📧 NEEDS APPROVAL</div>
+            <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Budget increase, New campaign, Big bid changes</div>
+          </div>
+        </div>
+
+        {/* Result */}
+        {autonomousResult && autonomousResult.success && (
+          <div style={{ background: 'rgba(99,102,241,0.08)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px' }}>
+            <div style={{ color: '#4ade80', marginBottom: '4px' }}>✅ Auto-applied: {autonomousResult.summary?.auto_applied || 0} fixes</div>
+            <div style={{ color: '#fbbf24' }}>📧 Pending approval: {autonomousResult.summary?.pending_approval || 0} actions</div>
+          </div>
+        )}
+      </div>
+
+      {/* Pending Approvals */}
+      {pendingApprovals.length > 0 && (
+        <div style={{ background: 'var(--bg2)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#fbbf24' }}>📧 Pending Approvals</span>
+            <span style={{ fontSize: '11px', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '2px 8px', borderRadius: '10px' }}>{pendingApprovals.reduce((s,r) => s + r.approve_actions.length, 0)}</span>
+          </div>
+          {pendingApprovals.map((run, ri) => (
+            <div key={ri} style={{ padding: '12px 16px', borderBottom: ri < pendingApprovals.length-1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px' }}>🕐 {run.run_at}</div>
+              {run.approve_actions.map((a, ai) => (
+                <div key={ai} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '6px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>{a.campaign}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text2)' }}>{a.reason}</div>
+                  </div>
+                  <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: a.severity === 'critical' ? 'rgba(239,68,68,0.15)' : a.severity === 'high' ? 'rgba(251,191,36,0.15)' : 'rgba(96,165,250,0.15)', color: a.severity === 'critical' ? '#f87171' : a.severity === 'high' ? '#fbbf24' : '#60a5fa', flexShrink: 0 }}>{a.severity}</div>
+                </div>
+              ))}
+              <a href="https://believable-rebirth-production-7e19.up.railway.app" style={{ display: 'block', textAlign: 'center', padding: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+                Review & Approve in Dashboard →
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Actions Log */}
       {actions.length > 0 && (
