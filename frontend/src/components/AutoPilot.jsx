@@ -209,7 +209,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>{a.campaign}</div>
                     <div style={{ fontSize: '11px', color: 'var(--text2)' }}>{a.reason}</div>
                   </div>
-                  <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: a.severity === 'critical' ? 'rgba(239,68,68,0.15)' : a.severity === 'high' ? 'rgba(251,191,36,0.15)' : 'rgba(96,165,250,0.15)', color: a.severity === 'critical' ? '#f87171' : a.severity === 'high' ? '#fbbf24' : '#60a5fa', flexShrink: 0 }}>{a.severity}</div>
+                  <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: a.severity === 'critical' ? 'rgba(239,68,68,0.15)' : a.severity === 'high' ? 'rgba(251,191,36,0.15)' : 'rgba(96,165,250,0.15)', color: a.severity === 'critical' ? '#f87171' : a.severity === 'high' ? '#fbbf24' : '#60a5fa', flexShrink: 0 }}>{a.severity}</span>
                 </div>
               ))}
               <a href="https://believable-rebirth-production-7e19.up.railway.app" style={{ display: 'block', textAlign: 'center', padding: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
