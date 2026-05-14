@@ -212,6 +212,34 @@ const TABS = [
 ]
 
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
+  const [emailReports, setEmailReports] = React.useState(true)
+  const [emailReportsLoading, setEmailReportsLoading] = React.useState(false)
+
+  React.useEffect(() => {
+    const token = localStorage.getItem('sem_token') || ''
+    if (!token) return
+    fetch('https://sem-ai-production.up.railway.app/api/email-reports/preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({})
+    }).then(r => r.json()).then(d => { if (d.enabled !== undefined) setEmailReports(d.enabled) }).catch(() => {})
+  }, [])
+
+  async function toggleEmailReports() {
+    const token = localStorage.getItem('sem_token') || ''
+    setEmailReportsLoading(true)
+    try {
+      const res = await fetch('https://sem-ai-production.up.railway.app/api/email-reports/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ enabled: !emailReports })
+      })
+      const d = await res.json()
+      if (d.success) setEmailReports(!emailReports)
+    } catch(e) {}
+    setEmailReportsLoading(false)
+  }
+
   // Capture Google Ads session_id from OAuth callback URL
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -418,6 +446,23 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                   Manage Subscription
                 </button>
               )}
+              {/* Email Reports Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 2px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text3)' }}>📧 Weekly reports</span>
+                <div onClick={emailReportsLoading ? undefined : toggleEmailReports} style={{
+                  width: '32px', height: '18px', borderRadius: '9px',
+                  background: emailReports ? 'var(--accent)' : 'var(--bg3)',
+                  cursor: emailReportsLoading ? 'not-allowed' : 'pointer',
+                  position: 'relative', transition: 'all 0.3s', flexShrink: 0,
+                }}>
+                  <div style={{
+                    position: 'absolute', top: '2px',
+                    left: emailReports ? '16px' : '2px',
+                    width: '14px', height: '14px', borderRadius: '50%',
+                    background: 'white', transition: 'all 0.3s',
+                  }} />
+                </div>
+              </div>
               <button onClick={onLogout} style={{ width: '100%', padding: '6px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text3)', fontSize: '11px', cursor: 'pointer' }}>
                 Sign out
               </button>

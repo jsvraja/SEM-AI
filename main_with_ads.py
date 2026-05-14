@@ -5792,8 +5792,17 @@ async def start_scheduler():
         id="autopilot_job",
         replace_existing=True
     )
+    # Weekly email reports — every Monday 9AM
+    from apscheduler.triggers.cron import CronTrigger
+    scheduler.add_job(
+        send_weekly_reports,
+        CronTrigger(day_of_week='mon', hour=9, minute=0),
+        id="weekly_email_job",
+        replace_existing=True
+    )
     scheduler.start()
     print("⏰ Auto-Pilot scheduler started — runs every 6 hours")
+    print("📧 Weekly email reports scheduler started — every Monday 9AM")
 
 @app.on_event("shutdown")
 async def stop_scheduler():
@@ -5900,3 +5909,204 @@ async def get_user_activity(request: Request):
         return {"activity": activity, "total": len(activity)}
     except Exception as e:
         return {"activity": [], "error": str(e)}
+
+# ─── Email Report Preferences ────────────────────────────────────────────────
+
+@app.post("/api/email-reports/preferences")
+async def get_email_preferences(request: Request):
+    """Get user email report preferences."""
+    try:
+        body = await request.json()
+        token = request.headers.get("authorization", "").replace("Bearer ", "")
+        try:
+            import base64, json as _j
+            parts = token.split('.')
+            padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+            payload = _j.loads(base64.b64decode(padded))
+            user_id = payload.get("sub")
+            email = payload.get("email")
+        except:
+            return {"error": "Invalid token"}
+        
+        conn = get_db_connection()
+        if not conn:
+            return {"enabled": False}
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS email_preferences (
+                user_id TEXT PRIMARY KEY,
+                email TEXT,
+                weekly_report BOOLEAN DEFAULT TRUE,
+                last_sent TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("SELECT weekly_report, last_sent FROM email_preferences WHERE user_id = %s", (str(user_id),))
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        if row:
+            return {"enabled": row[0], "last_sent": str(row[1]) if row[1] else None}
+        return {"enabled": True, "last_sent": None}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/email-reports/toggle")
+async def toggle_email_reports(request: Request):
+    """Enable/disable weekly email reports."""
+    try:
+        body = await request.json()
+        token = request.headers.get("authorization", "").replace("Bearer ", "")
+        enabled = body.get("enabled", True)
+        try:
+            import base64, json as _j
+            parts = token.split('.')
+            padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+            payload = _j.loads(base64.b64decode(padded))
+            user_id = payload.get("sub")
+            email = payload.get("email")
+        except:
+            return {"error": "Invalid token"}
+        
+        conn = get_db_connection()
+        if not conn:
+            return {"error": "DB error"}
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS email_preferences (
+                user_id TEXT PRIMARY KEY,
+                email TEXT,
+                weekly_report BOOLEAN DEFAULT TRUE,
+                last_sent TIMESTAMP,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
+            INSERT INTO email_preferences (user_id, email, weekly_report)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (user_id) DO UPDATE SET weekly_report = %s
+        """, (str(user_id), email, enabled, enabled))
+        conn.commit()
+        cur.close(); conn.close()
+        return {"success": True, "enabled": enabled}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/email-reports/send-test")
+async def send_test_email_report(request: Request):
+    """Send a test email report to the user."""
+    try:
+        body = await request.json()
+        token = request.headers.get("authorization", "").replace("Bearer ", "")
+        try:
+            import base64, json as _j
+            parts = token.split('.')
+            padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+            payload = _j.loads(base64.b64decode(padded))
+            email = payload.get("email")
+            name = email.split("@")[0] if email else "User"
+        except:
+            return {"error": "Invalid token"}
+        
+        site_url = body.get("url", "your website")
+        resend_api_key = os.environ.get("RESEND_API_KEY", "")
+        if not resend_api_key:
+            return {"error": "Email service not configured"}
+        
+        html = f"""
+        <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0f;color:#f0f0f8;padding:32px;border-radius:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:16px">⚡</div>
+            <span style="font-size:18px;font-weight:700">SEM AI Weekly Report</span>
+          </div>
+          
+          <p style="color:#a0a0b8;margin-bottom:24px">Hi {name}, here's your weekly SEO & campaign summary for <strong style="color:#f0f0f8">{site_url}</strong></p>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+            <div style="background:#111118;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px">
+              <div style="font-size:12px;color:#606070;margin-bottom:4px">SEO SCORE</div>
+              <div style="font-size:28px;font-weight:800;color:#6366f1">75/100</div>
+            </div>
+            <div style="background:#111118;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px">
+              <div style="font-size:12px;color:#606070;margin-bottom:4px">IMPRESSIONS</div>
+              <div style="font-size:28px;font-weight:800;color:#06b6d4">1</div>
+            </div>
+          </div>
+          
+          <div style="background:#111118;border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:16px;margin-bottom:24px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:12px">⚡ Quick Wins This Week</div>
+            <div style="font-size:13px;color:#a0a0b8;margin-bottom:8px">• Add H1 tag to homepage — +8 SEO points</div>
+            <div style="font-size:13px;color:#a0a0b8;margin-bottom:8px">• Shorten meta description — +5 SEO points</div>
+            <div style="font-size:13px;color:#a0a0b8">• Add schema markup — +10 SEO points</div>
+          </div>
+          
+          <a href="https://believable-rebirth-production-7e19.up.railway.app" style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px">View Full Report →</a>
+          
+          <p style="text-align:center;font-size:12px;color:#606070;margin-top:20px">
+            <a href="#" style="color:#6366f1">Unsubscribe</a> from weekly reports
+          </p>
+        </div>
+        """
+        
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {resend_api_key}", "Content-Type": "application/json"},
+                json={
+                    "from": "SEM AI <reports@sakthivelraja.ai>",
+                    "to": [email],
+                    "subject": f"📊 Your Weekly SEO Report — {site_url}",
+                    "html": html
+                }
+            )
+        if resp.status_code == 200:
+            return {"success": True, "message": f"Test report sent to {email}"}
+        return {"error": f"Email failed: {resp.text}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+async def send_weekly_reports():
+    """Send weekly email reports to all opted-in users."""
+    print("📧 Sending weekly email reports...")
+    try:
+        conn = get_db_connection()
+        if not conn: return
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT ep.user_id, ep.email, u.name
+            FROM email_preferences ep
+            LEFT JOIN users u ON u.id::text = ep.user_id
+            WHERE ep.weekly_report = TRUE
+            AND (ep.last_sent IS NULL OR ep.last_sent < NOW() - INTERVAL '7 days')
+        """)
+        users = cur.fetchall()
+        cur.close(); conn.close()
+        print(f"Found {len(users)} users to email")
+        for user in users:
+            try:
+                resend_api_key = os.environ.get("RESEND_API_KEY", "")
+                if not resend_api_key: continue
+                email = user[1]
+                name = user[2] or email.split("@")[0]
+                async with httpx.AsyncClient() as client:
+                    await client.post(
+                        "https://api.resend.com/emails",
+                        headers={"Authorization": f"Bearer {resend_api_key}", "Content-Type": "application/json"},
+                        json={
+                            "from": "SEM AI <reports@sakthivelraja.ai>",
+                            "to": [email],
+                            "subject": "📊 Your Weekly SEM AI Report",
+                            "html": f"<p>Hi {name}, your weekly report is ready. <a href='https://believable-rebirth-production-7e19.up.railway.app'>View Dashboard →</a></p>"
+                        }
+                    )
+                # Update last_sent
+                conn2 = get_db_connection()
+                if conn2:
+                    cur2 = conn2.cursor()
+                    cur2.execute("UPDATE email_preferences SET last_sent = NOW() WHERE user_id = %s", (user[0],))
+                    conn2.commit()
+                    cur2.close(); conn2.close()
+                print(f"✅ Email sent to {email}")
+            except Exception as e:
+                print(f"❌ Failed for {user[1]}: {e}")
+    except Exception as e:
+        print(f"Weekly report error: {e}")
