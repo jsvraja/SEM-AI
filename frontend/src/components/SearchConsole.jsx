@@ -4,9 +4,7 @@ import { Search, TrendingUp, MousePointer, Eye, ExternalLink, CheckCircle } from
 const BASE = "https://sem-ai-production.up.railway.app"
 
 export default function SearchConsole({ sessionId: propSessionId, url }) {
-  const sessionId = propSessionId || (() => {
-    const stored = localStorage.getItem("gsc_session_id")
-    if (stored) return stored
+  const sessionId = propSessionId || localStorage.getItem("sem_session_id") || localStorage.getItem("gsc_session_id") || (() => {
     const newId = "gsc_" + Math.random().toString(36).slice(2)
     localStorage.setItem("gsc_session_id", newId)
     return newId
