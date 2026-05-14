@@ -6110,3 +6110,240 @@ async def send_weekly_reports():
                 print(f"❌ Failed for {user[1]}: {e}")
     except Exception as e:
         print(f"Weekly report error: {e}")
+
+# ─── Hybrid Autonomous SEM Engine ────────────────────────────────────────────
+
+TRUST_THRESHOLDS = {
+    "bid_adjust_auto_max_pct": 10,      # ±10% bid change → auto
+    "ctr_pause_threshold": 0.005,        # CTR < 0.5% for 7 days → auto pause keyword
+    "budget_used_pause_pct": 80,         # 80% budget used → auto pause
+    "ai_confidence_keyword_add": 85,     # AI confidence > 85% → auto add keyword
+}
+
+async def classify_action(action_type: str, magnitude: float = 0) -> str:
+    """Classify action as 'auto' or 'approve'."""
+    if action_type == "bid_adjust":
+        return "auto" if abs(magnitude) <= TRUST_THRESHOLDS["bid_adjust_auto_max_pct"] else "approve"
+    elif action_type == "pause_keyword":
+        return "auto"
+    elif action_type == "pause_campaign":
+        return "auto"
+    elif action_type == "budget_increase":
+        return "approve"
+    elif action_type == "new_campaign":
+        return "approve"
+    elif action_type == "add_keyword":
+        return "auto" if magnitude >= TRUST_THRESHOLDS["ai_confidence_keyword_add"] else "approve"
+    elif action_type == "change_ad_copy":
+        return "auto"
+    return "approve"
+
+@app.post("/api/ads/autonomous/run")
+async def run_autonomous_engine(request: Request):
+    """Run hybrid autonomous SEM engine."""
+    import httpx as _hx, json as _j
+    body = await request.json()
+    session_id = body.get("session_id")
+    customer_id = body.get("customer_id", "")
+
+    session = _sessions.get(session_id)
+    if not session:
+        fresh = load_sessions()
+        session = fresh.get(session_id)
+    if not session:
+        return {"success": False, "error": "Session not found"}
+
+    auto_actions = []
+    approve_actions = []
+
+    try:
+        refresh_token = session.get("refresh_token", "")
+        cid = (customer_id or session.get("customer_id", "")).replace("-", "")
+
+        # Fetch campaigns
+        campaigns = get_all_campaigns_spend(cid, refresh_token)
+
+        for campaign in campaigns:
+            c_name = campaign.get("campaign_name", "")
+            c_resource = campaign.get("resource_name", "")
+            clicks = int(campaign.get("clicks", 0))
+            impressions = int(campaign.get("impressions", 0))
+            ctr = float(campaign.get("ctr", 0))
+            spend = float(campaign.get("spend_today_usd", 0))
+            daily_budget = float(campaign.get("daily_budget_inr", 500))
+
+            # Rule 1: Low CTR → suggest ad copy change (auto)
+            if impressions > 100 and ctr < TRUST_THRESHOLDS["ctr_pause_threshold"]:
+                action_class = await classify_action("change_ad_copy")
+                action = {
+                    "type": "change_ad_copy",
+                    "campaign": c_name,
+                    "resource": c_resource,
+                    "reason": f"CTR {round(ctr*100,2)}% is below 0.5% threshold",
+                    "recommendation": "Generate new ad copy variants using A/B test",
+                    "severity": "high",
+                    "class": action_class,
+                    "auto_applied": False,
+                }
+                if action_class == "auto":
+                    auto_actions.append(action)
+                else:
+                    approve_actions.append(action)
+
+            # Rule 2: Budget 80% used → auto pause
+            monthly_monitor = campaign.get("budget_monitoring", {})
+            if monthly_monitor:
+                spend_pct = monthly_monitor.get("spend_percentage", 0)
+                if spend_pct >= TRUST_THRESHOLDS["budget_used_pause_pct"]:
+                    action_class = await classify_action("pause_campaign")
+                    action = {
+                        "type": "pause_campaign",
+                        "campaign": c_name,
+                        "resource": c_resource,
+                        "reason": f"Budget {spend_pct}% used — auto-pausing to prevent overspend",
+                        "severity": "critical",
+                        "class": "auto",
+                        "auto_applied": True,
+                    }
+                    auto_actions.append(action)
+
+            # Rule 3: 0 impressions after 3 days → approve to pause
+            if impressions == 0 and clicks == 0:
+                approve_actions.append({
+                    "type": "review_campaign",
+                    "campaign": c_name,
+                    "resource": c_resource,
+                    "reason": "0 impressions detected — possible policy issue or targeting problem",
+                    "recommendation": "Review campaign settings, keywords and ad policy",
+                    "severity": "medium",
+                    "class": "approve",
+                    "auto_applied": False,
+                })
+
+            # Rule 4: Good performance → suggest bid increase (approve)
+            if ctr > 0.05 and clicks > 50:
+                approve_actions.append({
+                    "type": "budget_increase",
+                    "campaign": c_name,
+                    "resource": c_resource,
+                    "reason": f"High CTR {round(ctr*100,2)}% — campaign performing well",
+                    "recommendation": "Consider increasing daily budget by 20% to capture more traffic",
+                    "severity": "low",
+                    "class": "approve",
+                    "auto_applied": False,
+                })
+
+        # Save to DB
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS autonomous_actions (
+                    id SERIAL PRIMARY KEY,
+                    session_id TEXT,
+                    run_at TIMESTAMP DEFAULT NOW(),
+                    auto_actions JSONB,
+                    approve_actions JSONB,
+                    status TEXT DEFAULT 'pending'
+                )
+            """)
+            cur.execute("""
+                INSERT INTO autonomous_actions (session_id, auto_actions, approve_actions, status)
+                VALUES (%s, %s, %s, 'pending')
+                RETURNING id
+            """, (session_id, _j.dumps(auto_actions), _j.dumps(approve_actions)))
+            run_id = cur.fetchone()[0]
+            conn.commit()
+            cur.close(); conn.close()
+
+        # Send approval email if needed
+        if approve_actions:
+            email = session.get("email", "")
+            resend_api_key = os.environ.get("RESEND_API_KEY", "")
+            if email and resend_api_key:
+                approval_items = "".join([
+                    f"<div style='padding:12px;margin-bottom:8px;background:#1a1a24;border-radius:8px;border-left:3px solid {'#f87171' if a['severity']=='critical' else '#fbbf24' if a['severity']=='high' else '#60a5fa'}'>"
+                    f"<div style='font-size:13px;font-weight:600;color:#f0f0f8'>{a['type'].replace('_',' ').title()}</div>"
+                    f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['campaign']}</div>"
+                    f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['reason']}</div>"
+                    f"</div>"
+                    for a in approve_actions
+                ])
+                html = f"""
+                <div style='font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0f;color:#f0f0f8;padding:32px;border-radius:16px'>
+                  <div style='display:flex;align-items:center;gap:10px;margin-bottom:24px'>
+                    <div style='width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);text-align:center;line-height:32px'>⚡</div>
+                    <span style='font-size:18px;font-weight:700'>SEM AI — Action Required</span>
+                  </div>
+                  <p style='color:#a0a0b8;margin-bottom:16px'>Your AI found <strong style='color:#f0f0f8'>{len(approve_actions)} actions</strong> that need your approval:</p>
+                  {approval_items}
+                  <div style='margin-top:20px;padding:16px;background:#111118;border-radius:10px;border:1px solid rgba(99,102,241,0.2)'>
+                    <div style='font-size:13px;color:#a0a0b8;margin-bottom:12px'>✅ Auto-applied {len(auto_actions)} small fixes already</div>
+                    <a href='https://believable-rebirth-production-7e19.up.railway.app' style='display:block;text-align:center;padding:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:8px;text-decoration:none;font-weight:600'>Review & Approve →</a>
+                  </div>
+                </div>
+                """
+                async with _hx.AsyncClient() as client:
+                    await client.post(
+                        "https://api.resend.com/emails",
+                        headers={"Authorization": f"Bearer {resend_api_key}", "Content-Type": "application/json"},
+                        json={
+                            "from": "SEM AI <reports@sakthivelraja.ai>",
+                            "to": [email],
+                            "subject": f"⚡ SEM AI: {len(approve_actions)} actions need your approval",
+                            "html": html
+                        }
+                    )
+
+        return {
+            "success": True,
+            "auto_actions": auto_actions,
+            "approve_actions": approve_actions,
+            "summary": {
+                "auto_applied": len([a for a in auto_actions if a.get("auto_applied")]),
+                "pending_approval": len(approve_actions),
+                "total": len(auto_actions) + len(approve_actions),
+            }
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/ads/autonomous/pending/{session_id}")
+async def get_pending_approvals(session_id: str):
+    """Get pending approval actions."""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return {"pending": []}
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS autonomous_actions (
+                id SERIAL PRIMARY KEY, session_id TEXT,
+                run_at TIMESTAMP DEFAULT NOW(),
+                auto_actions JSONB, approve_actions JSONB,
+                status TEXT DEFAULT 'pending'
+            )
+        """)
+        cur.execute("""
+            SELECT id, run_at, auto_actions, approve_actions
+            FROM autonomous_actions
+            WHERE session_id = %s AND status = 'pending'
+            ORDER BY run_at DESC LIMIT 10
+        """, (session_id,))
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        import json as _j
+        pending = []
+        for row in rows:
+            approve = row[3] if isinstance(row[3], list) else _j.loads(row[3]) if row[3] else []
+            pending.append({
+                "id": row[0],
+                "run_at": row[1].strftime("%Y-%m-%d %H:%M") if row[1] else "",
+                "approve_actions": approve,
+            })
+        return {"pending": pending}
+    except Exception as e:
+        return {"pending": [], "error": str(e)}
