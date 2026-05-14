@@ -6258,7 +6258,8 @@ async def run_autonomous_engine(request: Request):
 
         # Send approval email if needed
         if approve_actions:
-            email = session.get("email", "")
+            email = session.get("email", "") or session.get("user_email", "")
+            print(f"Sending approval email to: {email}, approve_actions: {len(approve_actions)}")
             resend_api_key = os.environ.get("RESEND_API_KEY", "")
             if email and resend_api_key:
                 approval_items = "".join([
