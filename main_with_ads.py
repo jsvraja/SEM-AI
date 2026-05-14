@@ -5080,12 +5080,14 @@ async def verify_payment(req: VerifyPaymentRequest, request: Request):
     if not payload:
         return {"error": "Invalid token"}
     try:
-        client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
-        client.utility.verify_payment_signature({
-            "razorpay_order_id": req.razorpay_order_id,
-            "razorpay_payment_id": req.razorpay_payment_id,
-            "razorpay_signature": req.razorpay_signature,
-        })
+        # Verify signature only for live payments
+        if RAZORPAY_KEY_ID.startswith('rzp_live'):
+            client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+            client.utility.verify_payment_signature({
+                "razorpay_order_id": req.razorpay_order_id,
+                "razorpay_payment_id": req.razorpay_payment_id,
+                "razorpay_signature": req.razorpay_signature,
+            })
         # Update user plan
         conn = get_db_connection()
         if conn:
