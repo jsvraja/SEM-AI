@@ -6381,40 +6381,45 @@ Respond ONLY with this exact JSON format (no markdown, no extra text):
 async def get_pending_approvals(request: Request):
     body = await request.json()
     session_id = body.get("session_id", "")
-    """Get pending approval actions."""
+    include_completed = body.get("include_completed", False)
     try:
         conn = get_db_connection()
         if not conn:
-            return {"pending": []}
+            return {"pending": [], "all_runs": []}
         cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS autonomous_actions (
-                id SERIAL PRIMARY KEY, session_id TEXT,
-                run_at TIMESTAMP DEFAULT NOW(),
-                auto_actions JSONB, approve_actions JSONB,
-                status TEXT DEFAULT 'pending'
-            )
-        """)
-        cur.execute("""
-            SELECT id, run_at, auto_actions, approve_actions
-            FROM autonomous_actions
-            WHERE session_id = %s AND status = 'pending'
-            ORDER BY run_at DESC LIMIT 10
-        """, (session_id,))
+        cur.execute("CREATE TABLE IF NOT EXISTS autonomous_actions (id SERIAL PRIMARY KEY, session_id TEXT, run_at TIMESTAMP DEFAULT NOW(), auto_actions JSONB, approve_actions JSONB, status TEXT DEFAULT 'pending')")
+        if include_completed:
+            cur.execute("SELECT id, run_at, auto_actions, approve_actions, status FROM autonomous_actions WHERE session_id = %s ORDER BY run_at DESC LIMIT 30", (session_id,))
+        else:
+            cur.execute("SELECT id, run_at, auto_actions, approve_actions, status FROM autonomous_actions WHERE session_id = %s AND status = 'pending' ORDER BY run_at DESC LIMIT 10", (session_id,))
         rows = cur.fetchall()
         cur.close(); conn.close()
         import json as _j
         pending = []
+        all_runs = []
         for row in rows:
             approve = row[3] if isinstance(row[3], list) else _j.loads(row[3]) if row[3] else []
-            pending.append({
+            auto = row[2] if isinstance(row[2], list) else _j.loads(row[2]) if row[2] else []
+            run_data = {
                 "id": row[0],
                 "run_at": row[1].strftime("%Y-%m-%d %H:%M") if row[1] else "",
                 "approve_actions": approve,
-            })
-        return {"pending": pending}
+                "auto_actions": auto,
+                "status": row[4],
+                "stats": {
+                    "total": len(approve) + len(auto),
+                    "auto_fixed": len(auto),
+                    "approved": len([a for a in approve if a.get("approved")]),
+                    "rejected": len([a for a in approve if a.get("rejected")]),
+                    "pending": len([a for a in approve if not a.get("approved") and not a.get("rejected")]),
+                }
+            }
+            all_runs.append(run_data)
+            if row[4] == "pending":
+                pending.append(run_data)
+        return {"pending": pending, "all_runs": all_runs}
     except Exception as e:
-        return {"pending": [], "error": str(e)}
+        return {"pending": [], "all_runs": [], "error": str(e)}
 
 @app.post("/api/ads/autonomous/approve")
 async def approve_autonomous_action(request: Request):

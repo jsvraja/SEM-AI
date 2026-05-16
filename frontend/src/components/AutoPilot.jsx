@@ -11,6 +11,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
   const [history, setHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [autonomousHistory, setAutonomousHistory] = useState([])
   const [pendingApprovals, setPendingApprovals] = useState([])
   const [autonomousRunning, setAutonomousRunning] = useState(false)
   const [autonomousResult, setAutonomousResult] = useState(null)
@@ -73,6 +74,18 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
 
   function handleReject(actionIndex) {
     setApproving(prev => ({ ...prev, [actionIndex]: 'rejected' }))
+  }
+
+  async function fetchAutonomousHistory() {
+    try {
+      const res = await fetch(BASE + '/api/ads/autonomous/pending', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_id: sessionId, include_completed: true})
+      })
+      const d = await res.json()
+      setAutonomousHistory(d.all_runs || [])
+    } catch(e) {}
   }
 
   async function fetchHistory() {
@@ -410,44 +423,100 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
       )}
       {/* Activity History */}
       <div style={{ marginTop: '1.5rem' }}>
-        <button onClick={showHistory ? () => setShowHistory(false) : fetchHistory}
+        <button onClick={() => { if (!showHistory) { fetchHistory(); fetchAutonomousHistory() } setShowHistory(!showHistory) }}
           style={{ width: '100%', padding: '10px', borderRadius: '10px', background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          {historyLoading ? '⏳ Loading...' : showHistory ? '▲ Hide Activity Log' : '📜 View Activity Log'}
+          {historyLoading ? '⏳ Loading...' : showHistory ? '▲ Hide Report' : '📊 View Approval History Report'}
         </button>
 
         {showHistory && (
-          <div style={{ marginTop: '12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>📜 Activity Log</span>
-              <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Last {history.length} runs</span>
-            </div>
-            {history.length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '13px' }}>
-                No history yet. Run Auto-Pilot to start tracking.
+          <div style={{ marginTop: '12px' }}>
+            {/* Stats Summary */}
+            {autonomousHistory.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '8px', marginBottom: '12px' }}>
+                {[
+                  { label: 'Total Runs', value: autonomousHistory.length, color: '#6366f1' },
+                  { label: 'Auto Fixed', value: autonomousHistory.reduce((s,r) => s + (r.stats?.auto_fixed||0), 0), color: '#4ade80' },
+                  { label: 'Approved', value: autonomousHistory.reduce((s,r) => s + (r.stats?.approved||0), 0), color: '#22c55e' },
+                  { label: 'Pending', value: autonomousHistory.reduce((s,r) => s + (r.stats?.pending||0), 0), color: '#fbbf24' },
+                ].map((s,i) => (
+                  <div key={i} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>{s.label}</div>
+                  </div>
+                ))}
               </div>
-            ) : history.map((run, i) => (
-              <div key={i} style={{ padding: '12px 16px', borderBottom: i < history.length-1 ? '1px solid var(--border)' : 'none' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>🤖 Run #{history.length - i}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{run.run_at}</div>
-                  <div style={{ fontSize: '11px', color: '#6366f1', background: '#6366f120', padding: '2px 8px', borderRadius: '12px' }}>{run.total_actions} actions</div>
+            )}
+
+            {/* Autonomous Run History */}
+            {autonomousHistory.length > 0 && (
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                  🤖 Autonomous Engine History
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {(run.actions || []).slice(0, 3).map((a, j) => {
-                    const color = { high: '#f87171', medium: '#fbbf24', low: '#4ade80', info: '#60a5fa' }[a.severity] || '#60a5fa'
-                    return (
-                      <div key={j} style={{ fontSize: '12px', color: 'var(--text2)', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-                        <span style={{ color, flexShrink: 0 }}>●</span>
-                        <span>{a.action}</span>
+                {autonomousHistory.map((run, i) => (
+                  <div key={i} style={{ padding: '12px 16px', borderBottom: i < autonomousHistory.length-1 ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>Run #{autonomousHistory.length - i}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{run.run_at}</div>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px',
+                        background: run.status === 'completed' ? 'rgba(34,197,94,0.15)' : run.status === 'partial' ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)',
+                        color: run.status === 'completed' ? '#4ade80' : run.status === 'partial' ? '#fbbf24' : '#a5b4fc'
+                      }}>{run.status}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {run.stats?.auto_fixed > 0 && <span style={{ fontSize: '11px', color: '#4ade80' }}>✅ {run.stats.auto_fixed} auto-fixed</span>}
+                      {run.stats?.approved > 0 && <span style={{ fontSize: '11px', color: '#22c55e' }}>👍 {run.stats.approved} approved</span>}
+                      {run.stats?.rejected > 0 && <span style={{ fontSize: '11px', color: '#f87171' }}>👎 {run.stats.rejected} rejected</span>}
+                      {run.stats?.pending > 0 && <span style={{ fontSize: '11px', color: '#fbbf24' }}>⏳ {run.stats.pending} pending</span>}
+                    </div>
+                    {/* Action details */}
+                    {run.approve_actions?.filter(a => !a.approved && !a.rejected).length > 0 && (
+                      <div style={{ marginTop: '8px' }}>
+                        {run.approve_actions.filter(a => !a.approved && !a.rejected).map((a, j) => (
+                          <div key={j} style={{ fontSize: '12px', color: '#fbbf24', marginTop: '4px' }}>
+                            ⏳ {a.type?.replace(/_/g,' ')} — {a.campaign?.slice(0,40)}
+                          </div>
+                        ))}
                       </div>
-                    )
-                  })}
-                  {(run.actions || []).length > 3 && (
-                    <div style={{ fontSize: '11px', color: 'var(--text3)' }}>+{run.actions.length - 3} more actions</div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Auto-Pilot Activity Log */}
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)', display: 'flex', justifyContent: 'space-between' }}>
+                <span>📜 Auto-Pilot Activity Log</span>
+                <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Last {history.length} runs</span>
+              </div>
+              {history.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text3)', fontSize: '13px' }}>
+                  No history yet. Run Auto-Pilot to start tracking.
+                </div>
+              ) : history.map((run, i) => (
+                <div key={i} style={{ padding: '12px 16px', borderBottom: i < history.length-1 ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)' }}>🤖 Run #{history.length - i}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{run.run_at}</div>
+                    <div style={{ fontSize: '11px', color: '#6366f1', background: '#6366f120', padding: '2px 8px', borderRadius: '12px' }}>{run.total_actions} actions</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {(run.actions || []).slice(0, 3).map((a, j) => {
+                      const color = { high: '#f87171', medium: '#fbbf24', low: '#4ade80', info: '#60a5fa' }[a.severity] || '#60a5fa'
+                      return (
+                        <div key={j} style={{ fontSize: '12px', color: 'var(--text2)', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                          <span style={{ color, flexShrink: 0 }}>●</span>
+                          <span>{a.action}</span>
+                        </div>
+                      )
+                    })}
+                    {(run.actions || []).length > 3 && (
+                      <div style={{ fontSize: '11px', color: 'var(--text3)' }}>+{run.actions.length - 3} more actions</div>
+                    )}
+                  </div>
+                </div>
+              ))}
           </div>
         )}
       </div>
