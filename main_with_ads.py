@@ -6268,7 +6268,7 @@ async def run_autonomous_engine(request: Request):
                     f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['campaign']}</div>"
                     f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['reason']}</div>"
                     f"<div style='margin-top:8px;display:flex;gap:8px'>"
-                    f"<a href='https://sem-ai-production.up.railway.app/api/ads/autonomous/approve-page/{run_id}/{i}/{session_id}' style='padding:6px 14px;background:#22c55e;color:white;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600'>✅ Approve</a>"
+                    f"<a href='https://believable-rebirth-production-7e19.up.railway.app/approve/{run_id}/{i}/{session_id}' style='padding:6px 14px;background:#22c55e;color:white;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600'>✅ Approve</a>"
                     f"<a href='https://believable-rebirth-production-7e19.up.railway.app' style='padding:6px 14px;background:#374151;color:white;border-radius:6px;text-decoration:none;font-size:12px'>View Dashboard</a>"
                     f"</div>"
                     f"</div>"

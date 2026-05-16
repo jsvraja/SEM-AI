@@ -51,6 +51,30 @@ export default function App() {
 
   // Check for invite token in URL
   useEffect(() => {
+    // Handle approve action from email
+    const path = window.location.pathname
+    const approveMatch = path.match(/\/approve\/(\d+)\/(\d+)\/([^/]+)/)
+    if (approveMatch) {
+      const [, runId, actionIndex, sessionId] = approveMatch
+      fetch('https://sem-ai-production.up.railway.app/api/ads/autonomous/approve', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({run_id: parseInt(runId), action_index: parseInt(actionIndex), session_id: sessionId})
+      }).then(r => r.json()).then(d => {
+        document.body.innerHTML = `<div style="font-family:sans-serif;background:#0a0a0f;color:#f0f0f8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
+          <div style="text-align:center;padding:40px;background:#111118;border-radius:20px;border:1px solid rgba(255,255,255,0.08);max-width:400px">
+            <div style="font-size:48px;margin-bottom:16px">${d.success ? '✅' : '❌'}</div>
+            <h2>${d.success ? 'Action Approved!' : 'Error'}</h2>
+            <p style="color:#a0a0b8">${d.message || d.error || ''}</p>
+            <a href="/" style="display:inline-block;margin-top:20px;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:10px;text-decoration:none;font-weight:600">Go to Dashboard →</a>
+          </div>
+        </div>`
+      })
+      return
+    }
+  }, [])
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const inviteToken = params.get('invite')
     if (inviteToken) {
