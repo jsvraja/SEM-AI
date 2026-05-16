@@ -139,8 +139,10 @@ export default function PricingModal({ onClose, user, token, onPlanUpgraded, lim
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', padding: '24px' }}>
-            {plans.map((plan) => {
+          <div style={{ padding: '24px' }}>
+            {/* Paid plans - top row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+            {plans.filter(p => p.key !== 'free').map((plan) => {
               const Icon = plan.icon
               return (
                 <div key={plan.key} style={{ border: `2px solid ${plan.popular ? plan.color : 'var(--border)'}`, borderRadius: '12px', padding: '20px', position: 'relative', background: plan.popular ? 'var(--bg2)' : 'var(--bg)' }}>
@@ -191,6 +193,28 @@ export default function PricingModal({ onClose, user, token, onPlanUpgraded, lim
                       </div>
                     ))}
                   </div>
+                </div>
+              )
+            })}
+            </div>
+            {/* Free plan - full width bottom row */}
+            {plans.filter(p => p.key === 'free').map((plan) => {
+              return (
+                <div key={plan.key} style={{ border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <plan.icon size={20} color={plan.color} />
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 700 }}>Free Plan</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text3)' }}>1 analysis/day · Basic features</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => !plan.current && handleUpgrade(plan.key)}
+                    disabled={!!loading || plan.current}
+                    style={{ padding: '8px 20px', borderRadius: '8px', border: `1px solid ${plan.color}`, background: plan.current ? 'var(--bg3)' : 'transparent', color: plan.current ? 'var(--text3)' : plan.color, fontSize: '13px', fontWeight: 600, cursor: plan.current ? 'default' : 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    {plan.current ? 'Current Plan' : 'Downgrade to Free'}
+                  </button>
                 </div>
               )
             })}
