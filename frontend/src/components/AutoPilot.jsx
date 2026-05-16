@@ -16,6 +16,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
   const [autonomousRunning, setAutonomousRunning] = useState(false)
   const [autonomousResult, setAutonomousResult] = useState(null)
   const [checkDetails, setCheckDetails] = useState(null)
+  const [showAllPending, setShowAllPending] = useState(false)
   const [showCheckModal, setShowCheckModal] = useState(false)
   const [approving, setApproving] = useState({})
 
@@ -400,32 +401,41 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
 
       
       {/* Pending Approvals */}
-      {pendingApprovals.length > 0 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#fbbf24' }}>📧 Pending Approvals</span>
-            <span style={{ fontSize: '11px', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '2px 8px', borderRadius: '10px' }}>{pendingApprovals.reduce((s,r) => s + r.approve_actions.length, 0)}</span>
-          </div>
-          {pendingApprovals.map((run, ri) => (
-            <div key={ri} style={{ padding: '12px 16px', borderBottom: ri < pendingApprovals.length-1 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px' }}>🕐 {run.run_at}</div>
-              {run.approve_actions.filter(a => !a.approved).map((a, ai) => (
-                <div key={ai} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '6px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>{a.campaign}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text2)' }}>{a.reason}</div>
+      {pendingApprovals.length > 0 && (() => {
+        const allPending = pendingApprovals.flatMap(r => r.approve_actions.filter(a => !a.approved).map(a => ({...a, run_at: r.run_at})))
+        const shown = showAllPending ? allPending : allPending.slice(0, 3)
+        return (
+          <div style={{ background: 'var(--bg2)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#fbbf24' }}>📧 Pending Approvals</span>
+                <span style={{ fontSize: '11px', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '2px 8px', borderRadius: '10px' }}>{allPending.length}</span>
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Click item to review</span>
+            </div>
+            <div style={{ padding: '12px 16px' }}>
+              {shown.map((a, ai) => (
+                <div key={ai} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '6px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '1px' }}>{a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.campaign}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.reason?.slice(0,80)}{a.reason?.length > 80 ? '...' : ''}</div>
                   </div>
-                  <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: a.severity === 'critical' ? 'rgba(239,68,68,0.15)' : a.severity === 'high' ? 'rgba(251,191,36,0.15)' : 'rgba(96,165,250,0.15)', color: a.severity === 'critical' ? '#f87171' : a.severity === 'high' ? '#fbbf24' : '#60a5fa', flexShrink: 0 }}>{a.severity}</span>
+                  <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', flexShrink: 0 }}>{a.severity}</span>
                 </div>
               ))}
-              <a href="https://believable-rebirth-production-7e19.up.railway.app" style={{ display: 'block', textAlign: 'center', padding: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', borderRadius: '8px', textDecoration: 'none', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
-                Review & Approve in Dashboard →
-              </a>
+              {allPending.length > 3 && (
+                <button onClick={() => setShowAllPending(!showAllPending)} style={{ width: '100%', padding: '6px', background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text3)', fontSize: '12px', cursor: 'pointer', marginBottom: '8px' }}>
+                  {showAllPending ? '▲ Show less' : `▼ Show all ${allPending.length} pending`}
+                </button>
+              )}
+              <button onClick={() => { if(checkDetails) setShowCheckModal(true) }} style={{ width: '100%', padding: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                🔍 Run Check Now to Review →
+              </button>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        )
+      })()}
 
       
       {/* Activity History */}
