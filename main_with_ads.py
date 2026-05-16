@@ -4878,10 +4878,10 @@ async def admin_get_users(request: Request):
     if not conn: return {"error": "DB error"}
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, email, name, plan, created_at FROM users ORDER BY created_at DESC")
+        cur.execute("SELECT id, email, name, plan, created_at, locked_site FROM users ORDER BY created_at DESC")
         rows = cur.fetchall()
         cur.close(); conn.close()
-        return {"users": [{"id": r[0], "email": r[1], "name": r[2], "plan": r[3], "created_at": str(r[4])} for r in rows]}
+        return {"users": [{"id": r[0], "email": r[1], "name": r[2], "plan": r[3], "created_at": str(r[4]), "locked_site": r[5] if len(r) > 5 else None} for r in rows]}
     except Exception as e:
         return {"error": str(e)}
 
@@ -6623,3 +6623,27 @@ async def get_performance_comparison(request: Request):
             }
     except Exception as e:
         return {"error": str(e)}
+
+@app.post("/api/admin/set-user-site")
+async def admin_set_user_site(request: Request):
+    body = await request.json()
+    user_id = body.get("user_id")
+    site = body.get("site", "").strip()
+    admin_token = request.headers.get("authorization", "").replace("Bearer ", "")
+    try:
+        import base64 as _b64, json as _jj
+        parts = admin_token.split(".")
+        padded = parts[1] + "=" * (4 - len(parts[1]) % 4)
+        payload = _jj.loads(_b64.b64decode(padded))
+        if payload.get("email") != "jsvking@gmail.com":
+            return {"error": "Unauthorized"}
+    except:
+        return {"error": "Invalid token"}
+    if site and not site.startswith("http"):
+        site = "https://" + site
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET locked_site = %s WHERE id = %s", (site, user_id))
+    conn.commit(); cur.close(); conn.close()
+    return {"success": True, "locked_site": site}
