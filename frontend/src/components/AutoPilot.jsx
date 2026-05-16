@@ -517,6 +517,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
                   </div>
                 </div>
               ))}
+            </div>
           </div>
         )}
       </div>
