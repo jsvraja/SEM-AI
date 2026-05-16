@@ -78,6 +78,17 @@ export default function PricingModal({ onClose, user, token, onPlanUpgraded, lim
       disabled: ['Competitor analysis', 'Social media AI', 'SEMA Agent', 'Priority support'],
     },
     {
+      key: 'startup',
+      name: 'Startup',
+      price: 999,
+      period: 'month',
+      icon: Zap,
+      color: '#22c55e',
+      current: user?.plan === 'startup',
+      features: ['1 website only', 'Unlimited analyses on your site', 'Full SEO + Site audit', 'Google Ads access', 'Auto-Pilot monitoring', 'Email reports'],
+      disabled: ['Multiple websites', 'White-label reports', 'Team workspaces'],
+    },
+    {
       key: 'pro',
       name: 'Pro',
       price: 2999,
