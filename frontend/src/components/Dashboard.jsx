@@ -214,6 +214,27 @@ const TABS = [
 export default function Dashboard({ data, onReset, sessionId, googleEmail, user, onLogout, onAdmin, featureFlags = {} }) {
   const [emailReports, setEmailReports] = React.useState(true)
   const [emailReportsLoading, setEmailReportsLoading] = React.useState(false)
+  const [pendingCount, setPendingCount] = React.useState(0)
+  const [showNotifDropdown, setShowNotifDropdown] = React.useState(false)
+  const [pendingActions, setPendingActions] = React.useState([])
+
+  React.useEffect(() => {
+    if (!sessionId) return
+    const fetchPending = async () => {
+      try {
+        const res = await fetch('https://sem-ai-production.up.railway.app/api/ads/autonomous/pending/' + sessionId)
+        const d = await res.json()
+        const pending = (d.pending || []).flatMap(r => 
+          (r.approve_actions || []).filter(a => !a.approved).map(a => ({...a, run_id: r.id, run_at: r.run_at}))
+        )
+        setPendingCount(pending.length)
+        setPendingActions(pending)
+      } catch(e) {}
+    }
+    fetchPending()
+    const interval = setInterval(fetchPending, 60000)
+    return () => clearInterval(interval)
+  }, [sessionId])
 
   React.useEffect(() => {
     const token = localStorage.getItem('sem_token') || ''
@@ -366,7 +387,57 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
       }}>
         {/* Logo */}
         <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.01em' }}>SEM AI</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.01em' }}>SEM AI</div>
+            {pendingCount > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button onClick={() => setShowNotifDropdown(!showNotifDropdown)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  position: 'relative', padding: '2px',
+                }}>
+                  <span style={{ fontSize: '16px' }}>🔔</span>
+                  <span style={{
+                    position: 'absolute', top: '-4px', right: '-4px',
+                    background: '#f87171', color: 'white',
+                    fontSize: '9px', fontWeight: 700,
+                    width: '14px', height: '14px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{pendingCount}</span>
+                </button>
+                {showNotifDropdown && (
+                  <div style={{
+                    position: 'absolute', top: '24px', left: '-10px',
+                    background: 'var(--bg2)', border: '1px solid var(--border)',
+                    borderRadius: '12px', width: '260px', zIndex: 1000,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                  }}>
+                    <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#fbbf24' }}>📧 Pending Approvals</span>
+                      <span style={{ fontSize: '11px', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '2px 7px', borderRadius: '10px' }}>{pendingCount}</span>
+                    </div>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                      {pendingActions.slice(0, 5).map((a, i) => (
+                        <div key={i} style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                          onClick={() => { setTab('ads'); setShowNotifDropdown(false) }}>
+                          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
+                            {a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text3)' }}>{a.campaign?.slice(0,35)}...</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ padding: '10px 14px' }}>
+                      <button onClick={() => { setTab('ads'); setShowNotifDropdown(false) }} style={{
+                        width: '100%', padding: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                        border: 'none', borderRadius: '8px', color: 'white',
+                        fontSize: '12px', fontWeight: 600, cursor: 'pointer'
+                      }}>Review in Auto-Pilot →</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</div>
         </div>
 
@@ -508,7 +579,24 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         </div>
       )}
 
-      <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '24px 28px', minHeight: 0 }}>
+      <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0', minHeight: 0 }}>
+        {/* Pending approval warning banner */}
+        {pendingCount > 0 && (
+          <div onClick={() => setTab('ads')} style={{
+            background: 'rgba(251,191,36,0.1)', borderBottom: '1px solid rgba(251,191,36,0.3)',
+            padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>⚠️</span>
+              <span style={{ fontSize: '13px', color: '#fbbf24', fontWeight: 500 }}>
+                {pendingCount} campaign action{pendingCount > 1 ? 's' : ''} need{pendingCount === 1 ? 's' : ''} your approval
+              </span>
+            </div>
+            <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 600 }}>Review →</span>
+          </div>
+        )}
+        <div style={{ padding: '24px 28px' }}>
         {/* Mobile hamburger */}
         <button onClick={() => setMobileNav(!mobileNav)} className="mob-menu-btn" style={{ display: 'none', marginBottom: '12px', padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text)', fontSize: '13px' }}>
           ☰ Menu
@@ -2164,6 +2252,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
         {tab === 'search-console' && (
           <SearchConsole sessionId={sessionId} url={data?.url || ''} />
         )}
+        </div>
       </main>
       {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} user={user} token={localStorage.getItem('sem_token')} onPlanChanged={(plan) => window.location.reload()} />}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} user={user} token={localStorage.getItem('sem_token')} onPlanUpgraded={(plan) => { const u = JSON.parse(localStorage.getItem('sem_user') || '{}'); u.plan = plan; localStorage.setItem('sem_user', JSON.stringify(u)); window.location.reload(); }} />}
