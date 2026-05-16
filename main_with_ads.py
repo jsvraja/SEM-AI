@@ -6309,6 +6309,7 @@ async def run_autonomous_engine(request: Request):
 
         return {
             "success": True,
+            "run_id": run_id if 'run_id' in dir() else None,
             "auto_actions": auto_actions,
             "approve_actions": approve_actions,
             "summary": {

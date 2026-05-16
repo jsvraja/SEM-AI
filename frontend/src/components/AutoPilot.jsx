@@ -14,6 +14,9 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
   const [pendingApprovals, setPendingApprovals] = useState([])
   const [autonomousRunning, setAutonomousRunning] = useState(false)
   const [autonomousResult, setAutonomousResult] = useState(null)
+  const [checkDetails, setCheckDetails] = useState(null)
+  const [showCheckModal, setShowCheckModal] = useState(false)
+  const [approving, setApproving] = useState({})
 
   useEffect(() => {
     fetchStatus()
@@ -30,6 +33,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
 
   async function runAutonomous() {
     setAutonomousRunning(true)
+    setCheckDetails(null)
     try {
       const res = await fetch(BASE + '/api/ads/autonomous/run', {
         method: 'POST',
@@ -38,9 +42,33 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
       })
       const d = await res.json()
       setAutonomousResult(d)
-      if (d.success) fetchPending()
+      if (d.success) {
+        setCheckDetails(d)
+        setShowCheckModal(true)
+        fetchPending()
+      }
     } catch(e) {}
     setAutonomousRunning(false)
+  }
+
+  async function handleApprove(runId, actionIndex, action) {
+    setApproving(prev => ({ ...prev, [actionIndex]: 'approving' }))
+    try {
+      const res = await fetch(BASE + '/api/ads/autonomous/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ run_id: runId, action_index: actionIndex, session_id: sessionId })
+      })
+      const d = await res.json()
+      if (d.success) {
+        setApproving(prev => ({ ...prev, [actionIndex]: 'approved' }))
+        fetchPending()
+      }
+    } catch(e) {}
+  }
+
+  function handleReject(actionIndex) {
+    setApproving(prev => ({ ...prev, [actionIndex]: 'rejected' }))
   }
 
   async function fetchHistory() {
@@ -109,8 +137,118 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
   const severityColor = { high: '#f87171', medium: '#fbbf24', low: '#4ade80', info: '#60a5fa' }
   const typeIcon = { warning: AlertTriangle, ai_recommendation: Zap, info: CheckCircle }
 
+  const severityColor = (s) => s === 'critical' ? '#f87171' : s === 'high' ? '#fbbf24' : s === 'medium' ? '#60a5fa' : '#4ade80'
+  const severityBg = (s) => s === 'critical' ? 'rgba(239,68,68,0.1)' : s === 'high' ? 'rgba(251,191,36,0.1)' : s === 'medium' ? 'rgba(96,165,250,0.1)' : 'rgba(34,197,94,0.1)'
+
   return (
     <div style={{ padding: '1.5rem', maxWidth: '900px', margin: '0 auto' }}>
+
+      {/* Check Details Modal */}
+      {showCheckModal && checkDetails && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '20px', maxWidth: '600px', width: '100%', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>🔍 Campaign Health Check</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text3)', margin: '4px 0 0' }}>
+                  {checkDetails.summary?.total || 0} issues found · {checkDetails.summary?.auto_applied || 0} auto-fixed
+                </p>
+              </div>
+              <button onClick={() => setShowCheckModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '20px' }}>×</button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ overflowY: 'auto', padding: '16px 24px', flex: 1 }}>
+              
+              {/* Auto-applied summary */}
+              {checkDetails.auto_actions?.length > 0 && (
+                <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#4ade80', marginBottom: '6px' }}>✅ Auto-applied fixes</div>
+                  {checkDetails.auto_actions.map((a, i) => (
+                    <div key={i} style={{ fontSize: '12px', color: 'var(--text2)', padding: '4px 0' }}>• {a.action || a.type?.replace(/_/g,' ')}</div>
+                  ))}
+                </div>
+              )}
+
+              {/* Needs approval */}
+              {checkDetails.approve_actions?.length > 0 ? (
+                <>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '12px' }}>📧 Actions needing your review:</div>
+                  {checkDetails.approve_actions.map((a, i) => {
+                    const status = approving[i]
+                    return (
+                      <div key={i} style={{ background: 'var(--bg3)', border: `1px solid ${severityColor(a.severity)}30`, borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
+                        
+                        {/* Action header */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)' }}>
+                            {a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}
+                          </div>
+                          <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '10px', background: severityBg(a.severity), color: severityColor(a.severity), fontWeight: 600 }}>
+                            {a.severity?.toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* Campaign */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>CAMPAIGN</div>
+                          <div style={{ fontSize: '13px', color: 'var(--text2)' }}>{a.campaign}</div>
+                        </div>
+
+                        {/* Problem */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>⚠️ PROBLEM DETECTED</div>
+                          <div style={{ fontSize: '13px', color: '#fbbf24' }}>{a.reason}</div>
+                        </div>
+
+                        {/* Recommendation */}
+                        <div style={{ background: 'rgba(99,102,241,0.08)', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>💡 RECOMMENDED ACTION</div>
+                          <div style={{ fontSize: '13px', color: '#a5b4fc' }}>{a.recommendation || 'Review campaign settings and take appropriate action'}</div>
+                        </div>
+
+                        {/* Approve / Reject */}
+                        {!status && (
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => handleApprove(checkDetails.run_id, i, a)} style={{
+                              flex: 1, padding: '10px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+                              borderRadius: '8px', color: '#4ade80', fontSize: '13px', fontWeight: 600, cursor: 'pointer'
+                            }}>✅ Approve & Apply</button>
+                            <button onClick={() => handleReject(i)} style={{
+                              flex: 1, padding: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                              borderRadius: '8px', color: '#f87171', fontSize: '13px', fontWeight: 600, cursor: 'pointer'
+                            }}>❌ Reject</button>
+                          </div>
+                        )}
+                        {status === 'approving' && <div style={{ textAlign: 'center', color: 'var(--text3)', fontSize: '13px', padding: '8px' }}>⏳ Processing...</div>}
+                        {status === 'approved' && <div style={{ textAlign: 'center', color: '#4ade80', fontSize: '13px', padding: '8px', background: 'rgba(34,197,94,0.08)', borderRadius: '8px' }}>✅ Approved & Applied</div>}
+                        {status === 'rejected' && <div style={{ textAlign: 'center', color: '#f87171', fontSize: '13px', padding: '8px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px' }}>❌ Rejected — keeping current settings</div>}
+                      </div>
+                    )
+                  })}
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text3)' }}>
+                  <div style={{ fontSize: '40px', marginBottom: '12px' }}>✅</div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>All campaigns healthy!</div>
+                  <div style={{ fontSize: '13px' }}>No issues requiring your approval were found.</div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)' }}>
+              <button onClick={() => setShowCheckModal(false)} style={{
+                width: '100%', padding: '11px', background: 'var(--bg3)',
+                border: '1px solid var(--border)', borderRadius: '10px',
+                color: 'var(--text2)', fontSize: '14px', cursor: 'pointer'
+              }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
