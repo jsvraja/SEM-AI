@@ -6583,38 +6583,19 @@ async def get_performance_comparison(request: Request):
         cid = session.get("customer_id", "").replace("-", "")
         refresh_token = session.get("refresh_token", "")
 
-        from ads_manager import get_headers
-        headers = get_headers(refresh_token)
-        access_token = headers.get('Authorization', '').replace('Bearer ', '')
-
-        async with _hx.AsyncClient() as client:
-            # Last 14 days data
-            query = f"""
-                SELECT
-                    campaign.resource_name,
-                    campaign.name,
-                    metrics.clicks,
-                    metrics.impressions,
-                    metrics.ctr,
-                    metrics.cost_micros,
-                    segments.date
-                FROM campaign
-                WHERE campaign.resource_name = '{campaign_resource}'
-                AND segments.date DURING LAST_14_DAYS
-                ORDER BY segments.date ASC
-            """
-            resp = await client.post(
-                f"https://googleads.googleapis.com/v18/customers/{cid}/googleAds:search",
-                headers={**headers, "developer-token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN",""), "login-customer-id": cid},
-                json={"query": query}
-            )
-            data = resp.json()
-            rows = data.get("results", [])
-
-            daily = []
-            for row in rows:
-                m = row.get("metrics", {})
-                daily.append({
+        from ads_manager import gaql_search
+        q = f"SELECT campaign.resource_name, metrics.clicks, metrics.impressions, metrics.ctr, metrics.cost_micros, segments.date FROM campaign WHERE campaign.resource_name = '{campaign_resource}' AND segments.date DURING LAST_14_DAYS ORDER BY segments.date ASC"
+        rows = gaql_search(cid, refresh_token, q)
+        daily = []
+        for row in rows:
+            m = row.get("metrics", {})
+            daily.append({
+                "date": row.get("segments", {}).get("date", ""),
+                "clicks": int(m.get("clicks", 0)),
+                "impressions": int(m.get("impressions", 0)),
+                "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                "spend": round(float(m.get("costMicros", 0)) / 1000000, 2),
+            })
                     "date": row.get("segments", {}).get("date", ""),
                     "clicks": int(m.get("clicks", 0)),
                     "impressions": int(m.get("impressions", 0)),
