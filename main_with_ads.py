@@ -6218,7 +6218,7 @@ async def run_autonomous_engine(request: Request):
                 conn_c = get_db_connection()
                 if conn_c:
                     cur_c = conn_c.cursor()
-                    cur_c.execute("SELECT id FROM autonomous_actions WHERE session_id = %s AND status IN ('completed','partial') AND approve_actions::text LIKE %s AND run_at > NOW() - INTERVAL '24 hours'", (session_id, f'%{c_resource}%'))
+                    cur_c.execute("SELECT id FROM autonomous_actions WHERE session_id = %s AND status IN ('completed','partial') AND approve_actions::text LIKE %s AND run_at > NOW() - INTERVAL '1 hours'", (session_id, f'%{c_resource}%'))
                     if cur_c.fetchone():
                         already_approved = True
                     cur_c.close(); conn_c.close()
