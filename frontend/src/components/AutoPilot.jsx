@@ -288,6 +288,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
           </div>
         </div>
       )}
+      
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -311,6 +312,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
         </div>
       </div>
 
+      
       {/* Status Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '1.5rem' }}>
         {[
@@ -326,6 +328,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
         ))}
       </div>
 
+      
       {/* Run Now Button */}
       <button onClick={runNow} disabled={running}
         style={{ width: '100%', padding: '12px', borderRadius: '10px', background: running ? 'var(--bg3)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: 'white', fontSize: '14px', fontWeight: 600, cursor: running ? 'not-allowed' : 'pointer', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -333,6 +336,31 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
         {running ? 'Analyzing Campaigns...' : 'Run Auto-Pilot Now'}
       </button>
 
+      
+      {/* Actions Log */}
+      {actions.length > 0 && (
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+            📋 Campaign Status Report
+          </div>
+          {actions.map((a, i) => {
+            const Icon = typeIcon[a.type] || Info
+            const color = severityColor[a.severity] || '#60a5fa'
+            return (
+              <div key={i} style={{ padding: '12px 16px', borderBottom: i < actions.length-1 ? '1px solid var(--border)' : 'none', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <Icon size={16} color={color} style={{ marginTop: '2px', flexShrink: 0 }} />
+                <div>
+                  {a.campaign && <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '2px' }}>{a.campaign}</div>}
+                  <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: a.type === 'ai_recommendation' ? 600 : 400 }}>{a.action}</div>
+                  {a.reason && <div style={{ fontSize: '12px', color: 'var(--text2)', marginTop: '2px' }}>{a.reason}</div>}
+                </div>
+                <div style={{ marginLeft: 'auto', fontSize: '11px', color, background: color + '20', padding: '2px 8px', borderRadius: '12px', flexShrink: 0 }}>{a.severity}</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      
       {/* Autonomous Engine Section */}
       <div style={{ background: 'var(--bg2)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -370,6 +398,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
         )}
       </div>
 
+      
       {/* Pending Approvals */}
       {pendingApprovals.length > 0 && (
         <div style={{ background: 'var(--bg2)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
@@ -398,29 +427,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
         </div>
       )}
 
-      {/* Actions Log */}
-      {actions.length > 0 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
-            📋 Auto-Pilot Report
-          </div>
-          {actions.map((a, i) => {
-            const Icon = typeIcon[a.type] || Info
-            const color = severityColor[a.severity] || '#60a5fa'
-            return (
-              <div key={i} style={{ padding: '12px 16px', borderBottom: i < actions.length-1 ? '1px solid var(--border)' : 'none', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <Icon size={16} color={color} style={{ marginTop: '2px', flexShrink: 0 }} />
-                <div>
-                  {a.campaign && <div style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '2px' }}>{a.campaign}</div>}
-                  <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: a.type === 'ai_recommendation' ? 600 : 400 }}>{a.action}</div>
-                  {a.reason && <div style={{ fontSize: '12px', color: 'var(--text2)', marginTop: '2px' }}>{a.reason}</div>}
-                </div>
-                <div style={{ marginLeft: 'auto', fontSize: '11px', color, background: color + '20', padding: '2px 8px', borderRadius: '12px', flexShrink: 0 }}>{a.severity}</div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      
       {/* Activity History */}
       <div style={{ marginTop: '1.5rem' }}>
         <button onClick={() => { if (!showHistory) { fetchHistory(); fetchAutonomousHistory() } setShowHistory(!showHistory) }}
