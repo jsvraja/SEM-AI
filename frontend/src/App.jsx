@@ -119,6 +119,23 @@ export default function App() {
   async function handleAuth(userData, userToken) {
     setUser(userData)
     setToken(userToken)
+    // Startup plan - fetch and save locked site
+    if (userData.plan === 'startup') {
+      try {
+        const API = import.meta.env.VITE_API_URL || 'https://sem-ai-production.up.railway.app'
+        const res = await fetch(`${API}/api/user/profile`, {
+          headers: { Authorization: `Bearer ${userToken}` }
+        })
+        const profile = await res.json()
+        if (profile.locked_site) {
+          localStorage.setItem('sem_locked_site', profile.locked_site)
+        } else {
+          localStorage.removeItem('sem_locked_site')
+        }
+      } catch(e) {}
+    } else {
+      localStorage.removeItem('sem_locked_site')
+    }
     // Accept pending invite
     const pendingInvite = sessionStorage.getItem('pending_invite')
     if (pendingInvite) {
