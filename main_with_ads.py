@@ -6263,13 +6263,20 @@ async def run_autonomous_engine(request: Request):
             resend_api_key = os.environ.get("RESEND_API_KEY", "")
             if email and resend_api_key:
                 approval_items = "".join([
-                    f"<div style='padding:12px;margin-bottom:8px;background:#1a1a24;border-radius:8px;border-left:3px solid {'#f87171' if a['severity']=='critical' else '#fbbf24' if a['severity']=='high' else '#60a5fa'}'>"
-                    f"<div style='font-size:13px;font-weight:600;color:#f0f0f8'>{a['type'].replace('_',' ').title()}</div>"
-                    f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['campaign']}</div>"
-                    f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['reason']}</div>"
-                    f"<div style='margin-top:8px;display:flex;gap:8px'>"
-                    f"<a href='https://believable-rebirth-production-7e19.up.railway.app/approve/{run_id}/{i}/{session_id}' style='padding:6px 14px;background:#22c55e;color:white;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600'>✅ Approve</a>"
-                    f"<a href='https://believable-rebirth-production-7e19.up.railway.app' style='padding:6px 14px;background:#374151;color:white;border-radius:6px;text-decoration:none;font-size:12px'>View Dashboard</a>"
+                    f"<div style='padding:16px;margin-bottom:10px;background:#1a1a24;border-radius:10px;border-left:4px solid {'#f87171' if a['severity']=='critical' else '#fbbf24' if a['severity']=='high' else '#60a5fa'}'>"
+                    f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px'>"
+                    f"<div style='font-size:14px;font-weight:700;color:#f0f0f8'>{a['type'].replace('_',' ').title()}</div>"
+                    f"<span style='font-size:11px;padding:2px 8px;border-radius:10px;background:{'rgba(239,68,68,0.2)' if a['severity']=='critical' else 'rgba(251,191,36,0.2)' if a['severity']=='high' else 'rgba(96,165,250,0.2)'};color:{'#f87171' if a['severity']=='critical' else '#fbbf24' if a['severity']=='high' else '#60a5fa'}'>{a['severity'].upper()}</span>"
+                    f"</div>"
+                    f"<div style='font-size:12px;color:#606070;margin-bottom:2px'>CAMPAIGN</div>"
+                    f"<div style='font-size:13px;color:#a0a0b8;margin-bottom:8px'>{a['campaign']}</div>"
+                    f"<div style='font-size:12px;color:#606070;margin-bottom:2px'>ISSUE DETECTED</div>"
+                    f"<div style='font-size:13px;color:#a0a0b8;margin-bottom:8px'>{a['reason']}</div>"
+                    f"<div style='font-size:12px;color:#606070;margin-bottom:2px'>RECOMMENDED ACTION</div>"
+                    f"<div style='font-size:13px;color:#a0a0b8;margin-bottom:12px'>{a.get('recommendation','Review and take appropriate action')}</div>"
+                    f"<div style='display:flex;gap:8px'>"
+                    f"<a href='https://believable-rebirth-production-7e19.up.railway.app/approve/{run_id}/{i}/{session_id}' style='padding:8px 16px;background:#22c55e;color:white;border-radius:7px;text-decoration:none;font-size:13px;font-weight:600'>✅ Approve & Mark Reviewed</a>"
+                    f"<a href='https://believable-rebirth-production-7e19.up.railway.app' style='padding:8px 14px;background:#374151;color:white;border-radius:7px;text-decoration:none;font-size:13px'>View in Dashboard</a>"
                     f"</div>"
                     f"</div>"
                     for i, a in enumerate(approve_actions)

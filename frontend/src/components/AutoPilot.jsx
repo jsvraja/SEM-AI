@@ -203,7 +203,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
           {pendingApprovals.map((run, ri) => (
             <div key={ri} style={{ padding: '12px 16px', borderBottom: ri < pendingApprovals.length-1 ? '1px solid var(--border)' : 'none' }}>
               <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px' }}>🕐 {run.run_at}</div>
-              {run.approve_actions.map((a, ai) => (
+              {run.approve_actions.filter(a => !a.approved).map((a, ai) => (
                 <div key={ai} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px', background: 'var(--bg3)', borderRadius: '8px', marginBottom: '6px' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>{a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}</div>
