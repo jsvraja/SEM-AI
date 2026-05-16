@@ -217,6 +217,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   const [pendingCount, setPendingCount] = React.useState(0)
   const [showNotifDropdown, setShowNotifDropdown] = React.useState(false)
   const [pendingActions, setPendingActions] = React.useState([])
+  const [googleAdsInitialTab, setGoogleAdsInitialTab] = React.useState(null)
 
   React.useEffect(() => {
     if (!sessionId) return
@@ -422,7 +423,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                       {pendingActions.slice(0, 5).map((a, i) => (
                         <div key={i} style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                          onClick={() => { setTab('google-ads'); setShowNotifDropdown(false); setTimeout(() => document.querySelector('[data-subtab="autopilot"]')?.click(), 500) }}>
+                          onClick={() => { setGoogleAdsInitialTab('autopilot'); setTab('google-ads'); setShowNotifDropdown(false) }}>
                           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
                             {a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}
                           </div>
@@ -586,7 +587,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
       <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0', minHeight: 0 }}>
         {/* Pending approval warning banner */}
         {pendingCount > 0 && (
-          <div onClick={() => setTab('google-ads')} style={{
+          <div onClick={() => { setGoogleAdsInitialTab('autopilot'); setTab('google-ads') }} style={{
             background: 'rgba(251,191,36,0.1)', borderBottom: '1px solid rgba(251,191,36,0.3)',
             padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             cursor: 'pointer',
@@ -2248,6 +2249,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             sessionId={sessionId}
             adCopy={ads}
             seoReport={seo}
+            initialTab={googleAdsInitialTab}
             url={url}
             recommendedPages={recommendedPages}
             onRecommendedPages={setRecommendedPages}

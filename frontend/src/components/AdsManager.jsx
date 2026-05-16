@@ -2053,8 +2053,9 @@ function ReportPanel({ sessionId }) {
 }
 
 
-export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages }) {
-  const [tab, setTab] = useState(sessionId ? 'overview' : 'connect')
+export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages, initialTab }) {
+  const [tab, setTab] = useState(initialTab || (sessionId ? 'overview' : 'connect'))
+  React.useEffect(() => { if (initialTab) setTab(initialTab) }, [initialTab])
   const [adsConnected, setAdsConnected] = useState(false)
 
   useEffect(() => {
