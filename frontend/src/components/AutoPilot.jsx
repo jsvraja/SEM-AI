@@ -134,7 +134,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
     setRunning(false)
   }
 
-  const severityColor = { high: '#f87171', medium: '#fbbf24', low: '#4ade80', info: '#60a5fa' }
+
   const typeIcon = { warning: AlertTriangle, ai_recommendation: Zap, info: CheckCircle }
 
   const severityColor = (s) => s === 'critical' ? '#f87171' : s === 'high' ? '#fbbf24' : s === 'medium' ? '#60a5fa' : '#4ade80'
