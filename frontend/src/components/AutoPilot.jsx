@@ -204,10 +204,32 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
                         </div>
 
                         {/* Recommendation */}
-                        <div style={{ background: 'rgba(99,102,241,0.08)', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px' }}>
-                          <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>💡 RECOMMENDED ACTION</div>
+                        <div style={{ background: 'rgba(99,102,241,0.08)', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>💡 RECOMMENDED FIX</div>
                           <div style={{ fontSize: '13px', color: '#a5b4fc' }}>{a.recommendation || 'Review campaign settings and take appropriate action'}</div>
                         </div>
+
+                        {/* Budget comparison */}
+                        {a.current_budget && a.recommended_budget && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>CURRENT BUDGET</div>
+                              <div style={{ fontSize: '18px', fontWeight: 700, color: '#f87171' }}>₹{a.current_budget}/day</div>
+                            </div>
+                            <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '4px' }}>RECOMMENDED</div>
+                              <div style={{ fontSize: '18px', fontWeight: 700, color: '#4ade80' }}>₹{a.recommended_budget}/day</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* After approve */}
+                        {a.after_approve && (
+                          <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '2px' }}>✅ AFTER APPROVAL</div>
+                            <div style={{ fontSize: '13px', color: '#86efac' }}>{a.after_approve}</div>
+                          </div>
+                        )}
 
                         {/* Approve / Reject */}
                         {!status && (
