@@ -6583,8 +6583,9 @@ async def get_performance_comparison(request: Request):
         cid = session.get("customer_id", "").replace("-", "")
         refresh_token = session.get("refresh_token", "")
 
-        from ads_manager import get_access_token
-        access_token = get_access_token(refresh_token)
+        from ads_manager import get_headers
+        headers = get_headers(refresh_token)
+        access_token = headers.get('Authorization', '').replace('Bearer ', '')
 
         async with _hx.AsyncClient() as client:
             # Last 14 days data
@@ -6604,7 +6605,7 @@ async def get_performance_comparison(request: Request):
             """
             resp = await client.post(
                 f"https://googleads.googleapis.com/v18/customers/{cid}/googleAds:search",
-                headers={"Authorization": f"Bearer {access_token}", "developer-token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN","")},
+                headers={**headers, "developer-token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN",""), "login-customer-id": cid},
                 json={"query": query}
             )
             data = resp.json()
