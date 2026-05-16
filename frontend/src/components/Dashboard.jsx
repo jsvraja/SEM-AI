@@ -422,7 +422,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                       {pendingActions.slice(0, 5).map((a, i) => (
                         <div key={i} style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                          onClick={() => { setTab('ads'); setShowNotifDropdown(false) }}>
+                          onClick={() => { setTab('google-ads'); setShowNotifDropdown(false); setTimeout(() => document.querySelector('[data-subtab="autopilot"]')?.click(), 500) }}>
                           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '2px' }}>
                             {a.type?.replace(/_/g,' ').replace(/\w/g, c => c.toUpperCase())}
                           </div>
@@ -431,7 +431,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       ))}
                     </div>
                     <div style={{ padding: '10px 14px' }}>
-                      <button onClick={() => { setTab('ads'); setShowNotifDropdown(false) }} style={{
+                      <button onClick={() => { setTab('google-ads'); setShowNotifDropdown(false) }} style={{
                         width: '100%', padding: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                         border: 'none', borderRadius: '8px', color: 'white',
                         fontSize: '12px', fontWeight: 600, cursor: 'pointer'
@@ -586,7 +586,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
       <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0', minHeight: 0 }}>
         {/* Pending approval warning banner */}
         {pendingCount > 0 && (
-          <div onClick={() => setTab('ads')} style={{
+          <div onClick={() => setTab('google-ads')} style={{
             background: 'rgba(251,191,36,0.1)', borderBottom: '1px solid rgba(251,191,36,0.3)',
             padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             cursor: 'pointer',
