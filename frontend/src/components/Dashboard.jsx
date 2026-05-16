@@ -2250,6 +2250,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
             adCopy={ads}
             seoReport={seo}
             initialTab={googleAdsInitialTab}
+            onTabSet={() => setGoogleAdsInitialTab(null)}
             url={url}
             recommendedPages={recommendedPages}
             onRecommendedPages={setRecommendedPages}

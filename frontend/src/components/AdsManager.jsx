@@ -2053,8 +2053,11 @@ function ReportPanel({ sessionId }) {
 }
 
 
-export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages, initialTab }) {
+export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages, initialTab, onTabSet }) {
   const [tab, setTab] = useState(initialTab || (sessionId ? 'overview' : 'connect'))
+  const setTabAndReset = (t) => { setTab(t); if (onTabSet) onTabSet() }
+  // Apply initialTab on mount
+  useState(() => { if (initialTab) { setTab(initialTab); if (onTabSet) onTabSet() } })
   const [adsConnected, setAdsConnected] = useState(false)
 
   useEffect(() => {
