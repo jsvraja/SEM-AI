@@ -2060,7 +2060,13 @@ export default function AdsManager({ sessionId, adCopy, seoReport, url, recommen
   const [adsConnected, setAdsConnected] = useState(false)
 
   useEffect(() => {
-    setTab(sessionId ? 'overview' : 'connect')
+    const openTab = localStorage.getItem('ads_open_tab')
+    if (openTab) {
+      localStorage.removeItem('ads_open_tab')
+      setTab(openTab)
+    } else {
+      setTab(sessionId ? 'overview' : 'connect')
+    }
   }, [sessionId])
 
   const tabs = sessionId
