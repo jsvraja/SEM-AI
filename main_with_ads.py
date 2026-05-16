@@ -6429,27 +6429,26 @@ async def approve_autonomous_action(request: Request):
 
 @app.get("/api/ads/autonomous/approve-page/{run_id}/{action_index}/{session_id}")
 async def approve_action_page(run_id: int, action_index: int, session_id: str):
-    """Simple HTML page for email approve links."""
+    """Simple HTML page for email approve links - no auth required."""
     from fastapi.responses import HTMLResponse
     try:
-        import json as _j, httpx as _hx
+        import json as _j
         conn = get_db_connection()
         if conn:
             cur = conn.cursor()
             cur.execute("SELECT approve_actions FROM autonomous_actions WHERE id = %s", (run_id,))
             row = cur.fetchone()
-            cur.close(); conn.close()
-            
             if row:
                 actions = row[0] if isinstance(row[0], list) else _j.loads(row[0])
                 if action_index < len(actions):
                     action = actions[action_index]
-                    # Auto approve
-                    async with _hx.AsyncClient() as client:
-                        await client.post(
-                            f"https://sem-ai-production.up.railway.app/api/ads/autonomous/approve",
-                            json={"run_id": run_id, "action_index": action_index, "session_id": session_id}
-                        )
+                    actions[action_index]["approved"] = True
+                    actions[action_index]["approved_result"] = "Approved via email"
+                    all_approved = all(a.get("approved") for a in actions)
+                    new_status = "completed" if all_approved else "partial"
+                    cur.execute("UPDATE autonomous_actions SET approve_actions = %s, status = %s WHERE id = %s", (_j.dumps(actions), new_status, run_id))
+                    conn.commit()
+                    cur.close(); conn.close()
                     return HTMLResponse(f"""
                     <html><body style="font-family:sans-serif;background:#0a0a0f;color:#f0f0f8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
                     <div style="text-align:center;padding:40px;background:#111118;border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
