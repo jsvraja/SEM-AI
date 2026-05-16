@@ -6475,8 +6475,10 @@ async def approve_autonomous_action(request: Request):
             result_msg = f"Action '{action_type}' approved and logged"
 
         # Mark as approved in DB
+        from datetime import datetime as _dt
         approve_actions[action_index]["approved"] = True
         approve_actions[action_index]["approved_result"] = result_msg
+        approve_actions[action_index]["approved_at"] = _dt.now().isoformat()
         
         # Check if all approved
         all_approved = all(a.get("approved") for a in approve_actions)
@@ -6559,5 +6561,89 @@ async def debug_gemini():
             timeout=10
         )
         return {"status": r.status_code, "response": r.text[:300], "key_exists": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/ads/autonomous/performance-comparison")
+async def get_performance_comparison(request: Request):
+    """Get before/after performance comparison for approved actions."""
+    import httpx as _hx, json as _j
+    body = await request.json()
+    session_id = body.get("session_id")
+    campaign_resource = body.get("campaign_resource")
+
+    session = _sessions.get(session_id)
+    if not session:
+        fresh = load_sessions()
+        session = fresh.get(session_id)
+    if not session:
+        return {"error": "Session not found"}
+
+    try:
+        cid = session.get("customer_id", "").replace("-", "")
+        refresh_token = session.get("refresh_token", "")
+
+        from ads_manager import get_access_token
+        access_token = get_access_token(refresh_token)
+
+        async with _hx.AsyncClient() as client:
+            # Last 14 days data
+            query = f"""
+                SELECT
+                    campaign.resource_name,
+                    campaign.name,
+                    metrics.clicks,
+                    metrics.impressions,
+                    metrics.ctr,
+                    metrics.cost_micros,
+                    segments.date
+                FROM campaign
+                WHERE campaign.resource_name = '{campaign_resource}'
+                AND segments.date DURING LAST_14_DAYS
+                ORDER BY segments.date ASC
+            """
+            resp = await client.post(
+                f"https://googleads.googleapis.com/v18/customers/{cid}/googleAds:search",
+                headers={"Authorization": f"Bearer {access_token}", "developer-token": os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN","")},
+                json={"query": query}
+            )
+            data = resp.json()
+            rows = data.get("results", [])
+
+            daily = []
+            for row in rows:
+                m = row.get("metrics", {})
+                daily.append({
+                    "date": row.get("segments", {}).get("date", ""),
+                    "clicks": int(m.get("clicks", 0)),
+                    "impressions": int(m.get("impressions", 0)),
+                    "ctr": round(float(m.get("ctr", 0)) * 100, 2),
+                    "spend": round(float(m.get("costMicros", 0)) / 1000000, 2),
+                })
+
+            # Split into before (first 7) and after (last 7)
+            before = daily[:7] if len(daily) >= 7 else daily
+            after = daily[7:] if len(daily) >= 7 else []
+
+            def avg(lst, key):
+                return round(sum(d[key] for d in lst) / len(lst), 2) if lst else 0
+
+            return {
+                "success": True,
+                "daily": daily,
+                "before": {
+                    "clicks": sum(d["clicks"] for d in before),
+                    "impressions": sum(d["impressions"] for d in before),
+                    "avg_ctr": avg(before, "ctr"),
+                    "spend": sum(d["spend"] for d in before),
+                },
+                "after": {
+                    "clicks": sum(d["clicks"] for d in after),
+                    "impressions": sum(d["impressions"] for d in after),
+                    "avg_ctr": avg(after, "ctr"),
+                    "spend": sum(d["spend"] for d in after),
+                } if after else None,
+                "period": "Last 14 days (7 before + 7 after)"
+            }
     except Exception as e:
         return {"error": str(e)}

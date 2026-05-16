@@ -17,6 +17,24 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
   const [autonomousResult, setAutonomousResult] = useState(null)
   const [checkDetails, setCheckDetails] = useState(null)
   const [showAllPending, setShowAllPending] = useState(false)
+  const [perfData, setPerfData] = useState(null)
+  const [perfLoading, setPerfLoading] = useState(false)
+  const [showPerfModal, setShowPerfModal] = useState(false)
+
+  async function fetchPerformance(campaignResource) {
+    setPerfLoading(true)
+    try {
+      const res = await fetch(BASE + '/api/ads/autonomous/performance-comparison', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_id: sessionId, campaign_resource: campaignResource})
+      })
+      const d = await res.json()
+      setPerfData(d)
+      setShowPerfModal(true)
+    } catch(e) {}
+    setPerfLoading(false)
+  }
   const [showCheckModal, setShowCheckModal] = useState(false)
   const [approving, setApproving] = useState({})
 
@@ -155,11 +173,94 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
 
   const typeIcon = { warning: AlertTriangle, ai_recommendation: Zap, info: CheckCircle }
 
+  const PerfModal = () => {
+    if (!showPerfModal || !perfData) return null
+    const { before, after, daily } = perfData
+    const metrics = [
+      { label: 'Clicks', before: before?.clicks || 0, after: after?.clicks || 0, icon: '🖱️' },
+      { label: 'Impressions', before: before?.impressions || 0, after: after?.impressions || 0, icon: '👁️' },
+      { label: 'Avg CTR %', before: before?.avg_ctr || 0, after: after?.avg_ctr || 0, icon: '📊' },
+      { label: 'Spend ₹', before: before?.spend || 0, after: after?.spend || 0, icon: '💰' },
+    ]
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '20px', maxWidth: '600px', width: '100%', maxHeight: '85vh', overflow: 'auto' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>📈 Performance Comparison</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text3)', margin: '4px 0 0' }}>7 days before vs 7 days after approval</p>
+            </div>
+            <button onClick={() => setShowPerfModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: '20px' }}>×</button>
+          </div>
+          <div style={{ padding: '20px 24px' }}>
+            {!after ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text3)' }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)', marginBottom: '8px' }}>Not enough data yet</div>
+                <div style={{ fontSize: '13px' }}>Check back after 7 days to see performance comparison</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                  {metrics.map((m, i) => {
+                    const improved = m.after > m.before
+                    const pct = m.before > 0 ? Math.round(((m.after - m.before) / m.before) * 100) : 0
+                    return (
+                      <div key={i} style={{ background: 'var(--bg3)', borderRadius: '12px', padding: '16px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--text3)', marginBottom: '8px' }}>{m.icon} {m.label}</div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                          <div>
+                            <div style={{ fontSize: '11px', color: 'var(--text3)' }}>Before</div>
+                            <div style={{ fontSize: '20px', fontWeight: 700, color: '#f87171' }}>{m.before}</div>
+                          </div>
+                          <div style={{ fontSize: '18px', color: 'var(--text3)' }}>→</div>
+                          <div>
+                            <div style={{ fontSize: '11px', color: 'var(--text3)' }}>After</div>
+                            <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ade80' }}>{m.after}</div>
+                          </div>
+                          <div style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: 700, color: improved ? '#4ade80' : '#f87171' }}>
+                            {improved ? '▲' : '▼'} {Math.abs(pct)}%
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* Daily chart bars */}
+                {daily && daily.length > 0 && (
+                  <div style={{ background: 'var(--bg3)', borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '12px' }}>📅 Daily Clicks (Last 14 days)</div>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '80px' }}>
+                      {daily.map((d, i) => {
+                        const maxClicks = Math.max(...daily.map(x => x.clicks), 1)
+                        const h = Math.max((d.clicks / maxClicks) * 70, 4)
+                        return (
+                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <div style={{ width: '100%', height: `${h}px`, background: i < 7 ? 'rgba(239,68,68,0.5)' : 'rgba(34,197,94,0.7)', borderRadius: '3px 3px 0 0', transition: 'height 0.3s' }} title={`${d.date}: ${d.clicks} clicks`} />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#f87171' }}>◼ Before (7d)</span>
+                      <span style={{ fontSize: '11px', color: '#4ade80' }}>◼ After (7d)</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const severityColor = (s) => s === 'critical' ? '#f87171' : s === 'high' ? '#fbbf24' : s === 'medium' ? '#60a5fa' : '#4ade80'
   const severityBg = (s) => s === 'critical' ? 'rgba(239,68,68,0.1)' : s === 'high' ? 'rgba(251,191,36,0.1)' : s === 'medium' ? 'rgba(96,165,250,0.1)' : 'rgba(34,197,94,0.1)'
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: '900px', margin: '0 auto' }}>
+      <PerfModal />
 
       {/* Check Details Modal */}
       {showCheckModal && checkDetails && (
@@ -482,7 +583,15 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
                     </div>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {run.stats?.auto_fixed > 0 && <span style={{ fontSize: '11px', color: '#4ade80' }}>✅ {run.stats.auto_fixed} auto-fixed</span>}
-                      {run.stats?.approved > 0 && <span style={{ fontSize: '11px', color: '#22c55e' }}>👍 {run.stats.approved} approved</span>}
+                      {run.stats?.approved > 0 && (
+                        <span style={{ fontSize: '11px', color: '#22c55e', cursor: 'pointer', textDecoration: 'underline' }}
+                          onClick={() => {
+                            const approvedAction = run.approve_actions?.find(a => a.approved)
+                            if (approvedAction?.resource) fetchPerformance(approvedAction.resource)
+                          }}>
+                          👍 {run.stats.approved} approved — View Performance →
+                        </span>
+                      )}
                       {run.stats?.rejected > 0 && <span style={{ fontSize: '11px', color: '#f87171' }}>👎 {run.stats.rejected} rejected</span>}
                       {run.stats?.pending > 0 && <span style={{ fontSize: '11px', color: '#fbbf24' }}>⏳ {run.stats.pending} pending</span>}
                     </div>
