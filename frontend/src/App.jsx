@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { runFullReport } from './api'
 import PricingModal from './components/PricingModal'
 import LandingForm from './components/LandingForm'
+import ApprovePage from './components/ApprovePage'
 import OnboardingModal from './components/OnboardingModal'
 import Dashboard from './components/Dashboard'
 import AuthPage from './components/AuthPage'
@@ -175,6 +176,12 @@ export default function App() {
     setState('idle')
     setResult(null)
     setError(null)
+  }
+
+  // Handle approve page route
+  const approvePath = window.location.pathname.match(/^\/approve\/(\d+)\/(\d+)\/([^/]+)$/)
+  if (approvePath) {
+    return <ApprovePage runId={approvePath[1]} actionIndex={approvePath[2]} sessionId={approvePath[3]} />
   }
 
   // Show auth page if not logged in
