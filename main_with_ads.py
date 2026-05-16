@@ -6522,7 +6522,7 @@ async def approve_action_page(run_id: int, action_index: int, session_id: str):
         pass
     return HTMLResponse("<html><body>Error processing approval</body></html>")
 
-@app.get("/api/debug/gemini-test")
+@app.post("/api/debug/gemini-test")
 async def debug_gemini():
     """Test Gemini API connectivity."""
     try:
@@ -6532,9 +6532,9 @@ async def debug_gemini():
             return {"error": "GEMINI_API_KEY not set", "key_exists": False}
         r = _hx.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}",
-            json={"contents": [{"parts": [{"text": "Say hello"}]}]},
+            json={"contents": [{"parts": [{"text": "Say hello in JSON: {\"message\": \"hello\"}"}]}]},
             timeout=10
         )
-        return {"status": r.status_code, "response": r.text[:200], "key_exists": True}
+        return {"status": r.status_code, "response": r.text[:300], "key_exists": True}
     except Exception as e:
         return {"error": str(e)}
