@@ -6284,7 +6284,7 @@ async def run_autonomous_engine(request: Request):
                   {approval_items}
                   <div style='margin-top:20px;padding:16px;background:#111118;border-radius:10px;border:1px solid rgba(99,102,241,0.2)'>
                     <div style='font-size:13px;color:#a0a0b8;margin-bottom:12px'>✅ Auto-applied {len(auto_actions)} small fixes already</div>
-                    <a href='https://believable-rebirth-production-7e19.up.railway.app' style='display:block;text-align:center;padding:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:8px;text-decoration:none;font-weight:600'>Review & Approve →</a>
+                    <a href='https://believable-rebirth-production-7e19.up.railway.app/?tab=ads&subtab=autopilot' style='display:block;text-align:center;padding:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:8px;text-decoration:none;font-weight:600'>Review & Approve in Auto-Pilot →</a>
                   </div>
                 </div>
                 """

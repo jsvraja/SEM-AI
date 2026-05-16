@@ -66,7 +66,8 @@ export default function App() {
             <div style="font-size:48px;margin-bottom:16px">${d.success ? '✅' : '❌'}</div>
             <h2>${d.success ? 'Action Approved!' : 'Error'}</h2>
             <p style="color:#a0a0b8">${d.message || d.error || ''}</p>
-            <a href="/?tab=ads" style="display:inline-block;margin-top:20px;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:10px;text-decoration:none;font-weight:600">Go to Dashboard →</a>
+            <p style="color:#a0a0b8;font-size:13px;margin-top:16px">You can close this tab and return to SEM AI dashboard.</p>
+            <a href="https://believable-rebirth-production-7e19.up.railway.app" style="display:inline-block;margin-top:12px;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:10px;text-decoration:none;font-weight:600">Open SEM AI →</a>
           </div>
         </div>`
       })
