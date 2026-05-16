@@ -6212,9 +6212,22 @@ async def run_autonomous_engine(request: Request):
                     auto_actions.append(action)
 
             # Rule 3: 0 impressions after 3 days → approve to pause
-            if impressions == 0 and clicks == 0:
+            # Skip if same campaign approved in last 24 hours
+            already_approved = False
+            try:
+                conn_c = get_db_connection()
+                if conn_c:
+                    cur_c = conn_c.cursor()
+                    cur_c.execute("SELECT id FROM autonomous_actions WHERE session_id = %s AND status IN ('completed','partial') AND approve_actions::text LIKE %s AND run_at > NOW() - INTERVAL '24 hours'", (session_id, f'%{c_resource}%'))
+                    if cur_c.fetchone():
+                        already_approved = True
+                    cur_c.close(); conn_c.close()
+            except:
+                pass
+            if impressions == 0 and clicks == 0 and not already_approved:
                 # Use Gemini REST API for specific recommendations
-                daily_budget = campaign.get("daily_budget_inr", 0)
+                raw_budget = campaign.get("daily_budget_inr", 0)
+                daily_budget = round(raw_budget / 100, 0) if raw_budget > 1000 else raw_budget
                 cause = "0 impressions detected — possible policy issue or targeting problem"
                 fix = "Review campaign settings, keywords and ad policy"
                 after_approve = "Campaign will be flagged for review"
@@ -6296,8 +6309,8 @@ Respond ONLY with this exact JSON format (no markdown, no extra text):
             conn.commit()
             cur.close(); conn.close()
 
-        # Send approval email if needed
-        if approve_actions:
+        # Send approval email if needed (skip for manual runs)
+        if approve_actions and not manual_run:
             email = session.get("email", "") or session.get("user_email", "")
             print(f"Sending approval email to: {email}, approve_actions: {len(approve_actions)}")
             resend_api_key = os.environ.get("RESEND_API_KEY", "")
