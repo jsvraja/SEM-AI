@@ -66,7 +66,7 @@ export default function App() {
             <div style="font-size:48px;margin-bottom:16px">${d.success ? '✅' : '❌'}</div>
             <h2>${d.success ? 'Action Approved!' : 'Error'}</h2>
             <p style="color:#a0a0b8">${d.message || d.error || ''}</p>
-            <a href="/" style="display:inline-block;margin-top:20px;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:10px;text-decoration:none;font-weight:600">Go to Dashboard →</a>
+            <a href="/?tab=ads" style="display:inline-block;margin-top:20px;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:10px;text-decoration:none;font-weight:600">Go to Dashboard →</a>
           </div>
         </div>`
       })
