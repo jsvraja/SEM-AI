@@ -215,6 +215,7 @@ export default function AdminPanel({ user, token: tokenProp, onBack }) {
                             disabled={updatingId === u.id}
                             style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 500, border: '1px solid var(--border)', background: planBg[u.plan || 'free'], color: planColors[u.plan || 'free'], cursor: 'pointer', outline: 'none' }}>
                             <option value="free">Free</option>
+                            <option value="startup">Startup</option>
                             <option value="pro">Pro</option>
                             <option value="agency">Agency</option>
                           </select>

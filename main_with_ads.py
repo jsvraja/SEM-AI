@@ -5016,6 +5016,7 @@ RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 
 PLANS = {
+    "startup": {"amount": 99900, "name": "Startup Plan", "description": "SEM AI Startup - 1 site only"},
     "pro": {"amount": 299900, "name": "Pro Plan", "description": "SEM AI Pro - Unlimited analyses"},
     "agency": {"amount": 999900, "name": "Agency Plan", "description": "SEM AI Agency - Unlimited everything"},
 }
@@ -5722,6 +5723,7 @@ async def admin_toggle_user(user_id: int, request: Request):
         cur = conn.cursor()
         # Add column if not exists
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_site TEXT DEFAULT NULL")
         conn.commit()
         cur.execute("UPDATE users SET is_active = %s WHERE id = %s", (is_active, user_id))
         conn.commit()
