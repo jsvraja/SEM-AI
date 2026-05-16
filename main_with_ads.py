@@ -6267,8 +6267,12 @@ async def run_autonomous_engine(request: Request):
                     f"<div style='font-size:13px;font-weight:600;color:#f0f0f8'>{a['type'].replace('_',' ').title()}</div>"
                     f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['campaign']}</div>"
                     f"<div style='font-size:12px;color:#a0a0b8;margin-top:4px'>{a['reason']}</div>"
+                    f"<div style='margin-top:8px;display:flex;gap:8px'>"
+                    f"<a href='https://sem-ai-production.up.railway.app/api/ads/autonomous/approve-page/{run_id}/{i}/{session_id}' style='padding:6px 14px;background:#22c55e;color:white;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600'>✅ Approve</a>"
+                    f"<a href='https://believable-rebirth-production-7e19.up.railway.app' style='padding:6px 14px;background:#374151;color:white;border-radius:6px;text-decoration:none;font-size:12px'>View Dashboard</a>"
                     f"</div>"
-                    for a in approve_actions
+                    f"</div>"
+                    for i, a in enumerate(approve_actions)
                 ])
                 html = f"""
                 <div style='font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0f;color:#f0f0f8;padding:32px;border-radius:16px'>
@@ -6348,3 +6352,114 @@ async def get_pending_approvals(session_id: str):
         return {"pending": pending}
     except Exception as e:
         return {"pending": [], "error": str(e)}
+
+@app.post("/api/ads/autonomous/approve")
+async def approve_autonomous_action(request: Request):
+    """Approve a pending autonomous action."""
+    import json as _j
+    body = await request.json()
+    run_id = body.get("run_id")
+    action_index = body.get("action_index", 0)
+    session_id = body.get("session_id")
+
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return {"error": "DB error"}
+        cur = conn.cursor()
+        cur.execute("SELECT approve_actions, session_id FROM autonomous_actions WHERE id = %s", (run_id,))
+        row = cur.fetchone()
+        if not row:
+            return {"error": "Action not found"}
+
+        approve_actions = row[0] if isinstance(row[0], list) else _j.loads(row[0])
+        session_id = session_id or row[1]
+        
+        if action_index >= len(approve_actions):
+            return {"error": "Invalid action index"}
+
+        action = approve_actions[action_index]
+        action_type = action.get("type", "")
+        campaign_resource = action.get("resource", "")
+
+        session = _sessions.get(session_id)
+        if not session:
+            fresh = load_sessions()
+            session = fresh.get(session_id)
+
+        result_msg = ""
+
+        # Execute the approved action
+        if action_type == "pause_campaign" and session:
+            from ads_manager import pause_campaign
+            cid = session.get("customer_id", "").replace("-", "")
+            refresh_token = session.get("refresh_token", "")
+            result = pause_campaign(cid, refresh_token, campaign_resource)
+            result_msg = "Campaign paused successfully"
+
+        elif action_type == "budget_increase" and session:
+            result_msg = "Budget increase noted — please update manually in Google Ads"
+
+        elif action_type == "review_campaign":
+            result_msg = "Action marked as reviewed"
+
+        else:
+            result_msg = f"Action '{action_type}' approved and logged"
+
+        # Mark as approved in DB
+        approve_actions[action_index]["approved"] = True
+        approve_actions[action_index]["approved_result"] = result_msg
+        
+        # Check if all approved
+        all_approved = all(a.get("approved") for a in approve_actions)
+        new_status = "completed" if all_approved else "partial"
+
+        cur.execute("""
+            UPDATE autonomous_actions 
+            SET approve_actions = %s, status = %s
+            WHERE id = %s
+        """, (_j.dumps(approve_actions), new_status, run_id))
+        conn.commit()
+        cur.close(); conn.close()
+
+        return {"success": True, "message": result_msg, "action": action}
+
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/ads/autonomous/approve-page/{run_id}/{action_index}/{session_id}")
+async def approve_action_page(run_id: int, action_index: int, session_id: str):
+    """Simple HTML page for email approve links."""
+    from fastapi.responses import HTMLResponse
+    try:
+        import json as _j, httpx as _hx
+        conn = get_db_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("SELECT approve_actions FROM autonomous_actions WHERE id = %s", (run_id,))
+            row = cur.fetchone()
+            cur.close(); conn.close()
+            
+            if row:
+                actions = row[0] if isinstance(row[0], list) else _j.loads(row[0])
+                if action_index < len(actions):
+                    action = actions[action_index]
+                    # Auto approve
+                    async with _hx.AsyncClient() as client:
+                        await client.post(
+                            f"https://sem-ai-production.up.railway.app/api/ads/autonomous/approve",
+                            json={"run_id": run_id, "action_index": action_index, "session_id": session_id}
+                        )
+                    return HTMLResponse(f"""
+                    <html><body style="font-family:sans-serif;background:#0a0a0f;color:#f0f0f8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+                    <div style="text-align:center;padding:40px;background:#111118;border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
+                      <div style="font-size:48px;margin-bottom:16px">✅</div>
+                      <h2 style="margin-bottom:8px">Action Approved!</h2>
+                      <p style="color:#a0a0b8;margin-bottom:24px">{action.get('type','').replace('_',' ').title()} — {action.get('campaign','')}</p>
+                      <a href="https://believable-rebirth-production-7e19.up.railway.app" style="padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:8px;text-decoration:none;font-weight:600">Go to Dashboard →</a>
+                    </div>
+                    </body></html>
+                    """)
+    except Exception as e:
+        pass
+    return HTMLResponse("<html><body>Error processing approval</body></html>")
