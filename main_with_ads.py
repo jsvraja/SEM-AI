@@ -2561,7 +2561,7 @@ Give specific actionable advice."""
 
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
                 json={"contents": [{"parts": [{"text": prompt}]}]}
             )
             result = resp.json()
@@ -6225,7 +6225,7 @@ async def run_autonomous_engine(request: Request):
                     if gemini_key:
                         prompt = f"You are a Google Ads expert. Campaign '{c_name}' has 0 impressions with ₹{daily_budget}/day budget. Give specific diagnosis and fix. Respond ONLY with JSON: {{\"cause\": \"...\", \"fix\": \"...\", \"after_approve\": \"...\", \"recommended_budget\": <number or null>}}"
                         r2 = _hx2.post(
-                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
                             json={"contents": [{"parts": [{"text": prompt}]}]},
                             timeout=15
                         )
@@ -6531,7 +6531,7 @@ async def debug_gemini():
         if not key:
             return {"error": "GEMINI_API_KEY not set", "key_exists": False}
         r = _hx.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}",
             json={"contents": [{"parts": [{"text": "Say hello in JSON: {\"message\": \"hello\"}"}]}]},
             timeout=10
         )
