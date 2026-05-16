@@ -222,7 +222,11 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
     if (!sessionId) return
     const fetchPending = async () => {
       try {
-        const res = await fetch('https://sem-ai-production.up.railway.app/api/ads/autonomous/pending/' + sessionId)
+        const res = await fetch('https://sem-ai-production.up.railway.app/api/ads/autonomous/pending', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({session_id: sessionId})
+        })
         const d = await res.json()
         const pending = (d.pending || []).flatMap(r => 
           (r.approve_actions || []).filter(a => !a.approved).map(a => ({...a, run_id: r.id, run_at: r.run_at}))

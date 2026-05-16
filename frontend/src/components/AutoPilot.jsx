@@ -25,7 +25,11 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
 
   async function fetchPending() {
     try {
-      const res = await fetch(BASE + '/api/ads/autonomous/pending/' + sessionId)
+      const res = await fetch(BASE + '/api/ads/autonomous/pending', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_id: sessionId})
+      })
       const d = await res.json()
       setPendingApprovals(d.pending || [])
     } catch(e) {}

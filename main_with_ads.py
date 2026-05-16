@@ -6377,8 +6377,10 @@ Respond ONLY with this exact JSON format (no markdown, no extra text):
         traceback.print_exc()
         return {"success": False, "error": str(e)}
 
-@app.get("/api/ads/autonomous/pending/{session_id}")
-async def get_pending_approvals(session_id: str):
+@app.post("/api/ads/autonomous/pending")
+async def get_pending_approvals(request: Request):
+    body = await request.json()
+    session_id = body.get("session_id", "")
     """Get pending approval actions."""
     try:
         conn = get_db_connection()
