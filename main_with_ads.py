@@ -4722,6 +4722,8 @@ def init_users_table():
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         """)
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_site TEXT DEFAULT NULL")
         conn.commit()
         cur.close()
         conn.close()
@@ -5722,9 +5724,7 @@ async def admin_toggle_user(user_id: int, request: Request):
     try:
         cur = conn.cursor()
         # Add column if not exists
-        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
-        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_site TEXT DEFAULT NULL")
-        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_site TEXT DEFAULT NULL")
+
         conn.commit()
         cur.execute("UPDATE users SET is_active = %s WHERE id = %s", (is_active, user_id))
         conn.commit()
