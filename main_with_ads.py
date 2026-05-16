@@ -6449,16 +6449,30 @@ async def approve_action_page(run_id: int, action_index: int, session_id: str):
                     cur.execute("UPDATE autonomous_actions SET approve_actions = %s, status = %s WHERE id = %s", (_j.dumps(actions), new_status, run_id))
                     conn.commit()
                     cur.close(); conn.close()
-                    return HTMLResponse(f"""
-                    <html><body style="font-family:sans-serif;background:#0a0a0f;color:#f0f0f8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
-                    <div style="text-align:center;padding:40px;background:#111118;border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
-                      <div style="font-size:48px;margin-bottom:16px">✅</div>
-                      <h2 style="margin-bottom:8px">Action Approved!</h2>
-                      <p style="color:#a0a0b8;margin-bottom:24px">{action.get('type','').replace('_',' ').title()} — {action.get('campaign','')}</p>
-                      <a href="https://believable-rebirth-production-7e19.up.railway.app" style="padding:12px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:8px;text-decoration:none;font-weight:600">Go to Dashboard →</a>
-                    </div>
-                    </body></html>
-                    """)
+                    action_name = action.get('type','').replace('_',' ').title()
+                    campaign_name = action.get('campaign','')
+                    reason = action.get('reason','')
+                    return HTMLResponse(f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Action Approved — SEM AI</title></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0f;color:#f0f0f8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box">
+<div style="text-align:center;padding:40px 32px;background:#111118;border-radius:20px;border:1px solid rgba(255,255,255,0.08);max-width:480px;width:100%">
+  <div style="width:64px;height:64px;background:rgba(34,197,94,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px">✅</div>
+  <h2 style="font-size:22px;font-weight:700;margin:0 0 8px">Action Approved!</h2>
+  <p style="color:#a0a0b8;font-size:14px;margin:0 0 20px">{action_name}</p>
+  <div style="background:#1a1a24;border-radius:10px;padding:14px 16px;text-align:left;margin-bottom:24px">
+    <div style="font-size:12px;color:#606070;margin-bottom:4px">CAMPAIGN</div>
+    <div style="font-size:13px;color:#f0f0f8;margin-bottom:10px">{campaign_name}</div>
+    <div style="font-size:12px;color:#606070;margin-bottom:4px">ISSUE DETECTED</div>
+    <div style="font-size:13px;color:#a0a0b8">{reason}</div>
+  </div>
+  <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px 14px;font-size:13px;color:#4ade80;margin-bottom:20px">
+    ✓ Approval logged. SEM AI will process this action.
+  </div>
+  <a href="https://believable-rebirth-production-7e19.up.railway.app" style="display:block;padding:13px 24px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">View Dashboard →</a>
+  <p style="font-size:12px;color:#606070;margin-top:16px">Powered by SEM AI · <a href="https://believable-rebirth-production-7e19.up.railway.app" style="color:#6366f1">sakthivelraja.ai</a></p>
+</div>
+</body></html>""")
     except Exception as e:
         pass
     return HTMLResponse("<html><body>Error processing approval</body></html>")
