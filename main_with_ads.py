@@ -6223,7 +6223,10 @@ async def run_autonomous_engine(request: Request):
                     import httpx as _hx2, json as _j2, re as _re2
                     gemini_key = os.environ.get("GEMINI_API_KEY", "")
                     if gemini_key:
-                        prompt = f"You are a Google Ads expert. Campaign '{c_name}' has 0 impressions with ₹{daily_budget}/day budget. Give specific diagnosis and fix. Respond ONLY with JSON: {{\"cause\": \"...\", \"fix\": \"...\", \"after_approve\": \"...\", \"recommended_budget\": <number or null>}}"
+                        prompt = f"""You are a Google Ads expert. Campaign '{c_name}' has 0 impressions with Rs.{daily_budget}/day budget.
+
+Respond ONLY with this exact JSON format (no markdown, no extra text):
+{{"cause": "one sentence max - most likely cause", "fix": "2-3 specific steps max", "after_approve": "one sentence - what happens next", "recommended_budget": <number or null>}}"""
                         r2 = _hx2.post(
                             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
                             json={"contents": [{"parts": [{"text": prompt}]}]},
