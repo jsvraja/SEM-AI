@@ -363,7 +363,7 @@ export default function AutoPilot({ sessionId, customerId = '7836650842' }) {
       )}
       
       {/* Autonomous Engine Section */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '12px', padding: '16px', marginBottom: '16px', marginTop: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>🤖 Autonomous Engine</div>
