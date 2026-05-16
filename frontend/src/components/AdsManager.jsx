@@ -2054,10 +2054,9 @@ function ReportPanel({ sessionId }) {
 
 
 export default function AdsManager({ sessionId, adCopy, seoReport, url, recommendedPages, onRecommendedPages, initialTab, onTabSet }) {
-  const [tab, setTab] = useState(initialTab || (sessionId ? 'overview' : 'connect'))
-  const setTabAndReset = (t) => { setTab(t); if (onTabSet) onTabSet() }
-  // Apply initialTab on mount
-  useState(() => { if (initialTab) { setTab(initialTab); if (onTabSet) onTabSet() } })
+  const _initTab = localStorage.getItem('ads_open_tab') || initialTab || (sessionId ? 'overview' : 'connect')
+  if (localStorage.getItem('ads_open_tab')) localStorage.removeItem('ads_open_tab')
+  const [tab, setTab] = useState(_initTab)
   const [adsConnected, setAdsConnected] = useState(false)
 
   useEffect(() => {
