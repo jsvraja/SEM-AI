@@ -6209,41 +6209,35 @@ async def run_autonomous_engine(request: Request):
 
             # Rule 3: 0 impressions after 3 days → approve to pause
             if impressions == 0 and clicks == 0:
-                # Use Gemini to generate specific recommendations
+                # Use Gemini REST API for specific recommendations
+                daily_budget = campaign.get("daily_budget_inr", 0)
+                cause = "0 impressions detected — possible policy issue or targeting problem"
+                fix = "Review campaign settings, keywords and ad policy"
+                after_approve = "Campaign will be flagged for review"
+                rec_budget = None
                 try:
-                    import google.generativeai as genai
-                    genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    daily_budget = campaign.get("daily_budget_inr", 0)
-                    prompt = f"""You are a Google Ads expert. Analyze this campaign issue and give specific actionable advice.
-
-Campaign: {c_name}
-Daily Budget: ₹{daily_budget}
-Impressions: 0
-Clicks: 0
-Status: Running but getting no impressions
-
-Give a SHORT specific diagnosis (2-3 sentences max) with:
-1. Most likely cause (budget too low / keywords too restrictive / policy issue)
-2. Exact fix with numbers (e.g. increase budget from ₹{daily_budget} to ₹X)
-3. What happens after approve (one line)
-
-Format as JSON:
-{{"cause": "...", "fix": "...", "after_approve": "...", "recommended_budget": <number or null>}}"""
-                    resp = model.generate_content(prompt)
-                    import json as _j, re
-                    match = re.search(r'\{.*\}', resp.text, re.DOTALL)
-                    ai_rec = _j.loads(match.group()) if match else {}
-                    cause = ai_rec.get("cause", "0 impressions — possible policy issue or targeting problem")
-                    fix = ai_rec.get("fix", "Review campaign settings, keywords and ad policy")
-                    after_approve = ai_rec.get("after_approve", "Campaign will be flagged for review")
-                    rec_budget = ai_rec.get("recommended_budget")
+                    import httpx as _hx2, json as _j2, re as _re2
+                    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+                    if gemini_key:
+                        prompt = f"You are a Google Ads expert. Campaign '{c_name}' has 0 impressions with ₹{daily_budget}/day budget. Give specific diagnosis and fix. Respond ONLY with JSON: {{\"cause\": \"...\", \"fix\": \"...\", \"after_approve\": \"...\", \"recommended_budget\": <number or null>}}"
+                        r2 = _hx2.post(
+                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}",
+                            json={"contents": [{"parts": [{"text": prompt}]}]},
+                            timeout=15
+                        )
+                        if r2.status_code == 200:
+                            text = r2.json()["candidates"][0]["content"]["parts"][0]["text"]
+                            match = _re2.search(r'\{.*\}', text, _re2.DOTALL)
+                            if match:
+                                ai_rec = _j2.loads(match.group())
+                                cause = ai_rec.get("cause", cause)
+                                fix = ai_rec.get("fix", fix)
+                                after_approve = ai_rec.get("after_approve", after_approve)
+                                rec_budget = ai_rec.get("recommended_budget")
+                        else:
+                            print(f"Gemini API error: {r2.status_code} {r2.text[:100]}")
                 except Exception as e:
                     print(f"Gemini rec error: {e}")
-                    cause = "0 impressions detected — possible policy issue or targeting problem"
-                    fix = "Review campaign settings, keywords and ad policy"
-                    after_approve = "Campaign will be flagged for review"
-                    rec_budget = None
 
                 approve_actions.append({
                     "type": "review_campaign",
