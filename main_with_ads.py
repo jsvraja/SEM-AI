@@ -6595,37 +6595,29 @@ async def get_performance_comparison(request: Request):
                 "impressions": int(m.get("impressions", 0)),
                 "ctr": round(float(m.get("ctr", 0)) * 100, 2),
                 "spend": round(float(m.get("costMicros", 0)) / 1000000, 2),
-            })
-                    "date": row.get("segments", {}).get("date", ""),
-                    "clicks": int(m.get("clicks", 0)),
-                    "impressions": int(m.get("impressions", 0)),
-                    "ctr": round(float(m.get("ctr", 0)) * 100, 2),
-                    "spend": round(float(m.get("costMicros", 0)) / 1000000, 2),
-                })
+        })
+        before = daily[:7] if len(daily) >= 7 else daily
+        after = daily[7:] if len(daily) >= 7 else []
 
-            # Split into before (first 7) and after (last 7)
-            before = daily[:7] if len(daily) >= 7 else daily
-            after = daily[7:] if len(daily) >= 7 else []
+        def avg(lst, key):
+            return round(sum(d[key] for d in lst) / len(lst), 2) if lst else 0
 
-            def avg(lst, key):
-                return round(sum(d[key] for d in lst) / len(lst), 2) if lst else 0
-
-            return {
-                "success": True,
-                "daily": daily,
-                "before": {
-                    "clicks": sum(d["clicks"] for d in before),
-                    "impressions": sum(d["impressions"] for d in before),
-                    "avg_ctr": avg(before, "ctr"),
-                    "spend": sum(d["spend"] for d in before),
-                },
-                "after": {
-                    "clicks": sum(d["clicks"] for d in after),
-                    "impressions": sum(d["impressions"] for d in after),
-                    "avg_ctr": avg(after, "ctr"),
-                    "spend": sum(d["spend"] for d in after),
-                } if after else None,
-                "period": "Last 14 days (7 before + 7 after)"
+        return {
+            "success": True,
+            "daily": daily,
+            "before": {
+                "clicks": sum(d["clicks"] for d in before),
+                "impressions": sum(d["impressions"] for d in before),
+                "avg_ctr": avg(before, "ctr"),
+                "spend": sum(d["spend"] for d in before),
+            },
+            "after": {
+                "clicks": sum(d["clicks"] for d in after),
+                "impressions": sum(d["impressions"] for d in after),
+                "avg_ctr": avg(after, "ctr"),
+                "spend": sum(d["spend"] for d in after),
+            } if after else None,
+            "period": "Last 14 days (7 before + 7 after)"
             }
     except Exception as e:
         return {"error": str(e)}
