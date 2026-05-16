@@ -4684,6 +4684,10 @@ if _os.path.exists(_dist):
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
+        # Don't catch API routes
+        if full_path.startswith("api/"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="API endpoint not found")
         index = _os.path.join(_dist, "index.html")
         return _FileResponse(index)
 
