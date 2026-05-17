@@ -124,7 +124,8 @@ export default function App() {
       try {
         const API = import.meta.env.VITE_API_URL || 'https://sem-ai-production.up.railway.app'
         const res = await fetch(`${API}/api/user/profile`, {
-          headers: { Authorization: `Bearer ${userToken}` }
+          method: 'POST',
+          headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' }
         })
         const profile = await res.json()
         if (profile.locked_site) {

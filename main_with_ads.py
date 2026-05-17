@@ -6648,3 +6648,43 @@ async def admin_set_user_site(request: Request):
     cur.execute("UPDATE users SET locked_site = %s WHERE id = %s", (site, user_id))
     conn.commit(); cur.close(); conn.close()
     return {"success": True, "locked_site": site}
+
+@app.post("/api/user/profile")
+async def get_user_profile(request: Request):
+    token = request.headers.get("authorization", "").replace("Bearer ", "")
+    try:
+        import base64 as _b64, json as _jj
+        parts = token.split('.')
+        padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+        payload = _jj.loads(_b64.b64decode(padded))
+        user_id = payload.get("sub")
+    except:
+        return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    cur = conn.cursor()
+    cur.execute("SELECT id, email, name, plan, locked_site FROM users WHERE id = %s", (user_id,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if not row: return {"error": "User not found"}
+    return {"id": row[0], "email": row[1], "name": row[2], "plan": row[3], "locked_site": row[4]}
+
+@app.post("/api/user/profile")
+async def get_user_profile(request: Request):
+    token = request.headers.get("authorization", "").replace("Bearer ", "")
+    try:
+        import base64 as _b64, json as _jj
+        parts = token.split('.')
+        padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+        payload = _jj.loads(_b64.b64decode(padded))
+        user_id = payload.get("sub")
+    except:
+        return {"error": "Invalid token"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    cur = conn.cursor()
+    cur.execute("SELECT id, email, name, plan, locked_site FROM users WHERE id = %s", (user_id,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if not row: return {"error": "User not found"}
+    return {"id": row[0], "email": row[1], "name": row[2], "plan": row[3], "locked_site": row[4]}
