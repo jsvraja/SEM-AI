@@ -119,7 +119,7 @@ export default function App() {
   async function handleAuth(userData, userToken) {
     setUser(userData)
     setToken(userToken)
-    // Startup plan - fetch and save locked site
+    // Startup plan - fetch and auto-submit locked site
     if (userData.plan === 'startup') {
       try {
         const API = import.meta.env.VITE_API_URL || 'https://sem-ai-production.up.railway.app'
@@ -129,6 +129,15 @@ export default function App() {
         const profile = await res.json()
         if (profile.locked_site) {
           localStorage.setItem('sem_locked_site', profile.locked_site)
+          // Auto-submit — skip landing form entirely
+          setTimeout(() => {
+            handleSubmit({
+              url: profile.locked_site,
+              description: '',
+              targetKeywords: [],
+              urlType: 'website'
+            })
+          }, 100)
         } else {
           localStorage.removeItem('sem_locked_site')
         }

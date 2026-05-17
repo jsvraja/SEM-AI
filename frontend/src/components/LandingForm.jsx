@@ -72,6 +72,15 @@ export default function LandingForm({ onSubmit, loading, error, onClearError, us
     setUrlError('')
     const fullUrl = url.trim().startsWith('http') ? url.trim() : 'https://' + url.trim()
     const urlType = detectUrlType(fullUrl)
+    // Save locked site for startup plan on first analyse
+    if (user?.plan === 'startup' && !localStorage.getItem('sem_locked_site')) {
+      const token = localStorage.getItem('sem_token') || ''
+      fetch('https://sem-ai-production.up.railway.app/api/user/set-locked-site', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+        body: JSON.stringify({site: fullUrl})
+      }).then(() => localStorage.setItem('sem_locked_site', fullUrl)).catch(() => {})
+    }
     onSubmit({ url: fullUrl, description: desc.trim(), targetKeywords: keywords.split(',').map(k => k.trim()).filter(Boolean), urlType })
   }
 
