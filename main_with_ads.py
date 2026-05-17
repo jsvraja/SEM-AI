@@ -6690,3 +6690,17 @@ async def get_user_profile(request: Request):
     cur.close(); conn.close()
     if not row: return {"error": "User not found"}
     return {"id": row[0], "email": row[1], "name": row[2], "plan": row[3], "locked_site": row[4]}
+
+@app.post("/api/admin/reset-usage")
+async def admin_reset_usage(request: Request):
+    body = await request.json()
+    user_id = body.get("user_id")
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer ") or not is_admin(auth[7:]):
+        return {"error": "Unauthorized"}
+    conn = get_db_connection()
+    if not conn: return {"error": "DB error"}
+    cur = conn.cursor()
+    cur.execute("DELETE FROM usage_tracking WHERE user_id = %s AND date = CURRENT_DATE", (user_id,))
+    conn.commit(); cur.close(); conn.close()
+    return {"success": True, "message": f"Usage reset for user {user_id}"}
