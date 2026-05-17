@@ -5,7 +5,6 @@ import ThemeToggle from './ThemeToggle'
 export default function LandingForm({ onSubmit, loading, error, onClearError, user, onLogout, onAdmin }) {
   const lockedSite = user?.plan === 'startup' ? (localStorage.getItem('sem_locked_site') || '') : null
   const [url, setUrl] = useState(lockedSite || '')
-  const [url, setUrl] = useState(lockedSite || '')
   const [desc, setDesc] = useState('')
   const [keywords, setKeywords] = useState('')
   const [aiDetecting, setAiDetecting] = useState(false)
