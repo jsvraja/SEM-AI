@@ -137,7 +137,7 @@ export default function App() {
               targetKeywords: [],
               urlType: 'website'
             })
-          }, 100)
+          }, 500)
         } else {
           localStorage.removeItem('sem_locked_site')
         }
