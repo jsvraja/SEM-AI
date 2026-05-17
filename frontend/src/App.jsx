@@ -130,15 +130,8 @@ export default function App() {
         const profile = await res.json()
         if (profile.locked_site) {
           localStorage.setItem('sem_locked_site', profile.locked_site)
-          // Auto-submit — skip landing form entirely
-          setTimeout(() => {
-            handleSubmit({
-              url: profile.locked_site,
-              description: '',
-              targetKeywords: [],
-              urlType: 'website'
-            })
-          }, 500)
+          // Set flag for auto-submit on next render
+          sessionStorage.setItem('startup_auto_submit', profile.locked_site)
         } else {
           localStorage.removeItem('sem_locked_site')
         }

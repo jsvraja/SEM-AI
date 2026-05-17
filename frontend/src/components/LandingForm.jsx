@@ -5,6 +5,28 @@ import ThemeToggle from './ThemeToggle'
 export default function LandingForm({ onSubmit, loading, error, onClearError, user, onLogout, onAdmin }) {
   const lockedSite = user?.plan === 'startup' ? (localStorage.getItem('sem_locked_site') || '') : null
   const [url, setUrl] = useState(lockedSite || '')
+
+  // Auto-submit for startup plan users with locked site
+  useState(() => {
+    const autoSite = sessionStorage.getItem('startup_auto_submit')
+    if (autoSite && user?.plan === 'startup') {
+      sessionStorage.removeItem('startup_auto_submit')
+      setTimeout(() => {
+        onSubmit({ url: autoSite, description: '', targetKeywords: [], urlType: 'website' })
+      }, 300)
+    }
+  })
+
+  // Auto-submit for startup plan users with locked site
+  useState(() => {
+    const autoSite = sessionStorage.getItem('startup_auto_submit')
+    if (autoSite && user?.plan === 'startup') {
+      sessionStorage.removeItem('startup_auto_submit')
+      setTimeout(() => {
+        onSubmit({ url: autoSite, description: '', targetKeywords: [], urlType: 'website' })
+      }, 300)
+    }
+  })
   const [desc, setDesc] = useState('')
   const [keywords, setKeywords] = useState('')
   const [aiDetecting, setAiDetecting] = useState(false)
