@@ -6636,10 +6636,11 @@ async def admin_set_user_site(request: Request):
         parts = admin_token.split(".")
         padded = parts[1] + "=" * (4 - len(parts[1]) % 4)
         payload = _jj.loads(_b64.b64decode(padded))
-        if payload.get("email") != "jsvking@gmail.com":
+        email = payload.get("email", "")
+        if email != "jsvking@gmail.com":
             return {"error": "Unauthorized"}
-    except:
-        return {"error": "Invalid token"}
+    except Exception as ex:
+        return {"error": f"Invalid token: {ex}"}
     if site and not site.startswith("http"):
         site = "https://" + site
     conn = get_db_connection()
