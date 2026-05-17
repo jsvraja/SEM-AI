@@ -5325,6 +5325,7 @@ init_usage_table()
 
 PLAN_LIMITS = {
     "free": 1,
+    "startup": 3,
     "pro": 999999,
     "agency": 999999,
 }
