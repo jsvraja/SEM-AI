@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Globe, Zap, BarChart3, Target, Search, TrendingUp, Share2, ChevronRight, Loader2, AlertCircle, Bot, Shield } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 
@@ -7,7 +7,7 @@ export default function LandingForm({ onSubmit, loading, error, onClearError, us
   const [url, setUrl] = useState(lockedSite || '')
 
   // Auto-submit for startup plan users with locked site
-  useState(() => {
+  useEffect(() => {
     const autoSite = sessionStorage.getItem('startup_auto_submit')
     if (autoSite && user?.plan === 'startup') {
       sessionStorage.removeItem('startup_auto_submit')
@@ -15,7 +15,7 @@ export default function LandingForm({ onSubmit, loading, error, onClearError, us
         onSubmit({ url: autoSite, description: '', targetKeywords: [], urlType: 'website' })
       }, 300)
     }
-  })
+  }, [])
 
   // Auto-submit for startup plan users with locked site
   useState(() => {
