@@ -131,6 +131,7 @@ export default function App() {
         if (profile.locked_site) {
           localStorage.setItem('sem_locked_site', profile.locked_site)
           // Set flag for auto-submit on next render
+          console.log('Setting startup_auto_submit:', profile.locked_site)
           sessionStorage.setItem('startup_auto_submit', profile.locked_site)
         } else {
           localStorage.removeItem('sem_locked_site')
