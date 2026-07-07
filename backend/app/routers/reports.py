@@ -151,3 +151,16 @@ def get_reports(
             for r in reports
         ]
     }
+
+
+class PageSpeedRequest(BaseModel):
+    url: str
+
+
+@router.post("/pagespeed")
+async def pagespeed(req: PageSpeedRequest):
+    url = req.url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    result = await get_pagespeed_score(url)
+    return result
