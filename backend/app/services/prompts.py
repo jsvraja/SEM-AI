@@ -18,6 +18,14 @@ Body Text Sample: {s['body_text_sample'][:1500]}
 Return ONLY valid JSON with no markdown, no code fences, no explanation. Start your response with {{ and end with }}:
 {{
   "overall_seo_score": <integer 0-100>,
+  "score_breakdown": {{
+    "title_tag": <integer 0-100>,
+    "meta_description": <integer 0-100>,
+    "heading_structure": <integer 0-100>,
+    "content_quality": <integer 0-100>,
+    "image_optimisation": <integer 0-100>,
+    "schema_markup": <integer 0-100>
+  }},
   "summary": "<2-3 sentence overall assessment>",
   "strengths": [{{"point": "<strength>", "impact": "high"}}],
   "weaknesses": [{{"point": "<weakness>", "impact": "high", "fix": "<specific fix>"}}],
@@ -46,10 +54,8 @@ Return ONLY valid JSON with no markdown, no code fences, no explanation. Start y
     ],
     "audience_segments": [{{"segment": "<name>", "age_range": "<range>", "interests": ["<interest>"]}}],
     "estimated_monthly_clicks": {{"min": <int>, "max": <int>}},
-    "monthly_budget_inr": <int>,
     "estimated_cpc_usd": {{"min": <float>, "max": <float>}},
-    "estimated_cpc_inr": <integer in Indian Rupees e.g. 30>,
-    "monthly_budget_inr": <integer in Indian Rupees e.g. 50000>
+    "estimated_cpc_inr": <integer in Indian Rupees e.g. 30>
   }},
   "competitor_insights": {{
     "likely_competitors": ["<domain1>", "<domain2>"],
