@@ -1,0 +1,17 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+httpx>=0.28.1
+beautifulsoup4==4.12.3
+google-genai==1.10.0
+google-ads==26.0.0
+pydantic==2.9.2
+python-multipart==0.0.12
+python-dotenv==1.0.0
+google-generativeai
+psycopg2-binary==2.9.9
+bcrypt==4.0.1
+passlib==1.7.4
+python-jose==3.5.0
+razorpay==2.0.1
+apscheduler
+PyJWT
