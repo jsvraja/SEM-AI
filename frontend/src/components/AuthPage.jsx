@@ -26,9 +26,9 @@ export default function AuthPage({ onAuth }) {
       })
       const data = await res.json()
       if (data.error) { setError(data.error); return }
-      localStorage.setItem('sem_token', data.token)
+      localStorage.setItem('sem_token', data.access_token || data.token)
       localStorage.setItem('sem_user', JSON.stringify(data.user))
-      onAuth(data.user, data.token)
+      onAuth(data.user, data.access_token || data.token)
     } catch (err) {
       setError('Something went wrong. Please try again.')
     } finally {
