@@ -31,8 +31,19 @@ export async function runFullReport({ url, businessDescription, targetKeywords }
     }),
   })
   const data = await res.json()
+
+  // Usage limit check
+  if (res.status === 429 || (data.detail && data.detail.includes('limit reached'))) {
+    throw new Error("USAGE_LIMIT:3:free")
+  }
+
   if (data.error === "usage_limit_exceeded") {
     throw new Error("USAGE_LIMIT:" + data.limit + ":" + data.plan)
   }
+
+  if (!res.ok) {
+    throw new Error(data.detail || data.error || "Could not analyse this website. Please check the URL and try again.")
+  }
+
   return data
 }
