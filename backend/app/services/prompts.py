@@ -47,7 +47,9 @@ Return ONLY valid JSON with no markdown, no code fences, no explanation. Start y
     "audience_segments": [{{"segment": "<name>", "age_range": "<range>", "interests": ["<interest>"]}}],
     "estimated_monthly_clicks": {{"min": <int>, "max": <int>}},
     "monthly_budget_inr": <int>,
-    "estimated_cpc_usd": {{"min": <float>, "max": <float>}}
+    "estimated_cpc_usd": {{"min": <float>, "max": <float>}},
+    "estimated_cpc_inr": <integer in Indian Rupees e.g. 30>,
+    "monthly_budget_inr": <integer in Indian Rupees e.g. 50000>
   }},
   "competitor_insights": {{
     "likely_competitors": ["<domain1>", "<domain2>"],
