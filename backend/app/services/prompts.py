@@ -30,11 +30,23 @@ Return ONLY valid JSON with no markdown, no code fences, no explanation. Start y
   }},
   "keyword_suggestions": [{{"keyword": "<keyword>", "intent": "transactional", "difficulty": "medium", "priority": "primary"}}],
   "sem_recommendations": {{
+    "monthly_budget_inr": <integer in Indian Rupees e.g. 50000>,
     "suggested_monthly_budget_usd": {{"min": <int>, "max": <int>}},
+    "budget_calculation": {{
+      "target_daily_clicks": <int>,
+      "avg_cpc_inr": <int>,
+      "daily_budget_inr": <int>,
+      "buffer_pct": 20,
+      "reasoning": "<brief reasoning>"
+    }},
     "bidding_strategy": "<strategy>",
     "target_countries": ["<country1>"],
+    "country_budgets": [
+      {{"country": "<name>", "budget_inr": <int>, "budget_pct": <int>, "avg_cpc_inr": <int>}}
+    ],
     "audience_segments": [{{"segment": "<name>", "age_range": "<range>", "interests": ["<interest>"]}}],
     "estimated_monthly_clicks": {{"min": <int>, "max": <int>}},
+    "monthly_budget_inr": <int>,
     "estimated_cpc_usd": {{"min": <float>, "max": <float>}}
   }},
   "competitor_insights": {{
@@ -68,21 +80,53 @@ Return ONLY valid JSON, no markdown, no code fences. Start with {{ and end with 
     {{
       "variant_name": "Value-Led",
       "angle": "<angle>",
-      "headlines": [{{"text": "<max 30 chars>", "char_count": <int>}}],
-      "descriptions": [{{"text": "<max 90 chars>", "char_count": <int>}}],
+      "headlines": [{{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}}],
+      "descriptions": [{{"text": "<max 90 chars>", "char_count": <int>}},
+                       {{"text": "<max 90 chars>", "char_count": <int>}},
+                       {{"text": "<max 90 chars>", "char_count": <int>}}],
       "display_url_path": "/free-trial"
+    }},
+    {{
+      "variant_name": "Feature-Led",
+      "angle": "<angle>",
+      "headlines": [{{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}}],
+      "descriptions": [{{"text": "<max 90 chars>", "char_count": <int>}},
+                       {{"text": "<max 90 chars>", "char_count": <int>}},
+                       {{"text": "<max 90 chars>", "char_count": <int>}}],
+      "display_url_path": "/features"
+    }},
+    {{
+      "variant_name": "Social Proof",
+      "angle": "<angle>",
+      "headlines": [{{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}},
+                    {{"text": "<max 30 chars>", "char_count": <int>}}],
+      "descriptions": [{{"text": "<max 90 chars>", "char_count": <int>}},
+                       {{"text": "<max 90 chars>", "char_count": <int>}},
+                       {{"text": "<max 90 chars>", "char_count": <int>}}],
+      "display_url_path": "/reviews"
     }}
   ],
   "recommended_extensions": {{
-    "sitelinks": ["<sitelink1>", "<sitelink2>"],
-    "callouts": ["<callout1>", "<callout2>"],
-    "structured_snippets": ["<snippet1>"]
+    "sitelinks": ["<sitelink1>", "<sitelink2>", "<sitelink3>", "<sitelink4>"],
+    "callouts": ["<callout1>", "<callout2>", "<callout3>"],
+    "structured_snippets": ["<snippet1>", "<snippet2>"]
   }},
   "campaign_settings": {{
     "campaign_type": "Search",
     "ad_rotation": "Optimize: Prefer best performing ads",
     "keyword_match_types": ["Phrase match", "Exact match"],
-    "negative_keywords": ["<neg1>", "<neg2>"],
+    "negative_keywords": ["<neg1>", "<neg2>", "<neg3>"],
     "landing_page_recommendation": "<recommendation>"
   }}
 }}"""
