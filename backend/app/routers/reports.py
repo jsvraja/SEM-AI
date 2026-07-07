@@ -5,12 +5,12 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from jose import jwt, JWTError
-
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.services.scraper import scrape_website
 from app.services.prompts import build_seo_prompt, build_ad_prompt
 from app.services.gemini import call_gemini, parse_ai_json
+from app.services.pagespeed import get_pagespeed_score
 from app.database import get_db
 from app.models.user import User
 from app.models.report import Report
@@ -57,7 +57,6 @@ async def full_report(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Plan limit check
     limit = PLAN_LIMITS.get(current_user.plan, 3)
     if current_user.reports_used >= limit:
         raise HTTPException(
@@ -78,9 +77,11 @@ async def full_report(
         req.target_keywords
     )
 
-    seo_raw, ad_raw = await asyncio.gather(
+    # Run all 3 in parallel
+    seo_raw, ad_raw, pagespeed = await asyncio.gather(
         call_gemini(seo_prompt),
-        call_gemini(ad_prompt)
+        call_gemini(ad_prompt),
+        get_pagespeed_score(url)
     )
 
     try:
@@ -93,7 +94,9 @@ async def full_report(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ad JSON parse error: {str(e)}")
 
-    # Save report to DB
+    # Add pagespeed to seo_report
+    seo_report["pagespeed"] = pagespeed
+
     report = Report(
         user_id=current_user.id,
         url=url,
@@ -111,8 +114,6 @@ async def full_report(
         }
     )
     db.add(report)
-
-    # Increment usage
     current_user.reports_used += 1
     db.commit()
 
