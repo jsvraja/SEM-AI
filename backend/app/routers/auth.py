@@ -17,6 +17,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str = ""
+    name: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -41,6 +42,20 @@ def create_token(user_id: str) -> str:
     )
 
 
+def user_response(user: User, token: str) -> dict:
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name or user.email.split("@")[0],
+            "plan": user.plan,
+            "reports_used": user.reports_used
+        }
+    }
+
+
 @router.post("/register", status_code=201)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == req.email).first()
@@ -50,25 +65,13 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     user = User(
         email=req.email,
         hashed_password=hash_password(req.password),
-        full_name=req.full_name,
+        full_name=req.full_name or req.name,
         plan="free"
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-
-    token = create_token(str(user.id))
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "full_name": user.full_name,
-            "plan": user.plan,
-            "reports_used": user.reports_used
-        }
-    }
+    return user_response(user, create_token(str(user.id)))
 
 
 @router.post("/login")
@@ -77,15 +80,8 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     if not user or not verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_token(str(user.id))
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "full_name": user.full_name,
-            "plan": user.plan,
-            "reports_used": user.reports_used
-        }
-    }
+    # Check if user is disabled
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account disabled. Please contact support.")
+
+    return user_response(user, create_token(str(user.id)))
