@@ -318,6 +318,22 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   const [loadingSpeed, setLoadingSpeed] = useState(false)
   const [showGoogleScore, setShowGoogleScore] = useState(false)
 
+  // Auto-load Core Web Vitals after all state declared
+  React.useEffect(() => {
+    let cancelled = false
+    if (url) {
+      setLoadingSpeed(true)
+      fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url})
+      }).then(r => r.json()).then(d => {
+        if (!cancelled) { setPageSpeed(d); setLoadingSpeed(false) }
+      }).catch(() => { if (!cancelled) setLoadingSpeed(false) })
+    }
+    return () => { cancelled = true }
+  }, [url])
+
 
 
 
