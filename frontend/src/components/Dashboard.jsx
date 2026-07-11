@@ -1394,7 +1394,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       </div>
                     ) : (
                       <div style={{ padding: '10px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', fontSize: '12px', color: 'var(--red)' }}>
-                        ✗ No schema markup detected on this page
+                        ✗ No schema markup detected. Note: Some sites use dynamic loading — verify manually using Google's Rich Results Test (search.google.com/test/rich-results)
                       </div>
                     )}
                     {recommended.length > 0 && (
