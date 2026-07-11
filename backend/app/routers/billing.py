@@ -10,10 +10,7 @@ from app.database import get_db
 from app.models.user import User
 from app.routers.reports import get_current_user
 
-router = APIRouter(prefix="/api/billing", tags=["billing"])
-
-RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+router = APIRouter(prefix="/api/payment", tags=["billing"])
 
 PLANS = {
     "pro": {"amount": 99900, "name": "SEM AI Pro", "reports": 50},
@@ -38,6 +35,9 @@ def create_order(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
     if req.plan not in PLANS:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
@@ -47,7 +47,7 @@ def create_order(
     order = client.order.create({
         "amount": plan["amount"],
         "currency": "INR",
-        "receipt": f"receipt_{current_user.id}_{req.plan}",
+        "receipt": f"rcpt_{str(current_user.id)[:8]}_{req.plan}",
         "notes": {
             "user_id": str(current_user.id),
             "plan": req.plan,
@@ -64,13 +64,14 @@ def create_order(
     }
 
 
-@router.post("/verify-payment")
+@router.post("/verify")
 def verify_payment(
     req: VerifyPaymentRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Signature verify
+    RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
     body = f"{req.razorpay_order_id}|{req.razorpay_payment_id}"
     expected = hmac.new(
         RAZORPAY_KEY_SECRET.encode(),
@@ -84,7 +85,6 @@ def verify_payment(
     if req.plan not in PLANS:
         raise HTTPException(status_code=400, detail="Invalid plan")
 
-    # Update user plan
     current_user.plan = req.plan
     current_user.reports_used = 0
     db.commit()
