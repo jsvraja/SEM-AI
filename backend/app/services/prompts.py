@@ -32,6 +32,7 @@ Return ONLY valid JSON with no markdown, no code fences, no explanation. Start y
   "technical_issues": [{{"issue": "<name>", "severity": "critical", "description": "<detail>", "recommendation": "<action>"}}],
   "content_analysis": {{
     "quality_score": <integer 0-100>,
+    "word_count": <integer, estimated word count of the page>,
     "readability": "<assessment>",
     "keyword_density": "<assessment>",
     "content_gaps": ["<gap1>", "<gap2>"]
