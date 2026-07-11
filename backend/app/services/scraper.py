@@ -42,6 +42,9 @@ async def scrape_website(url: str) -> dict:
     body_text = re.sub(r'\s+', ' ', body_text)[:3000]
 
     schema_tags = soup.find_all("script", attrs={"type": "application/ld+json"})
+    # Also check microdata and RDFa
+    microdata = soup.find_all(attrs={"itemtype": True})
+    rdfa = soup.find_all(attrs={"typeof": True})
 
     return {
         "url": url,
@@ -60,7 +63,7 @@ async def scrape_website(url: str) -> dict:
         "external_links_count": len(external_links),
         "images_count": len(images),
         "images_without_alt_count": len(images_without_alt),
-        "has_schema_markup": len(schema_tags) > 0,
+        "has_schema_markup": len(schema_tags) > 0 or len(microdata) > 0 or len(rdfa) > 0,
         "body_text_sample": body_text,
         "html_size_kb": round(len(html) / 1024, 1),
     }
