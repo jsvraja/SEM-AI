@@ -53,6 +53,12 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
     }
   }
 
+  // Auto-fetch if already connected
+  React.useEffect(() => {
+    const gscToken = localStorage.getItem("gsc_token")
+    if (gscToken && url) fetchData()
+  }, [url])
+
   const fetchData = async () => {
     setLoading(true)
     try {
@@ -60,7 +66,7 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
       const res = await fetch(BASE + "/api/search-console/data", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ session_id: sessionId, url, days: 28 })
+        body: JSON.stringify({ session_id: sessionId, url, days: 28, gsc_token: localStorage.getItem("gsc_token") || "" })
       })
       const d = await res.json()
       setData(d)

@@ -87,6 +87,16 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    // Handle Search Console OAuth callback
+    const gscToken = params.get('gsc_token')
+    const gscRefresh = params.get('gsc_refresh')
+    if (gscToken) {
+      localStorage.setItem('gsc_token', gscToken)
+      if (gscRefresh) localStorage.setItem('gsc_refresh_token', gscRefresh)
+      window.history.replaceState({}, '', window.location.pathname)
+      return
+    }
+
     // Handle Google OAuth token redirect
     const googleToken = params.get('token')
     const googleUser = params.get('user')
