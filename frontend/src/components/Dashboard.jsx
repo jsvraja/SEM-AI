@@ -11,7 +11,7 @@ import ThemeToggle from './ThemeToggle'
 import PricingModal from './PricingModal'
 import SubscriptionModal from './SubscriptionModal'
 import Workspaces from './Workspaces'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, PieChart, Pie, Cell, Legend,
