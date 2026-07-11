@@ -87,6 +87,20 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    // Handle Google OAuth token redirect
+    const googleToken = params.get('token')
+    const googleUser = params.get('user')
+    if (googleToken && googleUser) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(googleUser))
+        localStorage.setItem('sem_token', googleToken)
+        localStorage.setItem('sem_user', JSON.stringify(userData))
+        setUser(userData)
+        setToken(googleToken)
+        window.history.replaceState({}, '', window.location.pathname)
+        return
+      } catch(e) { console.error('Google token parse error:', e) }
+    }
     const sid = params.get('session_id')
     const email = params.get('email')
     if (sid) {
