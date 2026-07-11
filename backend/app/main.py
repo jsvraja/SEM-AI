@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import ALLOWED_ORIGINS
-from app.routers import reports, auth, billing
+from app.routers import reports, auth, billing, google_auth
 from app.database import Base, engine
 
 Base.metadata.create_all(bind=engine)
@@ -19,6 +19,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(reports.router)
 app.include_router(billing.router)
+app.include_router(google_auth.router)
 
 
 @app.get("/")

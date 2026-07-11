@@ -17,3 +17,5 @@ apscheduler
 PyJWT
 sqlalchemy==2.0.36
 pydantic[email]
+authlib
+itsdangerous
