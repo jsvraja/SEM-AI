@@ -133,7 +133,7 @@ def update_flag(
     body: dict,
     current_user: User = Depends(require_admin)
 ):
-    return {"success": True, "key": key, "value": body.get("value")}
+    return {"success": True, "key": key, "enabled": body.get("enabled"), "value": body.get("enabled")}
 
 
 @router.post("/feature-flags")
