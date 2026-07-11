@@ -41,12 +41,16 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
     try {
       const res = await fetch(BASE + "/api/search-console/auth?session_id=" + sessionId)
       const d = await res.json()
-      // Store sessionId so we can restore after redirect
-      localStorage.setItem("gsc_session_id", sessionId)
-      localStorage.setItem("gsc_return_tab", "search-console")
-      // Direct redirect instead of popup (avoids COOP issues)
-      window.location.href = d.auth_url
-    } catch(e) { console.error(e) }
+      if (d.auth_url) {
+        localStorage.setItem("gsc_session_id", sessionId)
+        localStorage.setItem("gsc_return_tab", "search-console")
+        window.location.href = d.auth_url
+      } else {
+        alert("Google Search Console integration coming soon! Please check back later.")
+      }
+    } catch(e) { 
+      alert("Google Search Console integration coming soon! Please check back later.")
+    }
   }
 
   const fetchData = async () => {
