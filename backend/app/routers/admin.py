@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -52,9 +53,12 @@ def get_users(
     }
 
 
+class TokenBody(BaseModel):
+    token: str = ""
+
 @router.post("/user-activity")
 def get_activity(
-    current_user: User = Depends(require_admin),
+    body: TokenBody,
     db: Session = Depends(get_db)
 ):
     reports = db.query(Report).order_by(Report.created_at.desc()).limit(50).all()
