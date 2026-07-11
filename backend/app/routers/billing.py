@@ -73,7 +73,7 @@ def verify_payment(
     RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 
     body = f"{req.razorpay_order_id}|{req.razorpay_payment_id}"
-    expected = hmac.new(
+    expected = hmac.HMAC(
         RAZORPAY_KEY_SECRET.encode(),
         body.encode(),
         hashlib.sha256
