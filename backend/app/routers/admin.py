@@ -127,3 +127,15 @@ def update_flag(
     current_user: User = Depends(require_admin)
 ):
     return {"success": True, "key": key, "value": body.get("value")}
+
+
+@router.post("/feature-flags")
+def get_feature_flags_admin(current_user: User = Depends(require_admin)):
+    return {
+        "flags": {
+            "stripe_billing": False,
+            "team_workspaces": False,
+            "white_label": False,
+            "subscription_management": False
+        }
+    }

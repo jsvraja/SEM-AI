@@ -164,3 +164,15 @@ async def pagespeed(req: PageSpeedRequest):
         url = "https://" + url
     result = await get_pagespeed_score(url)
     return result
+
+
+@router.post("/feature-flags")
+async def feature_flags():
+    return {
+        "flags": {
+            "stripe_billing": False,
+            "team_workspaces": False,
+            "white_label": False,
+            "subscription_management": False
+        }
+    }
