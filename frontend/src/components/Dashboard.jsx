@@ -664,21 +664,9 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                   const totalImgs = sc?.images_count || 0
                   const wordCount = seo.content_analysis?.word_count || 0
 
-                  const titleScore = breakdown?.title_tag || (() => {
-                    if (!title) return 0
-                    if (title.length >= 30 && title.length <= 60) return 95
-                    if (title.length >= 20 && title.length <= 70) return 75
-                    return 50
-                  })()
+                  const titleScore = breakdown?.title_tag ?? 0
 
-                  const metaScore = breakdown?.meta_description || (() => {
-                    if (!meta) return 0
-                    if (meta.length >= 120 && meta.length <= 160) return 95
-                    if (meta.length >= 120 && meta.length <= 180) return 70
-                    if (meta.length > 180) return 45
-                    if (meta.length >= 80 && meta.length < 120) return 55
-                    return 40
-                  })()
+                  const metaScore = breakdown?.meta_description ?? 0
 
                   const h1Score = (() => {
                     if (!h1s.length) return 0
@@ -1284,12 +1272,12 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                   const hasSchema = sc?.has_schema_markup || false
                   const breakdown = seo?.score_breakdown || {}
 
-                  const titleScore = breakdown.title_optimisation ?? (title.length >= 30 && title.length <= 60 ? 95 : title.length > 0 ? 60 : 0)
-                  const metaScore = (breakdown.meta_description || breakdown.meta_descriptions) ?? (meta.length >= 120 && meta.length <= 160 ? 95 : meta.length > 0 ? 50 : 0)
-                  const h1Score = breakdown.heading_structure ?? (h1s.length === 1 ? 95 : h1s.length > 0 ? 60 : 0)
-                  const contentScore = breakdown.content_quality ?? seo?.content_analysis?.quality_score ?? (wordCount >= 800 ? 85 : wordCount >= 400 ? 60 : wordCount > 0 ? 40 : 10)
-                  const imgScore = breakdown.image_optimisation ?? (totalImgs === 0 ? 80 : Math.round((1 - imgMissing/totalImgs) * 100))
-                  const schemaScore = hasSchema ? 95 : 0
+                  const titleScore = breakdown.title_tag ?? breakdown.title_optimisation ?? 0
+                  const metaScore = breakdown.meta_description ?? breakdown.meta_descriptions ?? 0
+                  const h1Score = breakdown.heading_structure ?? 0
+                  const contentScore = breakdown.content_quality ?? seo?.content_analysis?.quality_score ?? 0
+                  const imgScore = breakdown.image_optimisation ?? 0
+                  const schemaScore = breakdown.schema_markup ?? 0
 
                   const radarData = [
                     { factor: 'Title', score: titleScore, fullMark: 100 },
