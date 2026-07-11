@@ -316,19 +316,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
   const [reportEmail, setReportEmail] = useState('')
   const [showEmailInput, setShowEmailInput] = useState(false)
   const [loadingSpeed, setLoadingSpeed] = useState(false)
-
-  // Auto-load PageSpeed on mount
-  useEffect(() => {
-    if (!pageSpeed && !loadingSpeed && url) {
-      setLoadingSpeed(true)
-      fetch('https://sem-ai-production.up.railway.app/api/pagespeed', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({url})
-      }).then(r => r.json()).then(d => { setPageSpeed(d); setLoadingSpeed(false) })
-        .catch(() => setLoadingSpeed(false))
-    }
-  }, [url])
   const [showGoogleScore, setShowGoogleScore] = useState(false)
 
 
