@@ -732,7 +732,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                         💡 <strong>How scores work:</strong> Each factor is evaluated based on your page content. Hover each bar for details.
                       </div>
                       <div style={{ marginTop: '6px', fontSize: '10px', color: 'var(--text3)', padding: '5px 8px', background: 'var(--yellow-bg)', borderRadius: '6px', lineHeight: 1.5, border: '1px solid var(--yellow)' }}>
-                        ⚠ These are our tool's scores based on raw HTML analysis. Compare with performance analysis for full accuracy.
+                        📊 Scores based on: Title, Meta, H1, Content, Images & Schema. Click Google Score for Core Web Vitals.
                       </div>
                     </div>
                   )
@@ -744,7 +744,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                 {seo.sem_recommendations && (
                   <>
                     <div style={{ fontSize: '28px', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                      ₹{(seo?.sem_recommendations?.monthly_budget_inr || 0).toLocaleString()}
+                      ₹{(((seo?.sem_recommendations?.suggested_monthly_budget_usd?.min || 0) * 84)).toLocaleString()}
                       <span style={{ fontSize: '14px', color: 'var(--text3)', fontWeight: 400 }}>/mo</span>
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>{(seo?.sem_recommendations?.bidding_strategy || "").split('—')[0]}</div>
