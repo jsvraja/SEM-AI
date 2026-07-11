@@ -63,9 +63,12 @@ def get_activity(
         "activity": [
             {
                 "id": str(r.id),
-                "user_email": users.get(str(r.user_id), "unknown"),
+                "email": users.get(str(r.user_id), "unknown"),
+                "tab": "SEO Analysis",
                 "url": r.url,
-                "created_at": r.created_at.isoformat() if r.created_at else None
+                "total_time_formatted": "N/A",
+                "visit_count": 1,
+                "last_visit": r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "N/A"
             }
             for r in reports
         ]
