@@ -52,7 +52,7 @@ def get_users(
     }
 
 
-@router.get("/user-activity")
+@router.post("/user-activity")
 def get_activity(
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
