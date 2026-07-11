@@ -54,7 +54,7 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
   }
 
   // Auto-fetch if already connected
-  React.useEffect(() => {
+  useEffect(() => {
     const gscToken = localStorage.getItem("gsc_token")
     if (gscToken && url) fetchData()
   }, [url])
