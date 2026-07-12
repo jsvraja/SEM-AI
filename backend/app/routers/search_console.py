@@ -145,8 +145,8 @@ async def get_search_console_data(req: SearchConsoleDataRequest):
         for row in page_data.get("rows", [])
     ]
 
-    total_clicks = sum(k["clicks"] for k in keywords)
-    total_impressions = sum(k["impressions"] for k in keywords)
+    total_clicks = sum(p["clicks"] for p in pages) if pages else sum(k["clicks"] for k in keywords)
+    total_impressions = sum(p["impressions"] for p in pages) if pages else sum(k["impressions"] for k in keywords)
     avg_ctr = round(sum(k["ctr"] for k in keywords) / len(keywords), 2) if keywords else 0
     avg_position = round(sum(k["position"] for k in keywords) / len(keywords), 1) if keywords else 0
 
