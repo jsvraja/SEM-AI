@@ -26,7 +26,7 @@ async def google_login():
         f"&redirect_uri={redirect_uri}"
         f"&response_type=code"
         f"&scope=openid%20email%20profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fadwords"
-        f"&access_type=offline"
+        f"&access_type=offline&prompt=consent"
     )
     return RedirectResponse(url=google_auth_url)
 
