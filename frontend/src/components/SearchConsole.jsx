@@ -171,10 +171,10 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>
         {[
-          { label: "Total Clicks", value: fmt(summary.clicks || 0), color: "var(--accent)" },
-          { label: "Impressions", value: fmt(summary.impressions || 0), color: "var(--blue, #3b82f6)" },
-          { label: "Avg CTR", value: pct(summary.ctr || 0), color: "var(--green)" },
-          { label: "Avg Position", value: pos(summary.position || 0), color: "var(--yellow)" },
+          { label: "Total Clicks", value: fmt(summary.total_clicks || summary.clicks || 0), color: "var(--accent)" },
+          { label: "Impressions", value: fmt(summary.total_impressions || summary.impressions || 0), color: "var(--blue, #3b82f6)" },
+          { label: "Avg CTR", value: pct(summary.avg_ctr || summary.ctr || 0), color: "var(--green)" },
+          { label: "Avg Position", value: pos(summary.avg_position || summary.position || 0), color: "var(--yellow)" },
         ].map(c => (
           <div key={c.label} style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "12px", padding: "16px" }}>
             <div style={{ fontSize: "11px", color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>{c.label}</div>
