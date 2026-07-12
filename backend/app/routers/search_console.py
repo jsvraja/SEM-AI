@@ -87,30 +87,41 @@ async def get_search_console_data(req: SearchConsoleDataRequest):
 
     async with httpx.AsyncClient() as client:
         # Get keywords
-        kw_res = await client.post(
-            f"https://searchconsole.googleapis.com/webmasters/v3/sites/{site_url}/searchAnalytics/query",
-            headers={"Authorization": f"Bearer {token}"},
-            json={
-                "startDate": start_date,
-                "endDate": end_date,
-                "dimensions": ["query"],
-                "rowLimit": 20
-            }
-        )
-        kw_data = kw_res.json()
-
-        # Get pages
-        page_res = await client.post(
-            f"https://searchconsole.googleapis.com/webmasters/v3/sites/{site_url}/searchAnalytics/query",
-            headers={"Authorization": f"Bearer {token}"},
-            json={
-                "startDate": start_date,
-                "endDate": end_date,
-                "dimensions": ["page"],
-                "rowLimit": 10
-            }
-        )
-        page_data = page_res.json()
+        # Try with https:// URL first, then sc-domain:
+        urls_to_try = [site_url, f"sc-domain:{site_url.replace('https://','').replace('http://','').rstrip('/')}"]
+        kw_data = {"rows": []}
+        page_data = {"rows": []}
+        
+        for try_url in urls_to_try:
+            kw_res = await client.post(
+                f"https://searchconsole.googleapis.com/webmasters/v3/sites/{try_url}/searchAnalytics/query",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "startDate": start_date,
+                    "endDate": end_date,
+                    "dimensions": ["query"],
+                    "rowLimit": 20
+                }
+            )
+            if kw_res.status_code == 200 and kw_res.content:
+                try:
+                    kw_data = kw_res.json()
+                    # Get pages with same URL
+                    page_res = await client.post(
+                        f"https://searchconsole.googleapis.com/webmasters/v3/sites/{try_url}/searchAnalytics/query",
+                        headers={"Authorization": f"Bearer {token}"},
+                        json={
+                            "startDate": start_date,
+                            "endDate": end_date,
+                            "dimensions": ["page"],
+                            "rowLimit": 10
+                        }
+                    )
+                    if page_res.status_code == 200 and page_res.content:
+                        page_data = page_res.json()
+                    break
+                except:
+                    continue
 
     keywords = [
         {
