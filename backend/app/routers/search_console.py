@@ -184,3 +184,74 @@ async def refresh_token(body: dict):
     if "access_token" in data:
         return {"access_token": data["access_token"]}
     raise HTTPException(status_code=400, detail="Token refresh failed")
+
+
+class InsightsRequest(BaseModel):
+    keywords: list
+    pages: list
+    summary: dict
+    url: str
+
+
+@router.post("/ai-insights")
+async def get_ai_insights(req: InsightsRequest):
+    from app.services.gemini import call_gemini, parse_ai_json
+    
+    prompt = f"""You are an SEO expert. Analyze this Google Search Console data and provide actionable insights.
+
+WEBSITE: {req.url}
+
+SUMMARY:
+- Total Clicks: {req.summary.get('total_clicks', 0)}
+- Total Impressions: {req.summary.get('total_impressions', 0)}
+- Avg CTR: {req.summary.get('avg_ctr', 0)}%
+- Avg Position: {req.summary.get('avg_position', 0)}
+
+TOP KEYWORDS:
+{req.keywords[:10]}
+
+TOP PAGES:
+{req.pages[:5]}
+
+Return ONLY valid JSON, no markdown:
+{{
+  "overall_assessment": "<2-3 sentence assessment>",
+  "quick_wins": [
+    {{
+      "title": "<action title>",
+      "description": "<specific action>",
+      "impact": "high|medium|low",
+      "effort": "easy|medium|hard",
+      "keyword": "<relevant keyword if any>"
+    }}
+  ],
+  "keyword_opportunities": [
+    {{
+      "keyword": "<keyword>",
+      "current_position": <number>,
+      "recommendation": "<specific recommendation>",
+      "potential_clicks": "<estimated increase>"
+    }}
+  ],
+  "content_recommendations": [
+    {{
+      "page": "<page url>",
+      "issue": "<issue>",
+      "recommendation": "<action>"
+    }}
+  ],
+  "sem_opportunities": [
+    {{
+      "keyword": "<keyword>",
+      "reason": "<why run ads>",
+      "suggested_bid": "<bid range>"
+    }}
+  ]
+}}"""
+
+    try:
+        raw = await call_gemini(prompt)
+        insights = parse_ai_json(raw)
+        return insights
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
