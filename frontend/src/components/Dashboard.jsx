@@ -340,14 +340,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
     return a
   })()
   
-  const urlType = seo?.url_type || ((() => {
-    const path = (url || '').replace(/https?:\/\//, '').split('?')[0]
-    const exts = ['.html', '.htm', '.php', '.aspx', '.asp']
-    if (exts.some(e => path.endsWith(e))) return 'single_page'
-    const segs = path.split('/').filter(s => s)
-    if (segs.length >= 3) return 'single_page'
-    return 'whole_site'
-  })())
+  const urlType = 'whole_site'
   const isWholeSite = urlType === 'whole_site'
 
   const domain = (url || '').replace(/https?:\/\//, '').split('/')[0]
