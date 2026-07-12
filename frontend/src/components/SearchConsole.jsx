@@ -65,14 +65,33 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
   const fetchData = async () => {
     setLoading(true)
     try {
+      let gscToken = localStorage.getItem("gsc_token") || ""
+      
+      // Try to refresh token if we have refresh token
+      const refreshToken = localStorage.getItem("gsc_refresh_token") || ""
+      if (refreshToken) {
+        try {
+          const refreshRes = await fetch(BASE + "/api/search-console/refresh-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refreshToken })
+          })
+          const refreshData = await refreshRes.json()
+          if (refreshData.access_token) {
+            gscToken = refreshData.access_token
+            localStorage.setItem("gsc_token", gscToken)
+          }
+        } catch(e) { console.error("Token refresh failed:", e) }
+      }
+
       const token = localStorage.getItem("sem_token") || ""
       const res = await fetch(BASE + "/api/search-console/data", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ session_id: sessionId, url, days: 28, gsc_token: localStorage.getItem("gsc_token") || "" })
+        body: JSON.stringify({ session_id: sessionId, url, days: 28, gsc_token: gscToken })
       })
       const d = await res.json()
-      if (d && (d.keywords || d.pages || d.summary)) {
+      if (d && (d.keywords !== undefined || d.pages !== undefined)) {
         setData(d)
         setConnected(true)
         generateInsights(d)
