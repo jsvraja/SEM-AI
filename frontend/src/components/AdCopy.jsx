@@ -145,7 +145,7 @@ export default function AdCopy({ url, seoReport, adCopy, urlType, savedRecommend
       if (data.error) throw new Error(data.error)
       setRecommendations(data)
       if (onRecommendations) onRecommendations(data)
-      try { sessionStorage.setItem('adcopy_recommendations', JSON.stringify(data)) } catch(e) {}
+      try { sessionStorage.setItem('adcopy_recommendations', JSON.stringify(data)); sessionStorage.setItem('adcopy_url', url) } catch(e) {}
     } catch (e) {
       setError(e.message)
     } finally {
