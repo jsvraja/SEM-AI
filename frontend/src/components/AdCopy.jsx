@@ -178,15 +178,15 @@ export default function AdCopy({ url, seoReport, adCopy, urlType, savedRecommend
             SEMA will crawl <strong>{url}</strong>, analyse all pages, and recommend only the best pages for Google Ads — with generated ad copy for each.
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text3)' }}>Pages to scan:</span>
-            {[25, 50, 100, 200].map(n => (
-              <button key={n} onClick={() => setMaxPages(n)} style={{
+            <span style={{ fontSize: '12px', color: 'var(--text3)' }}>Scan depth:</span>
+            {[{v:25,l:"Quick"},{v:50,l:"Standard"},{v:100,l:"Deep"},{v:200,l:"Full"}].map(n => (
+              <button key={n} onClick={() => setMaxPages(n.v)} style={{
                 padding: '4px 10px', borderRadius: '5px', fontSize: '12px',
-                background: maxPages === n ? 'var(--accent-bg)' : 'var(--bg3)',
-                border: `1px solid ${maxPages === n ? 'var(--accent-border)' : 'var(--border)'}`,
-                color: maxPages === n ? 'var(--accent)' : 'var(--text3)',
-                cursor: 'pointer', fontWeight: maxPages === n ? 600 : 400,
-              }}>{n}</button>
+                background: maxPages === n.v ? 'var(--accent-bg)' : 'var(--bg3)',
+                border: `1px solid ${maxPages === n.v ? 'var(--accent-border)' : 'var(--border)'}`,
+                color: maxPages === n.v ? 'var(--accent)' : 'var(--text3)',
+                cursor: 'pointer', fontWeight: maxPages === n.v ? 600 : 400,
+              }}>{n.l}</button>
             ))}
           </div>
           <button onClick={analyseAndRecommend} disabled={loading} style={{
