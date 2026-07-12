@@ -134,7 +134,7 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
         <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: "var(--accent-bg)", border: "2px solid var(--accent-border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "32px" }}>search</div>
         <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "10px" }}>Connect Google Search Console</h2>
         <p style={{ fontSize: "14px", color: "var(--text3)", marginBottom: "28px", lineHeight: 1.6 }}>
-          Real keyword data, clicks, impressions பாத்து AI-powered SEO opportunities find pannalam
+          Real keyword data, clicks & impressions — find AI-powered SEO opportunities
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "28px", textAlign: "left" }}>
           {["Keyword Opportunities", "CTR Optimizer", "Content Gaps", "SEM + SEO Connect"].map(f => (
@@ -214,7 +214,7 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
         <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
             <h3 style={{ fontSize: "15px", fontWeight: 600 }}>Keyword Opportunities</h3>
-            <p style={{ fontSize: "12px", color: "var(--text3)", marginTop: "4px" }}>Position 4-20 keywords - optimize pannaa page 1-ku varum</p>
+            <p style={{ fontSize: "12px", color: "var(--text3)", marginTop: "4px" }}>Keywords ranking position 4-20 — optimize to reach page 1</p>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -249,7 +249,7 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
         <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
             <h3 style={{ fontSize: "15px", fontWeight: 600 }}>CTR Optimizer</h3>
-            <p style={{ fontSize: "12px", color: "var(--text3)", marginTop: "4px" }}>Low CTR keywords - title/meta optimize pannaa clicks athikamaaum</p>
+            <p style={{ fontSize: "12px", color: "var(--text3)", marginTop: "4px" }}>Low CTR keywords — optimize title/meta to increase clicks</p>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -280,7 +280,7 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
         <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
             <h3 style={{ fontSize: "15px", fontWeight: 600 }}>Content Gaps</h3>
-            <p style={{ fontSize: "12px", color: "var(--text3)", marginTop: "4px" }}>Users search pannuraanga - but ungk site answer kudukkalai</p>
+            <p style={{ fontSize: "12px", color: "var(--text3)", marginTop: "4px" }}>Keywords users search for — but your site lacks content for</p>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -310,7 +310,7 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "12px", padding: "16px 20px" }}>
             <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>SEM + SEO Connect</h3>
-            <p style={{ fontSize: "12px", color: "var(--text3)" }}>Organic-la rank illatha keywords - Google Ads podu, udane traffic varum</p>
+            <p style={{ fontSize: "12px", color: "var(--text3)" }}>Keywords not ranking organically — run Google Ads for instant traffic</p>
           </div>
           {semOpp.map((k,i) => (
             <div key={i} style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
