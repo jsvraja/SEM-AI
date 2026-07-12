@@ -92,8 +92,12 @@ function CampaignMonitor({ sessionId, onCampaignsLoaded }) {
   const [allocatorData, setAllocatorData] = useState(null)
   const [allocatorLoading, setAllocatorLoading] = useState(false)
 
-  useEffect(() => { 
-    if (sessionId) fetchCampaigns() 
+  useEffect(() => {
+    // Set default customer_id from env
+    if (!localStorage.getItem('google_ads_customer_id')) {
+      localStorage.setItem('google_ads_customer_id', '7836650842')
+    }
+    if (sessionId) fetchCampaigns()
   }, [sessionId])
 
   async function fetchCampaigns() {
@@ -1098,15 +1102,14 @@ Respond ONLY with this JSON (no other text):
     setError(null)
 
     try {
-      const res = await fetch(`${BASE}/api/ads/publish`, {
+      const res = await fetch(`${BASE}/api/google-ads/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_id: sessionId,
-          customer_id: '',   // backend resolves from session automatically
+          refresh_token: localStorage.getItem('google_refresh_token') || '',
+          customer_id: localStorage.getItem('google_ads_customer_id') || '7836650842',
           campaign_name: campaignName,
           daily_budget_usd: daily,
-          monthly_budget_usd: monthly,
           target_countries: targetCountries,
           keywords: keywords.slice(0, 15),
           headlines: selectedPage?.ad_copy 
