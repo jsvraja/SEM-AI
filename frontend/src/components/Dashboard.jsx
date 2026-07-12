@@ -2190,6 +2190,7 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       </PieChart>
                     </ResponsiveContainer>
                   </Card>
+                )}
 
                 {/* Negative Keywords */}
                 {seo.sem_recommendations?.negative_keywords?.length > 0 && (
@@ -2259,7 +2260,6 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                   </Card>
                 )}
 
-                )}
               </>
             )}
           </div>
