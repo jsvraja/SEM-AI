@@ -29,11 +29,14 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
   const checkStatus = async () => {
     setLoading(true)
     try {
-      const res = await fetch(BASE + "/api/search-console/status?session_id=" + sessionId)
-      const d = await res.json()
-      setConnected(d.connected)
-      if (d.connected) fetchData()
-      else setLoading(false)
+      const gscToken = localStorage.getItem("gsc_token")
+      if (gscToken) {
+        setConnected(true)
+        fetchData()
+      } else {
+        setConnected(false)
+        setLoading(false)
+      }
     } catch { setLoading(false) }
   }
 
