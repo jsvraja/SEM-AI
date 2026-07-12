@@ -105,6 +105,10 @@ export default function App() {
         const userData = JSON.parse(decodeURIComponent(googleUser))
         localStorage.setItem('sem_token', googleToken)
         localStorage.setItem('sem_user', JSON.stringify(userData))
+        // Save Google Ads refresh token
+        if (userData.google_refresh_token) {
+          localStorage.setItem('google_refresh_token', userData.google_refresh_token)
+        }
         setUser(userData)
         setToken(googleToken)
         window.history.replaceState({}, '', window.location.pathname)

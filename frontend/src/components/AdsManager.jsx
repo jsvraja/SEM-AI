@@ -100,8 +100,14 @@ function CampaignMonitor({ sessionId, onCampaignsLoaded }) {
     if (!sessionId) return
     setLoading(true)
     setError(null)
+    const refreshToken = localStorage.getItem("google_refresh_token") || ""
+    const customerId = localStorage.getItem("google_ads_customer_id") || ""
     try {
-      const res = await fetch(`${BASE}/api/ads/campaigns/${sessionId}?customer_id=`)
+      const res = await fetch(`${BASE}/api/google-ads/campaigns`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ refresh_token: refreshToken, customer_id: customerId })
+      })
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.detail || 'Failed to fetch campaigns')
