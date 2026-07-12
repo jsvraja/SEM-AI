@@ -85,11 +85,11 @@ Return ONLY valid JSON:
       "title": "<page title>",
       "reason": "<why this page is good for ads>",
       "ad_copy": {{
-        "headline1": "<max 30 chars>",
-        "headline2": "<max 30 chars>",
-        "headline3": "<max 30 chars>",
-        "description1": "<max 90 chars>",
-        "description2": "<max 90 chars>"
+        "headline_1": "<max 30 chars>",
+        "headline_2": "<max 30 chars>",
+        "headline_3": "<max 30 chars>",
+        "description_1": "<max 90 chars>",
+        "description_2": "<max 90 chars>"
       }},
       "target_keywords": ["<keyword1>", "<keyword2>"],
       "estimated_cpc": "<INR range>"
