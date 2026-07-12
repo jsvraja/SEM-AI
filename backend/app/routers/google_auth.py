@@ -25,7 +25,7 @@ async def google_login():
         f"?client_id={GOOGLE_CLIENT_ID}"
         f"&redirect_uri={redirect_uri}"
         f"&response_type=code"
-        f"&scope=openid%20email%20profile"
+        f"&scope=openid%20email%20profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fadwords"
         f"&access_type=offline"
     )
     return RedirectResponse(url=google_auth_url)
@@ -66,6 +66,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Could not get email from Google")
 
     # Find or create user
+    refresh_token = token_data.get("refresh_token", "")
     user = db.query(User).filter(User.email == email).first()
     if not user:
         user = User(
@@ -77,6 +78,10 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         db.add(user)
         db.commit()
         db.refresh(user)
+    # Save refresh token if available
+    if refresh_token and hasattr(user, 'google_refresh_token'):
+        user.google_refresh_token = refresh_token
+        db.commit()
 
     # Create JWT token
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -91,7 +96,8 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         "email": user.email,
         "full_name": user.full_name,
         "plan": user.plan,
-        "reports_used": user.reports_used
+        "reports_used": user.reports_used,
+        "google_refresh_token": refresh_token or (user.google_refresh_token if hasattr(user, 'google_refresh_token') else "")
     }
 
     # Redirect to frontend with token

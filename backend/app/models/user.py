@@ -14,4 +14,5 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     plan = Column(String, default="free")  # free, pro, agency
     reports_used = Column(Integer, default=0)
+    google_refresh_token = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
