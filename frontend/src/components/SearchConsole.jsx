@@ -220,6 +220,53 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
       )}
 
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        {/* AI Insights Button */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+          <button onClick={generateAIInsights} disabled={loadingInsights2} style={{
+            padding: "10px 20px", background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            border: "none", borderRadius: "8px", color: "white", fontSize: "13px",
+            fontWeight: 600, cursor: loadingInsights2 ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", gap: "8px", opacity: loadingInsights2 ? 0.7 : 1
+          }}>
+            {loadingInsights2 ? "⏳ Analyzing..." : "✨ Generate AI Insights"}
+          </button>
+        </div>
+
+        {/* AI Insights Panel */}
+        {aiInsights && (
+          <div style={{ background: "var(--bg2)", border: "1px solid var(--accent-border)", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 700, marginBottom: "12px", color: "var(--accent)" }}>✨ AI Analysis</h3>
+            <p style={{ fontSize: "13px", color: "var(--text2)", marginBottom: "16px", lineHeight: 1.6 }}>{aiInsights.overall_assessment}</p>
+            {aiInsights.quick_wins?.length > 0 && (
+              <div style={{ marginBottom: "16px" }}>
+                <h4 style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>⚡ Quick Wins</h4>
+                {aiInsights.quick_wins.map((w, i) => (
+                  <div key={i} style={{ background: "var(--bg)", borderRadius: "8px", padding: "10px 14px", marginBottom: "8px", borderLeft: "3px solid var(--accent)" }}>
+                    <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "4px" }}>{w.title}</div>
+                    <div style={{ fontSize: "12px", color: "var(--text3)" }}>{w.description}</div>
+                    <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
+                      <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "10px", background: w.impact === "high" ? "#fee2e2" : "#fef9c3", color: w.impact === "high" ? "#ef4444" : "#ca8a04" }}>{w.impact} impact</span>
+                      <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "10px", background: "var(--bg3)", color: "var(--text3)" }}>{w.effort} effort</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {aiInsights.sem_opportunities?.length > 0 && (
+              <div>
+                <h4 style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px" }}>🎯 SEM Opportunities</h4>
+                {aiInsights.sem_opportunities.map((s, i) => (
+                  <div key={i} style={{ background: "var(--bg)", borderRadius: "8px", padding: "10px 14px", marginBottom: "8px", borderLeft: "3px solid #22c55e" }}>
+                    <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "4px" }}>{s.keyword}</div>
+                    <div style={{ fontSize: "12px", color: "var(--text3)" }}>{s.reason}</div>
+                    {s.suggested_bid && <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "4px" }}>Suggested bid: {s.suggested_bid}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {subTabs.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
             padding: "8px 16px", borderRadius: "8px", border: "1px solid",
