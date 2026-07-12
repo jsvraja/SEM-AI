@@ -72,8 +72,11 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
         body: JSON.stringify({ session_id: sessionId, url, days: 28, gsc_token: localStorage.getItem("gsc_token") || "" })
       })
       const d = await res.json()
-      setData(d)
-      generateInsights(d)
+      if (d && (d.keywords || d.pages || d.summary)) {
+        setData(d)
+        setConnected(true)
+        generateInsights(d)
+      }
     } catch(e) { console.error(e) }
     setLoading(false)
   }
