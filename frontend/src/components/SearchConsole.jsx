@@ -115,6 +115,29 @@ export default function SearchConsole({ sessionId: propSessionId, url }) {
     setLoadingInsights(false)
   }
 
+  const [aiInsights, setAiInsights] = useState(null)
+  const [loadingInsights2, setLoadingInsights2] = useState(false)
+
+  const generateAIInsights = async () => {
+    if (!data) return
+    setLoadingInsights2(true)
+    try {
+      const res = await fetch(BASE + "/api/search-console/ai-insights", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          keywords: data.keywords || [],
+          pages: data.pages || [],
+          summary: data.summary || {},
+          url: url
+        })
+      })
+      const d = await res.json()
+      setAiInsights(d)
+    } catch(e) { console.error(e) }
+    setLoadingInsights2(false)
+  }
+
   const fmt = (n) => n >= 1000 ? (n/1000).toFixed(1) + "k" : String(n)
   const pct = (n) => (n * 100).toFixed(1) + "%"
   const pos = (n) => Number(n).toFixed(1)
