@@ -56,7 +56,16 @@ Return ONLY valid JSON with no markdown, no code fences, no explanation. Start y
     "audience_segments": [{{"segment": "<name>", "age_range": "<range>", "interests": ["<interest>"]}}],
     "estimated_monthly_clicks": {{"min": <int>, "max": <int>}},
     "estimated_cpc_usd": {{"min": <float>, "max": <float>}},
-    "estimated_cpc_inr": <integer in Indian Rupees e.g. 30>
+    "estimated_cpc_inr": <integer in Indian Rupees e.g. 30>,
+    "negative_keywords": ["<neg1>", "<neg2>", "<neg3>", "<neg4>", "<neg5>"],
+    "campaign_groups": [
+      {{"name": "<campaign name>", "type": "Brand|Competitor|Feature|Generic", "keywords": ["<kw1>", "<kw2>"], "budget_pct": <int>, "goal": "<goal>"}}
+    ],
+    "campaign_timeline": [
+      {{"month": 1, "focus": "<focus>", "budget_inr": <int>, "goal": "<goal>", "actions": ["<action1>", "<action2>"]}},
+      {{"month": 2, "focus": "<focus>", "budget_inr": <int>, "goal": "<goal>", "actions": ["<action1>", "<action2>"]}},
+      {{"month": 3, "focus": "<focus>", "budget_inr": <int>, "goal": "<goal>", "actions": ["<action1>", "<action2>"]}}
+    ]
   }},
   "competitor_insights": {{
     "likely_competitors": ["<domain1>", "<domain2>"],

@@ -2190,6 +2190,75 @@ export default function Dashboard({ data, onReset, sessionId, googleEmail, user,
                       </PieChart>
                     </ResponsiveContainer>
                   </Card>
+
+                {/* Negative Keywords */}
+                {seo.sem_recommendations?.negative_keywords?.length > 0 && (
+                  <Card>
+                    <SectionTitle icon={FileSearch}>Negative Keywords</SectionTitle>
+                    <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '12px' }}>Exclude these to avoid wasted ad spend</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {seo.sem_recommendations.negative_keywords.map((kw, i) => (
+                        <span key={i} style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '20px', background: 'var(--red-bg, #fee2e2)', color: 'var(--red, #ef4444)', border: '1px solid var(--red-border, #fecaca)' }}>
+                          -{kw}
+                        </span>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Campaign Groups */}
+                {seo.sem_recommendations?.campaign_groups?.length > 0 && (
+                  <Card>
+                    <SectionTitle icon={Zap}>Campaign Groups</SectionTitle>
+                    <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '12px' }}>Recommended campaign structure</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {seo.sem_recommendations.campaign_groups.map((cg, i) => (
+                        <div key={i} style={{ background: 'var(--bg)', borderRadius: '8px', padding: '12px 16px', border: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{cg.name}</span>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--accent-bg)', color: 'var(--accent)' }}>{cg.type}</span>
+                              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--bg3)', color: 'var(--text3)' }}>{cg.budget_pct}% budget</span>
+                            </div>
+                          </div>
+                          <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '8px' }}>{cg.goal}</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {(cg.keywords || []).map((kw, j) => (
+                              <span key={j} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--bg3)', color: 'var(--text2)' }}>{kw}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {/* Campaign Timeline */}
+                {seo.sem_recommendations?.campaign_timeline?.length > 0 && (
+                  <Card>
+                    <SectionTitle icon={TrendingUp}>Campaign Timeline</SectionTitle>
+                    <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '12px' }}>3-month launch roadmap</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {seo.sem_recommendations.campaign_timeline.map((t, i) => (
+                        <div key={i} style={{ background: 'var(--bg)', borderRadius: '8px', padding: '12px 16px', border: '1px solid var(--border)', borderLeft: `3px solid ${i === 0 ? 'var(--accent)' : i === 1 ? 'var(--cyan, #06b6d4)' : 'var(--green, #22c55e)'}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>Month {t.month}: {t.focus}</span>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)' }}>₹{(t.budget_inr || 0).toLocaleString()}</span>
+                          </div>
+                          <p style={{ fontSize: '12px', color: 'var(--text3)', marginBottom: '8px' }}>{t.goal}</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {(t.actions || []).map((a, j) => (
+                              <div key={j} style={{ fontSize: '12px', color: 'var(--text2)', display: 'flex', gap: '6px' }}>
+                                <span style={{ color: 'var(--accent)' }}>→</span> {a}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
                 )}
               </>
             )}
