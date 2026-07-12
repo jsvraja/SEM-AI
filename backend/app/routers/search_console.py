@@ -161,3 +161,26 @@ async def get_search_console_data(req: SearchConsoleDataRequest):
             "date_range": f"{start_date} to {end_date}"
         }
     }
+
+
+@router.post("/refresh-token")
+async def refresh_token(body: dict):
+    refresh_tok = body.get("refresh_token", "")
+    if not refresh_tok:
+        raise HTTPException(status_code=400, detail="No refresh token")
+    
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "refresh_token": refresh_tok,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "grant_type": "refresh_token",
+            }
+        )
+        data = res.json()
+    
+    if "access_token" in data:
+        return {"access_token": data["access_token"]}
+    raise HTTPException(status_code=400, detail="Token refresh failed")
