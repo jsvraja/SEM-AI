@@ -72,16 +72,22 @@ async def recommend_pages(req: RecommendPagesRequest):
         return {"recommended_pages": [], "total_pages_analysed": 0}
 
     # Ask Gemini which pages are best for ads
-    prompt = f"""You are a Google Ads expert. Analyze these pages and recommend the best ones for Google Ads campaigns.
+    prompt = f"""You are a Google Ads expert. Analyze these pages and recommend ALL pages that are suitable for Google Ads campaigns. Return MULTIPLE pages - at least 3-5 if available.
 
-PAGES:
+PAGES TO ANALYZE:
 {pages_data}
 
-Return ONLY valid JSON:
+IMPORTANT: 
+- Recommend ALL pages that have clear value propositions, products, services, or content worth advertising
+- Each page should get its own unique ad copy
+- Headlines MUST be max 30 characters
+- Descriptions MUST be max 90 characters
+
+Return ONLY valid JSON with NO markdown:
 {{
   "recommended_pages": [
     {{
-      "url": "<page url>",
+      "url": "<exact page url>",
       "title": "<page title>",
       "reason": "<why this page is good for ads>",
       "ad_copy": {{
@@ -91,7 +97,7 @@ Return ONLY valid JSON:
         "description_1": "<max 90 chars>",
         "description_2": "<max 90 chars>"
       }},
-      "target_keywords": ["<keyword1>", "<keyword2>"],
+      "target_keywords": ["<keyword1>", "<keyword2>", "<keyword3>"],
       "estimated_cpc": "<INR range>"
     }}
   ],
